@@ -28,8 +28,9 @@ if (!class_exists('BoekDB', false)) {
  *
  * @return BoekDB
  */
-function BD()
+function BoekDB()
 { // phpcs:ignore WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid
     return BoekDB::instance();
 }
 
+BoekDB();

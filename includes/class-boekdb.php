@@ -11,6 +11,13 @@ defined('ABSPATH') || exit;
 final class BoekDB
 {
     /**
+     * BoekDB version.
+     *
+     * @var string
+     */
+    public $version = '0.0.1';
+
+    /**
      * The single instance of the class.
      *
      * @var BoekDB
@@ -24,7 +31,7 @@ final class BoekDB
      *
      * @static
      * @return BoekDB - Main instance.
-     * @see    BD()
+     * @see    BoekDB()
      */
     public static function instance()
     {
@@ -33,4 +40,56 @@ final class BoekDB
         }
         return self::$_instance;
     }
+
+    /**
+     * BoekDb Constructor.
+     */
+    public function __construct()
+    {
+        $this->define_constants();
+        $this->includes();
+        $this->init_hooks();
+    }
+
+    /**
+     * Define BoekDB Constants.
+     */
+    private function define_constants()
+    {
+        $upload_dir = wp_upload_dir(null, false);
+
+        $this->define('BOEKDB_ABSPATH', dirname(BOEKDB_PLUGIN_FILE) . '/');
+        $this->define('BOEKDB_PLUGIN_BASENAME', plugin_basename(BOEKDB_PLUGIN_FILE));
+        $this->define('BOEKDB_VERSION', $this->version);
+    }
+
+    /**
+     * Include required files
+     */
+    public function includes()
+    {
+        include_once BOEKDB_ABSPATH . 'includes/class-boekdb-post-types.php';
+        include_once BOEKDB_ABSPATH . 'includes/class-boekdb-install.php';
+    }
+
+    /**
+     * Define constant if not already set.
+     *
+     * @param string  $name  Constant name.
+     * @param string|bool  $value  Constant value.
+     */
+    private function define($name, $value)
+    {
+        if (!defined($name)) {
+            define($name, $value);
+        }
+    }
+
+    /**
+     * Hook into actions and filters.
+     */
+    private function init_hooks() {
+        register_activation_hook( BOEKDB_PLUGIN_FILE, array( 'BoekDB_Install', 'install' ) );
+    }
+
 }
