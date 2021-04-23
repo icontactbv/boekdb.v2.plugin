@@ -61,6 +61,11 @@ class Boekdb_Post_Types
                     'thumbnail',
                     'page-attributes'
                 ),
+                'capabilities' => array(
+                    'create_posts' => 'do_not_allow',
+
+                ),
+                'map_meta_cap' => true,
                 //'taxonomies'   => 'category',
                 'rewrite'      => array('slug' => 'book'),
                 'show_in_rest' => true
