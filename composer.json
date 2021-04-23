@@ -1,0 +1,28 @@
+{
+    "name": "icontactbv/boekdb.v2.plugin",
+    "description": "Wordpress plugin for BoekDBv2 data",
+    "type": "wordpress-plugin",
+    "authors": [
+        {
+            "name": "Kevin de Harde",
+            "email": "kevin@icontact.nl"
+        }
+    ],
+    "require": {},
+    "require-dev": {
+        "squizlabs/php_codesniffer": "3.*",
+        "wp-coding-standards/wpcs": "*",
+        "dealerdirect/phpcodesniffer-composer-installer": "^0.7.1"
+    },
+    "scripts": {
+        "phpcs": [
+            "phpcs -s -p"
+        ],
+        "phpcs-pre-commit": [
+            "phpcs -s -p -n"
+        ],
+        "phpcbf": [
+            "phpcbf -p"
+        ]
+    }
+}
