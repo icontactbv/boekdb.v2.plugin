@@ -5,7 +5,7 @@
  * Description: Wordpress plugin for BoekDBv2 data.
  * Version: 0.0.1-dev
  * Author: Icontact B.V.
- * Author URI: https://www.icontact.nl
+ * Author URI: http://www.icontact.nl
  * Requires at least: 5.5
  * Requires PHP: 7.0
  *

@@ -61,7 +61,7 @@ class Boekdb_Post_Types
                     'thumbnail',
                     'page-attributes'
                 ),
-                'taxonomies'   => 'category',
+                //'taxonomies'   => 'category',
                 'rewrite'      => array('slug' => 'book'),
                 'show_in_rest' => true
             )
