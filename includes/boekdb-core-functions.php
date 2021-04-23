@@ -15,7 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Define a constant if it is not already defined.
  *
- * @since 3.0.0
  * @param string $name  Constant name.
  * @param mixed  $value Value.
  */
