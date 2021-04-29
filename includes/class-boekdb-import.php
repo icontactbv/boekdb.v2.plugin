@@ -41,9 +41,55 @@ class BoekDB_Import
 
         $result = curl_exec($curl);
         curl_close($curl);
-        var_dump(json_decode($result));
-        die();
+        $products = json_decode($result);
+        echo '<pre>';
+        foreach($products as $product) {
+            $boek = array();
+            $boek['titel'] = $product->titel;
+            $boek['isbn'] = $product->isbn;
+//            $boek['subtitle'] = (string)$book_element->SubTitel;
+//            $boek['nur'] = (string)$book_element->Uitgave->Nurcode;
+//            $boek['genre'] = (string)$book_element->Uitgave->Genre->Omschrijving;
+//            $boek['imprint'] = $imprint;
+//            $boek['siteimprint'] = (string)$book_element->Uitgave->Fonds->Imprint;
+//            $boek['publicationdate'] = (string)$book_element->Uitgave->VerschijningsdatumEersteDruk;
+//            $boek['editionpublicationdate'] = (string)$book_element->Uitgave->Druk->Verschijningsdatum;
+//
+//            if($boek['publicationdate'] !== '') {
+//                $date = \DateTime::createFromFormat('Y-m-d', $boek['publicationdate']);
+//                $boek['sortpubdate'] =  $date->format('Y-m-d');
+//            }
+//            if($boek['editionpublicationdate'] !== '') {
+//                $date = \DateTime::createFromFormat('Y-m-d', $boek['publicationdate']);
+//                $boek['sorteditiondate'] =  $date->format('Y-m-d');
+//            }
 
+
+            $post_id = null;
+            $post = array(
+                'ID'            => $post_id,
+                'post_status'   => 'publish',
+                'post_type'     => 'boekdb_boek',
+                'post_title'    => $boek['titel'],
+                'post_name'     => sanitize_title($boek['titel'])
+            );
+
+            // create/update post
+            if(is_null($post_id)) {
+                $post_id = wp_insert_post($post);
+            } else {
+                $post_id = wp_update_post($post);
+            }
+
+            foreach($boek as $key => $value) {
+                switch($key) {
+                    default:
+                        update_post_meta($post_id, $key, $value);
+                        break;
+                }
+            }
+        }
+        die();
     }
 
 }
