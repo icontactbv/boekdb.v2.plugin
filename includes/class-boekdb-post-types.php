@@ -21,7 +21,6 @@ class Boekdb_Post_Types
     {
         add_action('init', array(__CLASS__, 'register_taxonomies'), 5);
         add_action('init', array(__CLASS__, 'register_post_types'), 5);
-        add_action('add_meta_boxes', array(__CLASS__, 'add_metaboxes'), 5);
     }
 
     /**
@@ -45,8 +44,41 @@ class Boekdb_Post_Types
             return;
         }
 
+        self::register_nstc_post_type();
         self::register_boek_post_type();
         self::register_medewerker_post_type();
+    }
+
+    protected static function register_nstc_post_type()
+    {
+        if (post_type_exists('boekdb_nstc')) {
+            return;
+        }
+
+        $labels = array(
+            'name'          => 'NSTCs',
+            'singular_name' => 'NSTC',
+        );
+
+        register_post_type(
+            'boekdb_nstc', array(
+                'labels'       => $labels,
+                'has_archive'  => true,
+                'public'       => false,
+                'hierarchical' => false,
+                'supports'     => array(
+                    'title',
+                    'thumbnail',
+                ),
+                'capabilities' => array(
+                    'create_posts' => 'do_not_allow',
+                ),
+                'map_meta_cap' => true,
+                //'taxonomies'   => 'category',
+                'rewrite'      => array('slug' => 'nstc'),
+                'show_in_rest' => true
+            )
+        );
     }
 
     protected static function register_medewerker_taxonomy()
@@ -136,27 +168,7 @@ class Boekdb_Post_Types
         );
     }
 
-    public static function add_metaboxes()
-    {
-        add_meta_box(
-            'boek_fields',
-            'Velden', // Title of metabox
-            array(__CLASS__, 'metabox_html'), // Function that prints out the HTML for metabox
-            'boekdb_boek',
-            'normal',
-            'high'
-        );
-    }
 
-    public static function metabox_html( $boek )
-    {
-        $meta = get_post_meta($boek->ID);
-        echo '<table>';
-        foreach($meta as $name => $value) {
-            echo '<tr><th style="vertical-align: top; text-align: left;">'.$name.'</th><td>'.$value[0].'</td></tr>';
-        }
-        echo '</table>';
-    }
 }
 
 Boekdb_Post_Types::init();

@@ -20,6 +20,9 @@ class BoekDB_Import
      */
     public static function init()
     {
+        // debug:
+        //add_action('init', array(self::class, 'import'));
+
         if (!wp_next_scheduled(self::CRON_HOOK)) {
             wp_schedule_event(time(), 'daily', self::CRON_HOOK);
         }
@@ -45,6 +48,7 @@ class BoekDB_Import
         echo '<pre>';
         foreach ($products as $product) {
             $boek                        = array();
+            $boek['nstc']                = $product->nstc;
             $boek['titel']               = $product->titel;
             $boek['isbn']                = $product->isbn;
             $boek['subtitel']            = $product->subtitel;
@@ -69,31 +73,20 @@ class BoekDB_Import
             $boek['actieperiode_start']  = $product->actieperiode_start;
             $boek['actieperiode_einde']  = $product->actieperiode_einde;
 
-//            $boek['subtitle'] = (string)$book_element->SubTitel;
-//            $boek['nur'] = (string)$book_element->Uitgave->Nurcode;
-//            $boek['genre'] = (string)$book_element->Uitgave->Genre->Omschrijving;
-//            $boek['imprint'] = $imprint;
-//            $boek['siteimprint'] = (string)$book_element->Uitgave->Fonds->Imprint;
-//            $boek['publicationdate'] = (string)$book_element->Uitgave->VerschijningsdatumEersteDruk;
-//            $boek['editionpublicationdate'] = (string)$book_element->Uitgave->Druk->Verschijningsdatum;
-//
-//            if($boek['publicationdate'] !== '') {
-//                $date = \DateTime::createFromFormat('Y-m-d', $boek['publicationdate']);
-//                $boek['sortpubdate'] =  $date->format('Y-m-d');
-//            }
-//            if($boek['editionpublicationdate'] !== '') {
-//                $date = \DateTime::createFromFormat('Y-m-d', $boek['publicationdate']);
-//                $boek['sorteditiondate'] =  $date->format('Y-m-d');
-//            }
-
-
-            $post_id = null;
+            $post_id = self::find_isbn($boek['isbn']);
+            if (!is_null($boek['nstc'])) {
+                $nstc = self::find_nstc($boek['nstc']);
+                if($nstc == $post_id) {
+                    $nstc = null;
+                }
+            }
             $post    = array(
                 'ID'          => $post_id,
                 'post_status' => 'publish',
                 'post_type'   => 'boekdb_boek',
                 'post_title'  => $boek['titel'],
-                'post_name'   => sanitize_title($boek['titel'])
+                'post_name'   => sanitize_title($boek['titel']),
+                'post_parent' => $nstc,
             );
 
             // create/update post
@@ -106,14 +99,62 @@ class BoekDB_Import
             foreach ($boek as $key => $value) {
                 switch ($key) {
                     default:
-                        update_post_meta($post_id, $key, $value);
+                        update_post_meta($post_id, 'boekdb_' . $key, $value);
                         break;
                 }
             }
         }
-        die();
+    }
+
+    private static function find_nstc($nstc)
+    {
+        $args    = array(
+            'post_type'   => 'boekdb_boek',
+            'post_status' => array('publish', 'draft', 'inherit'),
+            'meta_query'  => array(
+                array(
+                    'key'   => 'boekdb_nstc',
+                    'value' => $nstc
+                )
+            )
+        );
+        $query   = new \WP_Query($args);
+        $post_id = null;
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $post_id = get_the_ID();
+            }
+        }
+        wp_reset_postdata();
+        return $post_id;
+    }
+
+    private static function find_isbn($isbn)
+    {
+        $args    = array(
+            'post_type'   => 'boekdb_boek',
+            'post_status' => array('publish', 'draft', 'inherit'),
+            'meta_query'  => array(
+                array(
+                    'key'   => 'boekdb_isbn',
+                    'value' => $isbn
+                )
+            )
+        );
+        $query   = new \WP_Query($args);
+        $post_id = null;
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $post_id = get_the_ID();
+            }
+        }
+        wp_reset_postdata();
+        return $post_id;
     }
 
 }
 
 BoekDB_Import::init();
+
