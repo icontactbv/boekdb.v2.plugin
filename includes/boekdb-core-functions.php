@@ -9,17 +9,17 @@
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 /**
  * Define a constant if it is not already defined.
  *
- * @param string $name  Constant name.
- * @param mixed  $value Value.
+ * @param string  $name  Constant name.
+ * @param mixed  $value  Value.
  */
 function boekdb_maybe_define_constant( $name, $value ) {
-    if ( ! defined( $name ) ) {
-        define( $name, $value );
-    }
+	if ( ! defined( $name ) ) {
+		define( $name, $value );
+	}
 }
