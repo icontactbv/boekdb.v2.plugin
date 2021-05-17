@@ -87,7 +87,7 @@ class Boekdb_Post_Types {
 			'public'            => false,
 			'rewrite'           => false,
 			'query_var'         => false,
-			'show_ui'           => true,
+			'show_ui'           => false,
 			'show_admin_column' => true,
 			'show_in_nav_menus' => true,
 			'show_tagcloud'     => true,

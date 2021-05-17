@@ -19,7 +19,7 @@ class BoekDB_Import {
 	 */
 	public static function init() {
 		// debug:
-		//add_action('init', array(self::class, 'import'));
+		add_action( 'init', array( self::class, 'import' ) );
 
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'daily', self::CRON_HOOK );
@@ -28,11 +28,13 @@ class BoekDB_Import {
 	}
 
 	public static function import() {
-		$curl          = curl_init( 'http://boekdb.v2.test/api/json/v1/products?updated_at=2020-01-26T11%3A49%3A37%2B01%3A00' );
+		require_once(ABSPATH . 'wp-admin/includes/image.php');
+
+		$curl          = curl_init( 'https://boekdbv2.nl/api/json/v1/products?updated_at=2020-01-26T11%3A49%3A37%2B01%3A00' );
 		$authorization = "Authorization: Bearer j8mG6QORW04kgiEwH3G7hybmm0gEKU32dNUmyVtFGC08YXt9sRHlzkH8WTGkp7IJ";
 
 		curl_setopt( $curl, CURLOPT_HTTPHEADER, array(
-			'x-limit: 500',
+			'x-limit: 10',
 			$authorization
 		) );
 		curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, "GET" );
@@ -70,15 +72,15 @@ class BoekDB_Import {
 			$boek['actieperiode_start']  = $product->actieperiode_start;
 			$boek['actieperiode_einde']  = $product->actieperiode_einde;
 
-			$post_id = self::find_field( 'boekdb_boek', 'boekdb_isbn', $boek['isbn'] );
+			$boek_post_id = self::find_field( 'boekdb_boek', 'boekdb_isbn', $boek['isbn'] );
 			if ( ! is_null( $boek['nstc'] ) ) {
 				$nstc = self::find_field( 'boekdb_boek', 'boekdb_nstc', $boek['nstc'] );
-				if ( $nstc == $post_id ) {
+				if ( $nstc == $boek_post_id ) {
 					$nstc = null;
 				}
 			}
 			$post = array(
-				'ID'          => $post_id,
+				'ID'          => $boek_post_id,
 				'post_status' => 'publish',
 				'post_type'   => 'boekdb_boek',
 				'post_title'  => $boek['titel'],
@@ -87,22 +89,53 @@ class BoekDB_Import {
 			);
 
 			// create/update post
-			if ( is_null( $post_id ) ) {
-				$post_id = wp_insert_post( $post );
+			if ( is_null( $boek_post_id ) ) {
+				$boek_post_id = wp_insert_post( $post );
 			} else {
-				$post_id = wp_update_post( $post );
+				$boek_post_id = wp_update_post( $post );
 			}
 
 			// save post meta
 			foreach ( $boek as $key => $value ) {
 				switch ( $key ) {
 					default:
-						update_post_meta( $post_id, 'boekdb_' . $key, $value );
+						update_post_meta( $boek_post_id, 'boekdb_' . $key, $value );
 						break;
 				}
 			}
 
-			foreach($product->medewerkers as $medewerker) {
+			foreach ( $product->bestanden as $bestand ) {
+				if ( $bestand->soort === 'Cover' ) {
+					$hash          = md5( $bestand->url );
+					$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+					if ( is_null( $attachment_id ) ) {
+						// delete old cover
+						$cover_id = get_attached_media( 'image', $boek_post_id );
+						$wp_upload_dir = wp_upload_dir();
+
+						$get           = wp_safe_remote_get( $bestand->url );
+						$type          = wp_remote_retrieve_header( $get, 'content-type' );
+						$image         = wp_upload_bits( $bestand->bestandsnaam, null,
+							wp_remote_retrieve_body( $get ) );
+						$attachment    = array(
+							'post_title'     => $bestand->bestandsnaam,
+							'post_mime_type' => $type
+						);
+
+						$attachment_id = wp_insert_attachment( $attachment, $image['file'], $boek_post_id );
+						$attachment_data = wp_generate_attachment_metadata($attachment_id, $wp_upload_dir['path'] . '/' . $bestand->bestandsnaam);
+
+						wp_update_attachment_metadata($attachment_id, $attachment_data);
+
+						update_post_meta($attachment_id, 'hash', $hash);
+						update_post_meta($boek_post_id, '_thumbnail_id', $attachment_id);
+
+					}
+				}
+			}
+
+			$medewerker_term_ids = array();
+			foreach ( $product->medewerkers as $medewerker ) {
 				$boekdb_medewerker = array();
 				/*
 					 "id": 1,
@@ -115,18 +148,18 @@ class BoekDB_Import {
 	                "rol": "Auteur",
 	                "bestanden": []
 				 */
-				$boekdb_medewerker['boekdb_id'] = $medewerker->id;
-				$boekdb_medewerker['naam'] = $medewerker->naam;
-				$boekdb_medewerker['boekdb_voornaam'] = $medewerker->voornaam;
+				$boekdb_medewerker['id']                   = $medewerker->id;
+				$boekdb_medewerker['naam']                 = $medewerker->naam;
+				$boekdb_medewerker['boekdb_voornaam']      = $medewerker->voornaam;
 				$boekdb_medewerker['boekdb_tussenvoegsel'] = $medewerker->tussenvoegsel;
-				$boekdb_medewerker['boekdb_achternaam'] = $medewerker->achternaam;
-				$boekdb_medewerker['boekdb_organisatie'] = $medewerker->organisatie;
-				$boekdb_medewerker['boekdb_biografie'] = $medewerker->biografie;
-				$boekdb_medewerker['boekdb_bibliografie'] = $medewerker->bibliografie;
+				$boekdb_medewerker['boekdb_achternaam']    = $medewerker->achternaam;
+				$boekdb_medewerker['boekdb_organisatie']   = $medewerker->organisatie;
+				$boekdb_medewerker['boekdb_biografie']     = $medewerker->biografie;
+				$boekdb_medewerker['boekdb_bibliografie']  = $medewerker->bibliografie;
 
-				$post_id = self::find_field('boekdb_medewerker', 'boekdb_id', $medewerker->id);
-				$post = array(
-					'ID'          => $post_id,
+				$medewerker_post_id = self::find_field( 'boekdb_medewerker', 'boekdb_id', $medewerker->id );
+				$post               = array(
+					'ID'          => $medewerker_post_id,
 					'post_status' => 'publish',
 					'post_type'   => 'boekdb_medewerker',
 					'post_title'  => $boekdb_medewerker['naam'],
@@ -134,28 +167,48 @@ class BoekDB_Import {
 				);
 
 				// create/update post
-				if ( is_null( $post_id ) ) {
-					$post_id = wp_insert_post( $post );
+				if ( is_null( $medewerker_post_id ) ) {
+					$medewerker_post_id = wp_insert_post( $post );
 				} else {
-					$post_id = wp_update_post( $post );
+					$medewerker_post_id = wp_update_post( $post );
 				}
 
 				// save post meta
 				foreach ( $boekdb_medewerker as $key => $value ) {
 					switch ( $key ) {
 						default:
-							update_post_meta( $post_id, 'boekdb_' . $key, $value );
+							update_post_meta( $medewerker_post_id, 'boekdb_' . $key, $value );
 							break;
 					}
 				}
 
-				// @todo taxonomie
-
+				$term = get_term_by( 'slug', $boekdb_medewerker['id'], 'boekdb_medewerker_tax' );
+				if ( $term ) {
+					$term_id = $term->term_id;
+				} else {
+					$result  = wp_insert_term(
+						$medewerker->naam,
+						'boekdb_medewerker_tax',
+						array(
+							'name' => $medewerker->naam,
+							'slug' => (int) $boekdb_medewerker['id']
+						) );
+					$term_id = $result['term_id'];
+				}
+				$medewerker_term_ids[] = $term_id;
+				wp_set_object_terms( $medewerker_post_id, $term_id, 'boekdb_medewerker_tax' );
+				update_term_meta( $term_id, 'rol', $medewerker->rol );
 			}
+			wp_set_object_terms( $boek_post_id, $medewerker_term_ids, 'boekdb_medewerker_tax', false );
 		}
 	}
 
-	private static function find_field( $post_type, $key, $value ) {
+
+	private static function find_field(
+		$post_type,
+		$key,
+		$value
+	) {
 		$args    = array(
 			'post_type'   => $post_type,
 			'post_status' => array( 'publish', 'draft', 'inherit' ),
@@ -178,7 +231,6 @@ class BoekDB_Import {
 
 		return $post_id;
 	}
-
 }
 
 BoekDB_Import::init();
