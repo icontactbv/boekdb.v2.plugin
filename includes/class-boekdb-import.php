@@ -19,7 +19,7 @@ class BoekDB_Import {
 	 */
 	public static function init() {
 		// debug:
-		add_action( 'init', array( self::class, 'import' ) );
+		//add_action( 'init', array( self::class, 'import' ) );
 
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'daily', self::CRON_HOOK );
