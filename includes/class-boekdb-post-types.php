@@ -29,7 +29,7 @@ class Boekdb_Post_Types {
 			return;
 		}
 
-		self::register_medewerker_taxonomy();
+		self::register_medewerkers_taxonomies();
 	}
 
 	/**
@@ -76,24 +76,41 @@ class Boekdb_Post_Types {
 		);
 	}
 
-	protected static function register_medewerker_taxonomy() {
-		$labels = array(
-			'name'          => 'Medewerkers Taxonomie',
-			'singular_name' => 'Medewerker Taxonomie',
-		);
+	protected static function register_medewerkers_taxonomies() {
 		$args   = array(
-			'labels'            => $labels,
 			'hierarchical'      => false,
 			'public'            => false,
 			'rewrite'           => false,
 			'query_var'         => false,
-			'show_ui'           => false,
+			'show_ui'           => true,
 			'show_admin_column' => true,
-			'show_in_nav_menus' => true,
-			'show_tagcloud'     => true,
+			'show_in_nav_menus' => false,
+			'show_tagcloud'     => false,
 		);
 
-		register_taxonomy( 'boekdb_medewerker_tax', array( 'boekdb_boek', 'boekdb_medewerker' ), $args );
+		$labels = array(
+			'name'          => 'Auteurs',
+			'singular_name' => 'Auteur',
+		);
+		$args['labels'] = $labels;
+
+		register_taxonomy( 'boekdb_auteur_tax', array( 'boekdb_boek', 'boekdb_medewerker' ), $args );
+
+		$labels = array(
+			'name'          => 'Illustrators',
+			'singular_name' => 'Illustrator',
+		);
+		$args['labels'] = $labels;
+
+		register_taxonomy( 'boekdb_illustrator_tax', array( 'boekdb_boek', 'boekdb_medewerker' ), $args );
+
+		$labels = array(
+			'name'          => 'Sprekers',
+			'singular_name' => 'Spreker',
+		);
+		$args['labels'] = $labels;
+
+		register_taxonomy( 'boekdb_spreker_tax', array( 'boekdb_boek', 'boekdb_medewerker' ), $args );
 	}
 
 	protected static function register_medewerker_post_type() {
@@ -153,7 +170,6 @@ class Boekdb_Post_Types {
 					'create_posts' => 'do_not_allow',
 				),
 				'map_meta_cap' => true,
-				//'taxonomies'   => 'category',
 				'rewrite'      => array( 'slug' => 'boek' ),
 				'show_in_rest' => true
 			)
