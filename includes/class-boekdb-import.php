@@ -35,6 +35,15 @@ class BoekDB_Import {
 		foreach ( $products as $product ) {
 			$boek_post_id = self::handle_boek( $product );
 			self::handle_betrokkenen( $product, $boek_post_id );
+			foreach ( $product->onderwerpen as $onderwerp ) {
+				if ( $onderwerp->type === 'NUR' || $onderwerp->type === 'BISAC') {
+					$term_id = self::get_taxonomy_term_id( $onderwerp->code, strtolower($onderwerp->type), $onderwerp->waarde );
+					wp_set_object_terms( $boek_post_id, $term_id, 'boekdb_'.strtolower($onderwerp->type).'_tax' );
+				} elseif(substr($onderwerp->type, 0, 5) === 'Thema') {
+					$term_id = self::get_taxonomy_term_id( $onderwerp->code, 'thema', $onderwerp->waarde );
+					wp_set_object_terms( $boek_post_id, $term_id, 'boekdb_thema_tax' );
+				}
+			}
 		}
 	}
 
@@ -110,7 +119,7 @@ class BoekDB_Import {
 		$boek['serietitel']          = $product->serietitel;
 		$boek['deel']                = $product->deel;
 		$boek['druk']                = $product->druk;
-		$boek['verschijningsvorm']   = $product->verschijningsvorm;
+		//$boek['verschijningsvorm']   = $product->verschijningsvorm;
 		$boek['uitgever']            = $product->uitgever;
 		$boek['imprint']             = $product->imprint;
 		$boek['flaptekst']           = $product->flaptekst;
@@ -248,28 +257,26 @@ class BoekDB_Import {
 		return $boek_post_id;
 	}
 
-
 	/**
-	 * get taxonomy id for contributor
+	 * get taxonomy term_id
 	 *
-	 * @param $betrokkene_id
-	 * @param $rol
-	 * @param $betrokkene
-	 * @param $id
+	 * @param $slug
+	 * @param $taxonomy
+	 * @param $value
 	 *
 	 * @return int|mixed
 	 */
-	protected static function get_taxonomy_term_id( $betrokkene_id, $rol, $betrokkene, $id ) {
-		$term = get_term_by( 'slug', $betrokkene_id, 'boekdb_' . $rol . '_tax' );
+	protected static function get_taxonomy_term_id( $slug, $taxonomy, $value ) {
+		$term = get_term_by( 'slug', $slug, 'boekdb_' . $taxonomy . '_tax' );
 		if ( $term ) {
 			$term_id = $term->term_id;
 		} else {
 			$result  = wp_insert_term(
-				$betrokkene->naam,
-				'boekdb_' . $rol . '_tax',
+				$value,
+				'boekdb_' . $taxonomy . '_tax',
 				array(
-					'name' => $betrokkene->naam,
-					'slug' => (int) $id
+					'name' => $value,
+					'slug' => $slug,
 				) );
 			$term_id = $result['term_id'];
 		}
@@ -327,8 +334,7 @@ class BoekDB_Import {
 
 				$betrokkene_id = $boekdb_betrokkene['id'];
 
-				$term_id = self::get_taxonomy_term_id( $betrokkene_id, $rol, $betrokkene,
-					$boekdb_betrokkene['id'] );
+				$term_id = self::get_taxonomy_term_id( $betrokkene_id, $rol, $betrokkene->naam );
 				wp_set_object_terms( $betrokkene_post_id, $term_id, 'boekdb_' . $rol . '_tax' );
 				$term_ids[ $rol ][] = $term_id;
 			} else {
