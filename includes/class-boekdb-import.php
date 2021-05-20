@@ -41,64 +41,56 @@ class BoekDB_Import {
 				'spreker'     => array(),
 			);
 
+			$medewerkers_meta[] = array();
 			foreach ( $product->medewerkers as $medewerker ) {
 				$boekdb_medewerker = self::create_medewerker_array( $medewerker );
-
-				$medewerker_post_id = self::find_field( 'boekdb_medewerker', 'boekdb_id', $medewerker->id );
-				$post               = array(
-					'ID'          => $medewerker_post_id,
-					'post_status' => 'publish',
-					'post_type'   => 'boekdb_medewerker',
-					'post_title'  => $boekdb_medewerker['naam'],
-					'post_name'   => sanitize_title( $boekdb_medewerker['naam'] ),
-				);
-
-				// create/update post
-				if ( is_null( $medewerker_post_id ) ) {
-					$medewerker_post_id = wp_insert_post( $post );
-				} else {
-					$medewerker_post_id = wp_update_post( $post );
-				}
-
-				// save post meta
-				foreach ( $boekdb_medewerker as $key => $value ) {
-					switch ( $key ) {
-						default:
-							update_post_meta( $medewerker_post_id, 'boekdb_' . $key, $value );
-							break;
-					}
-				}
-
-				/**
-				 * 'A01' => 'Auteur',
-				 * 'A12' => 'Illustrator',
-				 * 'A13' => 'Fotograaf',
-				 * 'B01' => 'Redacteur',
-				 * 'B05' => 'Bewerker',
-				 * 'B06' => 'Vertaler',
-				 * 'E07' => 'Voorlezer',
-				 * 'E03' => 'Verteller',
-				 */
-
-				$rol = strtolower( $medewerker->rol );
+				$rol               = strtolower( $medewerker->rol );
 				if ( $rol === 'voorlezer' || $rol === 'verteller' ) {
 					$rol = 'spreker';
 				}
-				$medewerker_id = $boekdb_medewerker['id'];
 
 				if ( $rol === 'auteur' || $rol === 'illustrator' || $rol === 'spreker' ) {
+					$medewerker_post_id = self::find_field( 'boekdb_medewerker', 'boekdb_id', $medewerker->id );
+					$post               = array(
+						'ID'          => $medewerker_post_id,
+						'post_status' => 'publish',
+						'post_type'   => 'boekdb_medewerker',
+						'post_title'  => $boekdb_medewerker['naam'],
+						'post_name'   => sanitize_title( $boekdb_medewerker['naam'] ),
+					);
+
+					// create/update post
+					if ( is_null( $medewerker_post_id ) ) {
+						$medewerker_post_id = wp_insert_post( $post );
+					} else {
+						$medewerker_post_id = wp_update_post( $post );
+					}
+
+					// save post meta
+					foreach ( $boekdb_medewerker as $key => $value ) {
+						switch ( $key ) {
+							default:
+								update_post_meta( $medewerker_post_id, 'boekdb_' . $key, $value );
+								break;
+						}
+					}
+
+					$medewerker_id = $boekdb_medewerker['id'];
+
 					$term_id = self::get_taxonomy_term_id( $medewerker_id, $rol, $medewerker,
 						$boekdb_medewerker['id'] );
 					wp_set_object_terms( $medewerker_post_id, $term_id, 'boekdb_' . $rol . '_tax' );
 					$term_ids[ $rol ][] = $term_id;
 				} else {
-					// sla op als metadata
+					$medewerkers_meta[$rol] = (isset($medewerker_meta[$rol]) ? $medewerker_meta[$rol] . ', ' : '') . $medewerker['naam'];
 				}
 			}
 
 			wp_set_object_terms( $boek_post_id, $term_ids['auteur'], 'boekdb_auteur_tax', false );
 			wp_set_object_terms( $boek_post_id, $term_ids['illustrator'], 'boekdb_illustrator_tax', false );
 			wp_set_object_terms( $boek_post_id, $term_ids['spreker'], 'boekdb_spreker_tax', false );
+
+
 		}
 	}
 
