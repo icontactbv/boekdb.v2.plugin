@@ -34,63 +34,7 @@ class BoekDB_Import {
 
 		foreach ( $products as $product ) {
 			$boek_post_id = self::handle_boek( $product );
-
-			$term_ids = array(
-				'auteur'      => array(),
-				'illustrator' => array(),
-				'spreker'     => array(),
-			);
-
-			$medewerkers_meta[] = array();
-			foreach ( $product->medewerkers as $medewerker ) {
-				$boekdb_medewerker = self::create_medewerker_array( $medewerker );
-				$rol               = strtolower( $medewerker->rol );
-				if ( $rol === 'voorlezer' || $rol === 'verteller' ) {
-					$rol = 'spreker';
-				}
-
-				if ( $rol === 'auteur' || $rol === 'illustrator' || $rol === 'spreker' ) {
-					$medewerker_post_id = self::find_field( 'boekdb_medewerker', 'boekdb_id', $medewerker->id );
-					$post               = array(
-						'ID'          => $medewerker_post_id,
-						'post_status' => 'publish',
-						'post_type'   => 'boekdb_medewerker',
-						'post_title'  => $boekdb_medewerker['naam'],
-						'post_name'   => sanitize_title( $boekdb_medewerker['naam'] ),
-					);
-
-					// create/update post
-					if ( is_null( $medewerker_post_id ) ) {
-						$medewerker_post_id = wp_insert_post( $post );
-					} else {
-						$medewerker_post_id = wp_update_post( $post );
-					}
-
-					// save post meta
-					foreach ( $boekdb_medewerker as $key => $value ) {
-						switch ( $key ) {
-							default:
-								update_post_meta( $medewerker_post_id, 'boekdb_' . $key, $value );
-								break;
-						}
-					}
-
-					$medewerker_id = $boekdb_medewerker['id'];
-
-					$term_id = self::get_taxonomy_term_id( $medewerker_id, $rol, $medewerker,
-						$boekdb_medewerker['id'] );
-					wp_set_object_terms( $medewerker_post_id, $term_id, 'boekdb_' . $rol . '_tax' );
-					$term_ids[ $rol ][] = $term_id;
-				} else {
-					$medewerkers_meta[$rol] = (isset($medewerker_meta[$rol]) ? $medewerker_meta[$rol] . ', ' : '') . $medewerker['naam'];
-				}
-			}
-
-			wp_set_object_terms( $boek_post_id, $term_ids['auteur'], 'boekdb_auteur_tax', false );
-			wp_set_object_terms( $boek_post_id, $term_ids['illustrator'], 'boekdb_illustrator_tax', false );
-			wp_set_object_terms( $boek_post_id, $term_ids['spreker'], 'boekdb_spreker_tax', false );
-
-
+			self::handle_betrokkenen( $product, $boek_post_id );
 		}
 	}
 
@@ -125,7 +69,7 @@ class BoekDB_Import {
 	 * @todo   check result before json decoding
 	 */
 	protected static function fetch() {
-		$curl          = curl_init( 'https://boekdbv2.nl/api/json/v1/products?updated_at=2020-01-26T11%3A49%3A37%2B01%3A00' );
+		$curl          = curl_init( 'https://boekdbv2.nl/api/json/v1/products?updated_at=2021-05-20T11%3A49%3A37%2B01%3A00' );
 		$authorization = "Authorization: Bearer j8mG6QORW04kgiEwH3G7hybmm0gEKU32dNUmyVtFGC08YXt9sRHlzkH8WTGkp7IJ";
 
 		curl_setopt( $curl, CURLOPT_HTTPHEADER, array(
@@ -166,6 +110,7 @@ class BoekDB_Import {
 		$boek['serietitel']          = $product->serietitel;
 		$boek['deel']                = $product->deel;
 		$boek['druk']                = $product->druk;
+		$boek['verschijningsvorm']   = $product->verschijningsvorm;
 		$boek['uitgever']            = $product->uitgever;
 		$boek['imprint']             = $product->imprint;
 		$boek['flaptekst']           = $product->flaptekst;
@@ -185,13 +130,13 @@ class BoekDB_Import {
 	}
 
 	/**
-	 * Create medewerker array from contributor
+	 * Create betrokkene array from contributor
 	 *
-	 * @param $medewerker
+	 * @param $betrokkene
 	 *
 	 * @return array
 	 */
-	protected static function create_medewerker_array( $medewerker ) {
+	protected static function create_betrokkene_array( $betrokkene ) {
 		/*
 			 "id": 1,
 			"voornaam": "Ken",
@@ -203,17 +148,17 @@ class BoekDB_Import {
 			"rol": "Auteur",
 			"bestanden": []
 		 */
-		$boekdb_medewerker                         = array();
-		$boekdb_medewerker['id']                   = $medewerker->id;
-		$boekdb_medewerker['naam']                 = $medewerker->naam;
-		$boekdb_medewerker['boekdb_voornaam']      = $medewerker->voornaam;
-		$boekdb_medewerker['boekdb_tussenvoegsel'] = $medewerker->tussenvoegsel;
-		$boekdb_medewerker['boekdb_achternaam']    = $medewerker->achternaam;
-		$boekdb_medewerker['boekdb_organisatie']   = $medewerker->organisatie;
-		$boekdb_medewerker['boekdb_biografie']     = $medewerker->biografie;
-		$boekdb_medewerker['boekdb_bibliografie']  = $medewerker->bibliografie;
+		$boekdb_betrokkene                         = array();
+		$boekdb_betrokkene['id']                   = $betrokkene->id;
+		$boekdb_betrokkene['naam']                 = $betrokkene->naam;
+		$boekdb_betrokkene['boekdb_voornaam']      = $betrokkene->voornaam;
+		$boekdb_betrokkene['boekdb_tussenvoegsel'] = $betrokkene->tussenvoegsel;
+		$boekdb_betrokkene['boekdb_achternaam']    = $betrokkene->achternaam;
+		$boekdb_betrokkene['boekdb_organisatie']   = $betrokkene->organisatie;
+		$boekdb_betrokkene['boekdb_biografie']     = $betrokkene->biografie;
+		$boekdb_betrokkene['boekdb_bibliografie']  = $betrokkene->bibliografie;
 
-		return $boekdb_medewerker;
+		return $boekdb_betrokkene;
 	}
 
 	/**
@@ -305,29 +250,98 @@ class BoekDB_Import {
 
 
 	/**
-	 * @param $medewerker_id
+	 * get taxonomy id for contributor
+	 *
+	 * @param $betrokkene_id
 	 * @param $rol
-	 * @param $medewerker
+	 * @param $betrokkene
 	 * @param $id
 	 *
 	 * @return int|mixed
 	 */
-	protected static function get_taxonomy_term_id( $medewerker_id, $rol, $medewerker, $id ) {
-		$term = get_term_by( 'slug', $medewerker_id, 'boekdb_' . $rol . '_tax' );
+	protected static function get_taxonomy_term_id( $betrokkene_id, $rol, $betrokkene, $id ) {
+		$term = get_term_by( 'slug', $betrokkene_id, 'boekdb_' . $rol . '_tax' );
 		if ( $term ) {
 			$term_id = $term->term_id;
 		} else {
 			$result  = wp_insert_term(
-				$medewerker->naam,
+				$betrokkene->naam,
 				'boekdb_' . $rol . '_tax',
 				array(
-					'name' => $medewerker->naam,
+					'name' => $betrokkene->naam,
 					'slug' => (int) $id
 				) );
 			$term_id = $result['term_id'];
 		}
 
 		return $term_id;
+	}
+
+	/**
+	 * parse contributors
+	 *
+	 * @param $product
+	 * @param $boek_post_id
+	 */
+	protected static function handle_betrokkenen( $product, $boek_post_id ) {
+		$term_ids = array(
+			'auteur'      => array(),
+			'illustrator' => array(),
+			'spreker'     => array(),
+		);
+
+		$betrokkenen_meta[] = array();
+
+		foreach ( $product->betrokkenen as $betrokkene ) {
+			$boekdb_betrokkene = self::create_betrokkene_array( $betrokkene );
+			$rol               = strtolower( $betrokkene->rol );
+			if ( $rol === 'voorlezer' || $rol === 'verteller' ) {
+				$rol = 'spreker';
+			}
+
+			if ( $rol === 'auteur' || $rol === 'illustrator' || $rol === 'spreker' ) {
+				$betrokkene_post_id = self::find_field( 'boekdb_betrokkene', 'boekdb_id', $betrokkene->id );
+				$post               = array(
+					'ID'          => $betrokkene_post_id,
+					'post_status' => 'publish',
+					'post_type'   => 'boekdb_betrokkene',
+					'post_title'  => $boekdb_betrokkene['naam'],
+					'post_name'   => sanitize_title( $boekdb_betrokkene['naam'] ),
+				);
+
+				// create/update post
+				if ( is_null( $betrokkene_post_id ) ) {
+					$betrokkene_post_id = wp_insert_post( $post );
+				} else {
+					$betrokkene_post_id = wp_update_post( $post );
+				}
+
+				// save post meta
+				foreach ( $boekdb_betrokkene as $key => $value ) {
+					switch ( $key ) {
+						default:
+							update_post_meta( $betrokkene_post_id, 'boekdb_' . $key, $value );
+							break;
+					}
+				}
+
+				$betrokkene_id = $boekdb_betrokkene['id'];
+
+				$term_id = self::get_taxonomy_term_id( $betrokkene_id, $rol, $betrokkene,
+					$boekdb_betrokkene['id'] );
+				wp_set_object_terms( $betrokkene_post_id, $term_id, 'boekdb_' . $rol . '_tax' );
+				$term_ids[ $rol ][] = $term_id;
+			} else {
+				$betrokkenen_meta[ $rol ] = ( isset( $betrokkenen_meta[ $rol ] ) ? $betrokkenen_meta[ $rol ] . ', ' : '' ) . $boekdb_betrokkene['naam'];
+			}
+		}
+
+		wp_set_object_terms( $boek_post_id, $term_ids['auteur'], 'boekdb_auteur_tax', false );
+		wp_set_object_terms( $boek_post_id, $term_ids['illustrator'], 'boekdb_illustrator_tax', false );
+		wp_set_object_terms( $boek_post_id, $term_ids['spreker'], 'boekdb_spreker_tax', false );
+		foreach ( $betrokkenen_meta as $key => $value ) {
+			update_post_meta( $boek_post_id, 'boekdb_' . $key, $value );
+		}
 	}
 }
 
