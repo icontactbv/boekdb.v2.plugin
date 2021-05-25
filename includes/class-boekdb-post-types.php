@@ -19,6 +19,9 @@ class Boekdb_Post_Types {
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'register_taxonomies' ), 5 );
 		add_action( 'init', array( __CLASS__, 'register_post_types' ), 5 );
+		add_filter( 'posts_join', array( __CLASS__, 'search_join' ), 5 );
+		add_filter( 'posts_where', array( __CLASS__, 'search_where' ), 5 );
+		add_filter( 'posts_distinct', array( __CLASS__, 'search_distinct' ), 5 );
 		add_filter( 'gutenberg_can_edit_post_type', array( __CLASS__, 'gutenberg_can_edit_post_type' ), 10, 2 );
 		add_filter( 'use_block_editor_for_post_type', array( __CLASS__, 'gutenberg_can_edit_post_type' ), 10, 2 );
 	}
@@ -222,7 +225,56 @@ class Boekdb_Post_Types {
 	 * @return bool
 	 */
 	public static function gutenberg_can_edit_post_type( $can_edit, $post_type ) {
-		return 'product' === $post_type ? false : $can_edit;
+		$result = 'boekdb_boek' === $post_type || 'boekdb_betrokkene' === $post_type || 'boekdb_nstc' === $post_type;
+
+		return $result ? false : $can_edit;
+	}
+
+	/**
+	 * Join posts and postmeta tables
+	 *
+	 * http://codex.wordpress.org/Plugin_API/Filter_Reference/posts_join
+	 */
+	public static function search_join( $join ) {
+		global $wpdb;
+
+		if ( is_search() ) {
+			$join .= ' LEFT JOIN ' . $wpdb->postmeta . ' ON ' . $wpdb->posts . '.ID = ' . $wpdb->postmeta . '.post_id ';
+		}
+
+		return $join;
+	}
+
+	/**
+	 * Modify the search query with posts_where
+	 *
+	 * http://codex.wordpress.org/Plugin_API/Filter_Reference/posts_where
+	 */
+	public static function search_where( $where ) {
+		global $pagenow, $wpdb;
+
+		if ( is_search() ) {
+			$where = preg_replace(
+				"/\(\s*" . $wpdb->posts . ".post_title\s+LIKE\s*(\'[^\']+\')\s*\)/",
+				"(" . $wpdb->posts . ".post_title LIKE $1) OR (" . $wpdb->postmeta . ".meta_value LIKE $1)", $where );
+		}
+
+		return $where;
+	}
+
+	/**
+	 * Prevent duplicates
+	 *
+	 * http://codex.wordpress.org/Plugin_API/Filter_Reference/posts_distinct
+	 */
+	public static function search_distinct( $where ) {
+		global $wpdb;
+
+		if ( is_search() ) {
+			return "DISTINCT";
+		}
+
+		return $where;
 	}
 
 
