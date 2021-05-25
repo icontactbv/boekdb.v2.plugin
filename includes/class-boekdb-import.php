@@ -119,7 +119,7 @@ class BoekDB_Import {
 		$boek['serietitel']          = $product->serietitel;
 		$boek['deel']                = $product->deel;
 		$boek['druk']                = $product->druk;
-		//$boek['verschijningsvorm']   = $product->verschijningsvorm;
+		$boek['verschijningsvorm']   = $product->verschijningsvorm;
 		$boek['uitgever']            = $product->uitgever;
 		$boek['imprint']             = $product->imprint;
 		$boek['flaptekst']           = $product->flaptekst;
@@ -221,6 +221,8 @@ class BoekDB_Import {
 		$boek = self::create_boek_array( $product );
 
 		$boek_post_id = self::find_field( 'boekdb_boek', 'boekdb_isbn', $boek['isbn'] );
+
+		$nstc = null;
 		if ( ! is_null( $boek['nstc'] ) ) {
 			$nstc = self::find_field( 'boekdb_boek', 'boekdb_nstc', $boek['nstc'] );
 			if ( $nstc == $boek_post_id ) {

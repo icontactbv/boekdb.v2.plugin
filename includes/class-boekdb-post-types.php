@@ -19,6 +19,8 @@ class Boekdb_Post_Types {
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'register_taxonomies' ), 5 );
 		add_action( 'init', array( __CLASS__, 'register_post_types' ), 5 );
+		add_filter( 'gutenberg_can_edit_post_type', array( __CLASS__, 'gutenberg_can_edit_post_type' ), 10, 2 );
+		add_filter( 'use_block_editor_for_post_type', array( __CLASS__, 'gutenberg_can_edit_post_type' ), 10, 2 );
 	}
 
 	/**
@@ -78,7 +80,7 @@ class Boekdb_Post_Types {
 	}
 
 	protected static function register_onderwerpen_taxonomies() {
-		$args   = array(
+		$args = array(
 			'hierarchical'      => false,
 			'public'            => false,
 			'rewrite'           => false,
@@ -89,21 +91,21 @@ class Boekdb_Post_Types {
 			'show_tagcloud'     => false,
 		);
 
-		$labels = array(
+		$labels         = array(
 			'name'          => 'NUR',
 			'singular_name' => 'NUR',
 		);
 		$args['labels'] = $labels;
 		register_taxonomy( 'boekdb_nur_tax', 'boekdb_boek', $args );
 
-		$labels = array(
+		$labels         = array(
 			'name'          => 'BISAC',
 			'singular_name' => 'BISAC',
 		);
 		$args['labels'] = $labels;
 		register_taxonomy( 'boekdb_bisac_tax', 'boekdb_boek', $args );
 
-		$labels = array(
+		$labels         = array(
 			'name'          => 'THEMA',
 			'singular_name' => 'THEMA',
 		);
@@ -209,6 +211,18 @@ class Boekdb_Post_Types {
 				'show_in_rest' => true
 			)
 		);
+	}
+
+	/**
+	 * Disable Gutenberg
+	 *
+	 * @param  bool  $can_edit  Whether the post type can be edited or not.
+	 * @param  string  $post_type  The post type being checked.
+	 *
+	 * @return bool
+	 */
+	public static function gutenberg_can_edit_post_type( $can_edit, $post_type ) {
+		return 'product' === $post_type ? false : $can_edit;
 	}
 
 
