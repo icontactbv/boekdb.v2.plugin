@@ -14,6 +14,9 @@ defined( 'ABSPATH' ) || exit;
 class BoekDB_Import {
 	const CRON_HOOK = 'boekdb_import';
 
+	const BASE_URL = 'https://boekdbv2.nl/api/json/v1/products';
+
+
 	/**
 	 * Hook in tabs.
 	 */
@@ -78,7 +81,7 @@ class BoekDB_Import {
 	 * @todo   check result before json decoding
 	 */
 	protected static function fetch() {
-		$curl          = curl_init( 'https://boekdbv2.nl/api/json/v1/products?updated_at=2021-05-20T11%3A49%3A37%2B01%3A00' );
+		$curl          = curl_init( BASE_URL.'?updated_at=2021-05-20T11%3A49%3A37%2B01%3A00' );
 		$authorization = "Authorization: Bearer j8mG6QORW04kgiEwH3G7hybmm0gEKU32dNUmyVtFGC08YXt9sRHlzkH8WTGkp7IJ";
 
 		curl_setopt( $curl, CURLOPT_HTTPHEADER, array(

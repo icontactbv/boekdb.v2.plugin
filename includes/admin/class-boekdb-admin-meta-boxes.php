@@ -4,7 +4,7 @@
  *
  * Sets up the write panels used by custom post types
  *
- * @package WooCommerce\Admin\Meta Boxes
+ * @package  BoekDB\Admin\Meta Boxes
  */
 
 defined( 'ABSPATH' ) || exit;

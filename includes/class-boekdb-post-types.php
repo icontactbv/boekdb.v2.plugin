@@ -256,7 +256,7 @@ class Boekdb_Post_Types {
 		if ( is_search() ) {
 			$where = preg_replace(
 				"/\(\s*" . $wpdb->posts . ".post_title\s+LIKE\s*(\'[^\']+\')\s*\)/",
-				"(" . $wpdb->posts . ".post_title LIKE $1) OR (" . $wpdb->postmeta . ".meta_value LIKE $1)", $where );
+				"(" . $wpdb->posts . ".post_title LIKE $1) OR (" . $wpdb->postmeta . ".meta_value LIKE $1 AND meta_key LIKE 'boekdb_%')", $where );
 		}
 
 		return $where;
@@ -276,7 +276,6 @@ class Boekdb_Post_Types {
 
 		return $where;
 	}
-
 
 }
 
