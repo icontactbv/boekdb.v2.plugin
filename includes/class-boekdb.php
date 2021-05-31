@@ -70,6 +70,7 @@ final class BoekDB {
 		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-import.php';
 
 		include_once BOEKDB_ABSPATH . 'includes/admin/class-boekdb-admin-meta-boxes.php';
+		include_once BOEKDB_ABSPATH . 'includes/admin/class-boekdb-admin.php';
 	}
 
 	/**
@@ -89,6 +90,16 @@ final class BoekDB {
 	 */
 	private function init_hooks() {
 		register_activation_hook( BOEKDB_PLUGIN_FILE, array( 'BoekDB_Install', 'install' ) );
+	}
+
+
+	/**
+	 * Get the plugin url.
+	 *
+	 * @return string
+	 */
+	public function plugin_url() {
+		return untrailingslashit( plugins_url( '/', BOEKDB_PLUGIN_FILE ) );
 	}
 
 }

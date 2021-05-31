@@ -159,8 +159,8 @@ class Boekdb_Post_Types {
 		}
 
 		$labels = array(
-			'name'          => 'betrokkenen',
-			'singular_name' => 'betrokkene',
+			'name'          => 'Betrokkenen',
+			'singular_name' => 'Betrokkene',
 		);
 
 		register_post_type(
@@ -179,7 +179,6 @@ class Boekdb_Post_Types {
 					'create_posts' => 'do_not_allow',
 				),
 				'map_meta_cap'    => true,
-				//'taxonomies'   => 'category',
 				'rewrite'         => array( 'slug' => 'betrokkene' ),
 				'show_in_rest'    => true
 			)

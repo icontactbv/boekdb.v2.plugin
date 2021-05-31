@@ -62,6 +62,7 @@ class BoekDB_Install {
 	private static function update_boekdb_version() {
 		update_option( 'boekdb_version', BoekDB()->version );
 	}
+
 }
 
 

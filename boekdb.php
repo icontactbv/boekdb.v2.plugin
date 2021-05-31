@@ -33,4 +33,6 @@ function BoekDB()
     return BoekDB::instance();
 }
 
+include_once dirname(BOEKDB_PLUGIN_FILE) . '/includes/boekdb-page-functions.php';
+
 BoekDB();

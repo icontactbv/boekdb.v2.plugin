@@ -46,8 +46,8 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			if ( empty( self::$settings ) ) {
 				$settings = array();
 
-				include_once dirname( __FILE__ ) . '/settings/class-wc-settings-page.php';
-				self::$settings = apply_filters( 'woocommerce_get_settings_pages', $settings );
+				include_once dirname( __DIR__ ) . '/settings/class-boekdb-settings-page.php';
+				self::$settings = apply_filters( 'boekdb_get_settings_pages', $settings );
 			}
 
 			return self::$settings;
@@ -62,19 +62,18 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			check_admin_referer( 'woocommerce-settings' );
 
 			// Trigger actions.
-			do_action( 'woocommerce_settings_save_' . $current_tab );
-			do_action( 'woocommerce_update_options_' . $current_tab );
-			do_action( 'woocommerce_update_options' );
+			do_action( 'boekdb_settings_save_' . $current_tab );
+			do_action( 'boekdb_update_options_' . $current_tab );
+			do_action( 'boekdb_update_options' );
 
-			self::add_message( __( 'Your settings have been saved.', 'woocommerce' ) );
-			self::check_download_folder_protection();
+			self::add_message( __( 'Your settings have been saved.', 'boekdb' ) );
 
 			// Clear any unwanted data and flush rules.
-			update_option( 'woocommerce_queue_flush_rewrite_rules', 'yes' );
-			WC()->query->init_query_vars();
-			WC()->query->add_endpoints();
+			update_option( 'boekdb_queue_flush_rewrite_rules', 'yes' );
+			BoekDB()->query->init_query_vars();
+			BoekDB()->query->add_endpoints();
 
-			do_action( 'woocommerce_settings_saved' );
+			do_action( 'boekdb_settings_saved' );
 		}
 
 		/**
@@ -120,13 +119,13 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 
 			$suffix = Constants::is_true( 'SCRIPT_DEBUG' ) ? '' : '.min';
 
-			do_action( 'woocommerce_settings_start' );
+			do_action( 'boekdb_settings_start' );
 
-			wp_enqueue_script( 'woocommerce_settings', WC()->plugin_url() . '/assets/js/admin/settings' . $suffix . '.js', array( 'jquery', 'wp-util', 'jquery-ui-datepicker', 'jquery-ui-sortable', 'iris', 'selectWoo' ), WC()->version, true );
+			wp_enqueue_script( 'boekdb_settings', BoekDB()->plugin_url() . '/assets/js/admin/settings' . $suffix . '.js', array( 'jquery', 'wp-util', 'jquery-ui-datepicker', 'jquery-ui-sortable', 'iris', 'selectWoo' ), BoekDB()->version, true );
 
 			wp_localize_script(
-				'woocommerce_settings',
-				'woocommerce_settings_params',
+				'boekdb_settings',
+				'boekdb_settings_params',
 				array(
 					'i18n_nav_warning'                    => __( 'The changes you made will be lost if you navigate away from this page.', 'woocommerce' ),
 					'i18n_moved_up'                       => __( 'Item moved up', 'woocommerce' ),
@@ -136,7 +135,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			);
 
 			// Get tabs for the settings page.
-			$tabs = apply_filters( 'woocommerce_settings_tabs_array', array() );
+			$tabs = apply_filters( 'boekdb_settings_tabs_array', array() );
 
 			include dirname( __FILE__ ) . '/views/html-admin-settings.php';
 		}
@@ -257,18 +256,18 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 						}
 						echo '<table class="form-table">' . "\n\n";
 						if ( ! empty( $value['id'] ) ) {
-							do_action( 'woocommerce_settings_' . sanitize_title( $value['id'] ) );
+							do_action( 'boekdb_settings_' . sanitize_title( $value['id'] ) );
 						}
 						break;
 
 					// Section Ends.
 					case 'sectionend':
 						if ( ! empty( $value['id'] ) ) {
-							do_action( 'woocommerce_settings_' . sanitize_title( $value['id'] ) . '_end' );
+							do_action( 'boekdb_settings_' . sanitize_title( $value['id'] ) . '_end' );
 						}
 						echo '</table>';
 						if ( ! empty( $value['id'] ) ) {
-							do_action( 'woocommerce_settings_' . sanitize_title( $value['id'] ) . '_after' );
+							do_action( 'boekdb_settings_' . sanitize_title( $value['id'] ) . '_after' );
 						}
 						break;
 
@@ -509,14 +508,14 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 					// Image width settings. @todo deprecate and remove in 4.0. No longer needed by core.
 					case 'image_width':
 						$image_size       = str_replace( '_image_size', '', $value['id'] );
-						$size             = wc_get_image_size( $image_size );
+						$size             = boekdb_get_image_size( $image_size );
 						$width            = isset( $size['width'] ) ? $size['width'] : $value['default']['width'];
 						$height           = isset( $size['height'] ) ? $size['height'] : $value['default']['height'];
 						$crop             = isset( $size['crop'] ) ? $size['crop'] : $value['default']['crop'];
 						$disabled_attr    = '';
 						$disabled_message = '';
 
-						if ( has_filter( 'woocommerce_get_image_size_' . $image_size ) ) {
+						if ( has_filter( 'boekdb_get_image_size_' . $image_size ) ) {
 							$disabled_attr    = 'disabled="disabled"';
 							$disabled_message = '<p><small>' . esc_html__( 'The settings of this image size have been disabled because its values are being overwritten by a filter.', 'woocommerce' ) . '</small></p>';
 						}
@@ -594,7 +593,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 									<?php echo implode( ' ', $custom_attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 									data-placeholder="<?php esc_attr_e( 'Search for a page&hellip;', 'woocommerce' ); ?>"
 									data-allow_clear="true"
-									data-exclude="<?php echo wc_esc_json( wp_json_encode( $value['args']['exclude'] ) ); ?>"
+									data-exclude="<?php echo boekdb_esc_json( wp_json_encode( $value['args']['exclude'] ) ); ?>"
 									>
 									<option value=""></option>
 									<?php if ( ! is_null( $page ) ) { ?>
@@ -625,8 +624,8 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 							<th scope="row" class="titledesc">
 								<label for="<?php echo esc_attr( $value['id'] ); ?>"><?php echo esc_html( $value['title'] ); ?> <?php echo $tooltip_html; // WPCS: XSS ok. ?></label>
 							</th>
-							<td class="forminp"><select name="<?php echo esc_attr( $value['id'] ); ?>" style="<?php echo esc_attr( $value['css'] ); ?>" data-placeholder="<?php esc_attr_e( 'Choose a country / region&hellip;', 'woocommerce' ); ?>" aria-label="<?php esc_attr_e( 'Country / Region', 'woocommerce' ); ?>" class="wc-enhanced-select">
-								<?php WC()->countries->country_dropdown_options( $country, $state ); ?>
+							<td class="forminp"><select name="<?php echo esc_attr( $value['id'] ); ?>" style="<?php echo esc_attr( $value['css'] ); ?>" data-placeholder="<?php esc_attr_e( 'Choose a country / region&hellip;', 'woocommerce' ); ?>" aria-label="<?php esc_attr_e( 'Country / Region', 'woocommerce' ); ?>" class="boekdb-enhanced-select">
+								<?php BoekDB()->countries->country_dropdown_options( $country, $state ); ?>
 							</select> <?php echo $description; // WPCS: XSS ok. ?>
 							</td>
 						</tr>
@@ -640,7 +639,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 						if ( ! empty( $value['options'] ) ) {
 							$countries = $value['options'];
 						} else {
-							$countries = WC()->countries->countries;
+							$countries = BoekDB()->countries->countries;
 						}
 
 						asort( $countries );
@@ -650,11 +649,11 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 								<label for="<?php echo esc_attr( $value['id'] ); ?>"><?php echo esc_html( $value['title'] ); ?> <?php echo $tooltip_html; // WPCS: XSS ok. ?></label>
 							</th>
 							<td class="forminp">
-								<select multiple="multiple" name="<?php echo esc_attr( $value['id'] ); ?>[]" style="width:350px" data-placeholder="<?php esc_attr_e( 'Choose countries / regions&hellip;', 'woocommerce' ); ?>" aria-label="<?php esc_attr_e( 'Country / Region', 'woocommerce' ); ?>" class="wc-enhanced-select">
+								<select multiple="multiple" name="<?php echo esc_attr( $value['id'] ); ?>[]" style="width:350px" data-placeholder="<?php esc_attr_e( 'Choose countries / regions&hellip;', 'woocommerce' ); ?>" aria-label="<?php esc_attr_e( 'Country / Region', 'woocommerce' ); ?>" class="boekdb-enhanced-select">
 									<?php
 									if ( ! empty( $countries ) ) {
 										foreach ( $countries as $key => $val ) {
-											echo '<option value="' . esc_attr( $key ) . '"' . wc_selected( $key, $selections ) . '>' . esc_html( $val ) . '</option>'; // WPCS: XSS ok.
+											echo '<option value="' . esc_attr( $key ) . '"' . boekdb_selected( $key, $selections ) . '>' . esc_html( $val ) . '</option>'; // WPCS: XSS ok.
 										}
 									}
 									?>
@@ -672,7 +671,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 							'months' => __( 'Month(s)', 'woocommerce' ),
 							'years'  => __( 'Year(s)', 'woocommerce' ),
 						);
-						$option_value = wc_parse_relative_date_option( $value['value'] );
+						$option_value = boekdb_parse_relative_date_option( $value['value'] );
 						?>
 						<tr valign="top">
 							<th scope="row" class="titledesc">
@@ -705,7 +704,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 
 					// Default: run an action.
 					default:
-						do_action( 'woocommerce_admin_field_' . $value['type'], $value );
+						do_action( 'boekdb_admin_field_' . $value['type'], $value );
 						break;
 				}
 			}
@@ -743,7 +742,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			if ( $tooltip_html && in_array( $value['type'], array( 'checkbox' ), true ) ) {
 				$tooltip_html = '<p class="description">' . $tooltip_html . '</p>';
 			} elseif ( $tooltip_html ) {
-				$tooltip_html = wc_help_tip( $tooltip_html );
+				$tooltip_html = boekdb_help_tip( $tooltip_html );
 			}
 
 			return array(
@@ -801,13 +800,13 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 						break;
 					case 'multiselect':
 					case 'multi_select_countries':
-						$value = array_filter( array_map( 'wc_clean', (array) $raw_value ) );
+						$value = array_filter( array_map( 'boekdb_clean', (array) $raw_value ) );
 						break;
 					case 'image_width':
 						$value = array();
 						if ( isset( $raw_value['width'] ) ) {
-							$value['width']  = wc_clean( $raw_value['width'] );
-							$value['height'] = wc_clean( $raw_value['height'] );
+							$value['width']  = boekdb_clean( $raw_value['width'] );
+							$value['height'] = boekdb_clean( $raw_value['height'] );
 							$value['crop']   = isset( $raw_value['crop'] ) ? 1 : 0;
 						} else {
 							$value['width']  = $option['default']['width'];
@@ -825,10 +824,10 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 						$value   = in_array( $raw_value, $allowed_values, true ) ? $raw_value : $default;
 						break;
 					case 'relative_date_selector':
-						$value = wc_parse_relative_date_option( $raw_value );
+						$value = boekdb_parse_relative_date_option( $raw_value );
 						break;
 					default:
-						$value = wc_clean( $raw_value );
+						$value = boekdb_clean( $raw_value );
 						break;
 				}
 
@@ -837,9 +836,9 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				 *
 				 * @deprecated 2.4.0 - doesn't allow manipulation of values!
 				 */
-				if ( has_action( 'woocommerce_update_option_' . sanitize_title( $option['type'] ) ) ) {
-					wc_deprecated_function( 'The woocommerce_update_option_X action', '2.4.0', 'woocommerce_admin_settings_sanitize_option filter' );
-					do_action( 'woocommerce_update_option_' . sanitize_title( $option['type'] ), $option );
+				if ( has_action( 'boekdb_update_option_' . sanitize_title( $option['type'] ) ) ) {
+					boekdb_deprecated_function( 'The boekdb_update_option_X action', '2.4.0', 'boekdb_admin_settings_sanitize_option filter' );
+					do_action( 'boekdb_update_option_' . sanitize_title( $option['type'] ), $option );
 					continue;
 				}
 
@@ -848,14 +847,14 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				 *
 				 * @since 2.4.0
 				 */
-				$value = apply_filters( 'woocommerce_admin_settings_sanitize_option', $value, $option, $raw_value );
+				$value = apply_filters( 'boekdb_admin_settings_sanitize_option', $value, $option, $raw_value );
 
 				/**
 				 * Sanitize the value of an option by option name.
 				 *
 				 * @since 2.4.0
 				 */
-				$value = apply_filters( "woocommerce_admin_settings_sanitize_option_$option_name", $value, $option, $raw_value );
+				$value = apply_filters( "boekdb_admin_settings_sanitize_option_$option_name", $value, $option, $raw_value );
 
 				if ( is_null( $value ) ) {
 					continue;
@@ -881,7 +880,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				 *
 				 * @deprecated 2.4.0 - doesn't allow manipulation of values!
 				 */
-				do_action( 'woocommerce_update_option', $option );
+				do_action( 'boekdb_update_option', $option );
 			}
 
 			// Save all options in our array.
@@ -892,38 +891,6 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			return true;
 		}
 
-		/**
-		 * Checks which method we're using to serve downloads.
-		 *
-		 * If using force or x-sendfile, this ensures the .htaccess is in place.
-		 */
-		public static function check_download_folder_protection() {
-			$upload_dir      = wp_get_upload_dir();
-			$downloads_path  = $upload_dir['basedir'] . '/woocommerce_uploads';
-			$download_method = get_option( 'woocommerce_file_download_method' );
-			$file_path       = $downloads_path . '/.htaccess';
-			$file_content    = 'redirect' === $download_method ? 'Options -Indexes' : 'deny from all';
-			$create          = false;
-
-			if ( wp_mkdir_p( $downloads_path ) && ! file_exists( $file_path ) ) {
-				$create = true;
-			} else {
-				$current_content = @file_get_contents( $file_path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-
-				if ( $current_content !== $file_content ) {
-					unlink( $file_path );
-					$create = true;
-				}
-			}
-
-			if ( $create ) {
-				$file_handle = @fopen( $file_path, 'wb' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_read_fopen
-				if ( $file_handle ) {
-					fwrite( $file_handle, $file_content ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fwrite
-					fclose( $file_handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fclose
-				}
-			}
-		}
 	}
 
 endif;
