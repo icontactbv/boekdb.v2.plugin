@@ -117,11 +117,11 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		public static function output() {
 			global $current_section, $current_tab;
 
-			$suffix = Constants::is_true( 'SCRIPT_DEBUG' ) ? '' : '.min';
+			//$suffix = Constants::is_true( 'SCRIPT_DEBUG' ) ? '' : '.min';
 
 			do_action( 'boekdb_settings_start' );
 
-			wp_enqueue_script( 'boekdb_settings', BoekDB()->plugin_url() . '/assets/js/admin/settings' . $suffix . '.js', array( 'jquery', 'wp-util', 'jquery-ui-datepicker', 'jquery-ui-sortable', 'iris', 'selectWoo' ), BoekDB()->version, true );
+			//wp_enqueue_script( 'boekdb_settings', BoekDB()->plugin_url() . '/assets/js/admin/settings' . $suffix . '.js', array( 'jquery', 'wp-util', 'jquery-ui-datepicker', 'jquery-ui-sortable', 'iris', 'selectWoo' ), BoekDB()->version, true );
 
 			wp_localize_script(
 				'boekdb_settings',
@@ -137,7 +137,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			// Get tabs for the settings page.
 			$tabs = apply_filters( 'boekdb_settings_tabs_array', array() );
 
-			include dirname( __FILE__ ) . '/views/html-admin-settings.php';
+			include __DIR__ . '/views/html-admin-settings.php';
 		}
 
 		/**
