@@ -64,7 +64,6 @@ final class BoekDB {
 	 * Include required files
 	 */
 	public function includes() {
-		include_once BOEKDB_ABSPATH . 'includes/boekdb-core-functions.php';
 		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-post-types.php';
 		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-install.php';
 		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-import.php';

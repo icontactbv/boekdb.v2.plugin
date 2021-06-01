@@ -46,6 +46,7 @@ class Boekdb_Post_Types {
 			return;
 		}
 
+		self::register_etalage_post_type();
 		self::register_nstc_post_type();
 		self::register_boek_post_type();
 		self::register_betrokkene_post_type();
@@ -211,6 +212,35 @@ class Boekdb_Post_Types {
 				'map_meta_cap' => true,
 				'rewrite'      => array( 'slug' => 'boek' ),
 				'show_in_rest' => true
+			)
+		);
+	}
+
+	protected static function register_etalage_post_type() {
+		if ( post_type_exists( 'boekdb_etalage' ) ) {
+			return;
+		}
+
+		$labels = array(
+			'name'          => 'Etalages',
+			'singular_name' => 'Etalage',
+		);
+
+		register_post_type(
+			'boekdb_etalage', array(
+				'labels'       => $labels,
+				'has_archive'  => true,
+				'public'       => true,
+				'hierarchical' => false,
+				'supports'     => array(
+					'title',
+				),
+				'capabilities' => array(
+
+				),
+				'map_meta_cap' => true,
+				'rewrite'      => array( 'slug' => 'etalage' ),
+				'show_in_rest' => false
 			)
 		);
 	}
