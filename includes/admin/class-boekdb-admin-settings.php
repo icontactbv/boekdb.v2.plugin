@@ -97,7 +97,16 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		}
 
 		public static function output() {
+			$etalages = self::get_etalages();
 			include __DIR__ . '/views/html-admin-settings.php';
+		}
+
+		public static function get_etalages() {
+			global $wpdb;
+
+			$etalages = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}boekdb_etalages", OBJECT );
+			var_dump($etalages);
+			die();
 		}
 
 	}

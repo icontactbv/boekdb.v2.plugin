@@ -46,8 +46,10 @@ class BoekDB_Install {
 
 		// If we made it till here nothing is running yet, lets set the transient now.
 		set_transient( 'boekdb_installing', 'yes', MINUTE_IN_SECONDS * 10 );
-		define( BOEKDB_INSTALLING, true );
+		define( "BOEKDB_INSTALLING", true );
+
 		self::update_boekdb_version();
+		self::register_tables();
 
 		delete_transient( 'boekdb_installing' );
 
@@ -62,6 +64,33 @@ class BoekDB_Install {
 		update_option( 'boekdb_version', BoekDB()->version );
 	}
 
+	private static function register_tables() {
+		global $wpdb;
+
+		$charset_collate = $wpdb->get_charset_collate();
+		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+
+		//* Create the etalage table
+		$table_name = $wpdb->prefix . 'boekdb_etalages';
+		$sql        = "CREATE TABLE $table_name (
+			 etalage_id INTEGER NOT NULL AUTO_INCREMENT,
+			 etalage_name varchar(192) NOT NULL,
+			 etalage_key varchar(192) NOT NULL,
+			 PRIMARY KEY (etalage_id)
+			 ) $charset_collate;";
+		dbDelta( $sql );
+
+		//* Create the etalage table
+		$table_name = $wpdb->prefix . 'boekdb_etalage_boeken';
+		$sql        = "CREATE TABLE $table_name (
+    		 id INTEGER NOT NULL AUTO_INCREMENT,
+			 etalage_id INTEGER NOT NULL,
+			 boek_id INTEGER NOT NULL,
+			 PRIMARY KEY (id)
+			 ) $charset_collate;";
+		dbDelta( $sql );
+
+	}
 }
 
 
