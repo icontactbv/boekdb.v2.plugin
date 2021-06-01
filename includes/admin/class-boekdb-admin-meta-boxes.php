@@ -4,13 +4,13 @@
  *
  * Sets up the write panels used by custom post types
  *
- * @package  BoekDB\Admin\Meta Boxes
+ * @package BoekDB\Admin\Meta Boxes
  */
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * WC_Admin_Meta_Boxes.
+ * BoekDB_Admin_Meta_Boxes.
  */
 class BoekDB_Admin_Meta_Boxes {
 	/**

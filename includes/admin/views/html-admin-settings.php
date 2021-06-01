@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</th>
 
 				<td>
-					<input type="text" value="key..." id="boekdb_api_key" name="boekdb_api_key">
+					<input type="text" placeholder="BoekDB API Key" id="boekdb_api_key" name="boekdb_api_key">
 					<br>
 					<span class="description">BoekDB API Key invullen</span>
 				</td>

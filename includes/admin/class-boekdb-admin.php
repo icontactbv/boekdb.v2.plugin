@@ -2,8 +2,8 @@
 /**
  * BoekDB Admin
  *
- * @class    BoekDB_Admin
- * @package  BoekDB\Admin
+ * @class   BoekDB_Admin
+ * @package BoekDB\Admin
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

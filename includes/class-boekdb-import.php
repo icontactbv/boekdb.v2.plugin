@@ -78,7 +78,6 @@ class BoekDB_Import {
 	 * Fetch from BoekDB
 	 *
 	 * @return array
-	 * @todo   check result before json decoding
 	 */
 	protected static function fetch() {
 		$curl          = curl_init( self::BASE_URL.'?updated_at=2021-05-20T11%3A49%3A37%2B01%3A00' );
@@ -263,7 +262,7 @@ class BoekDB_Import {
 	}
 
 	/**
-	 * get taxonomy term_id
+	 * Get taxonomy term_id
 	 *
 	 * @param $slug
 	 * @param $taxonomy
@@ -290,7 +289,7 @@ class BoekDB_Import {
 	}
 
 	/**
-	 * parse contributors
+	 * Parse contributors
 	 *
 	 * @param $product
 	 * @param $boek_post_id

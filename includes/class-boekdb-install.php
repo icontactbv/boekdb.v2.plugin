@@ -46,8 +46,7 @@ class BoekDB_Install {
 
 		// If we made it till here nothing is running yet, lets set the transient now.
 		set_transient( 'boekdb_installing', 'yes', MINUTE_IN_SECONDS * 10 );
-		boekdb_maybe_define_constant( 'BOEKDB_INSTALLING', true );
-
+		define( BOEKDB_INSTALLING, true );
 		self::update_boekdb_version();
 
 		delete_transient( 'boekdb_installing' );

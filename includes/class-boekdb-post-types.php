@@ -218,8 +218,8 @@ class Boekdb_Post_Types {
 	/**
 	 * Disable Gutenberg
 	 *
-	 * @param  bool  $can_edit  Whether the post type can be edited or not.
-	 * @param  string  $post_type  The post type being checked.
+	 * @param bool  $can_edit  Whether the post type can be edited or not.
+	 * @param string  $post_type  The post type being checked.
 	 *
 	 * @return bool
 	 */
@@ -231,7 +231,6 @@ class Boekdb_Post_Types {
 
 	/**
 	 * Join posts and postmeta tables
-	 *
 	 * http://codex.wordpress.org/Plugin_API/Filter_Reference/posts_join
 	 */
 	public static function search_join( $join ) {
@@ -246,7 +245,6 @@ class Boekdb_Post_Types {
 
 	/**
 	 * Modify the search query with posts_where
-	 *
 	 * http://codex.wordpress.org/Plugin_API/Filter_Reference/posts_where
 	 */
 	public static function search_where( $where ) {
@@ -255,7 +253,8 @@ class Boekdb_Post_Types {
 		if ( is_search() ) {
 			$where = preg_replace(
 				"/\(\s*" . $wpdb->posts . ".post_title\s+LIKE\s*(\'[^\']+\')\s*\)/",
-				"(" . $wpdb->posts . ".post_title LIKE $1) OR (" . $wpdb->postmeta . ".meta_value LIKE $1 AND meta_key LIKE 'boekdb_%')", $where );
+				"(" . $wpdb->posts . ".post_title LIKE $1) OR (" . $wpdb->postmeta . ".meta_value LIKE $1 AND meta_key LIKE 'boekdb_%')",
+				$where );
 		}
 
 		return $where;
@@ -263,7 +262,6 @@ class Boekdb_Post_Types {
 
 	/**
 	 * Prevent duplicates
-	 *
 	 * http://codex.wordpress.org/Plugin_API/Filter_Reference/posts_distinct
 	 */
 	public static function search_distinct( $where ) {
