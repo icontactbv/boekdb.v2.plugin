@@ -21,17 +21,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 		?>
 		<table class="form-table">
 			<tbody>
+            <tr>
+                <th scope="col">Naam</th>
+                <th scope="col">Boeken</th>
+                <th scope="col">API Key</th>
+                <th scope="col">Laatste import</th>
+            </tr>
             <?php foreach($etalages as $etalage) : ?>
 			<tr>
-				<th scope="row">
-					<label for="my-text-field">BoekDB API Key</label>
-				</th>
-
-				<td>
-					<input type="text" placeholder="BoekDB API Key" id="boekdb_api_key" name="boekdb_api_key">
-					<br>
-					<span class="description">BoekDB API Key invullen</span>
-				</td>
+				<td><?php echo $etalage->name ?></td>
+                <td><?php echo $etalage->name ?></td>
+                <td><?php echo $etalage->api_key ?></td>
+                <td><?php echo $etalage->last_import ?></td>
 			</tr>
 			<?php endforeach; ?>
 			</tbody>

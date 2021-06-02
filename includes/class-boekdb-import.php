@@ -41,6 +41,9 @@ class BoekDB_Import {
 			if ( is_null( $last_import ) ) {
 				$last_import = self::DEFAULT_LAST_IMPORT;
 			}
+			$last_import = new DateTime($last_import, wp_timezone());
+			$last_import = $last_import->format('Y-m-d\TH:i:sP');
+
 			while ( $products = self::fetch_products( $etalage->api_key, $last_import, $offset ) ) {
 				foreach ( $products as $product ) {
 					$boek_post_id = self::handle_boek( $product );
@@ -75,8 +78,7 @@ class BoekDB_Import {
 
 	private static function set_last_import( $id ) {
 		global $wpdb;
-
-		return $wpdb->update( $wpdb->prefix . 'boekdb_etalages', array( 'last_import' => current_time( 'mysql' ) ),
+		return $wpdb->update( $wpdb->prefix . 'boekdb_etalages', array( 'last_import' => current_time( 'mysql', 1 ) ),
 			array( 'id' => $id ) );
 	}
 
