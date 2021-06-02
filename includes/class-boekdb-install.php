@@ -73,10 +73,11 @@ class BoekDB_Install {
 		//* Create the etalage table
 		$table_name = $wpdb->prefix . 'boekdb_etalages';
 		$sql        = "CREATE TABLE $table_name (
-			 etalage_id INTEGER NOT NULL AUTO_INCREMENT,
-			 etalage_name varchar(192) NOT NULL,
-			 etalage_key varchar(192) NOT NULL,
-			 PRIMARY KEY (etalage_id)
+			 id INTEGER NOT NULL AUTO_INCREMENT,
+			 name varchar(192) NOT NULL,
+			 api_key varchar(192) NOT NULL,
+			 last_import DATETIME DEFAULT NULL,
+			 PRIMARY KEY (id)
 			 ) $charset_collate;";
 		dbDelta( $sql );
 

@@ -105,8 +105,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			global $wpdb;
 
 			$etalages = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}boekdb_etalages", OBJECT );
-			var_dump($etalages);
-			die();
+			return $etalages;
 		}
 
 	}
