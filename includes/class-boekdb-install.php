@@ -91,6 +91,15 @@ class BoekDB_Install {
 			 ) $charset_collate;";
 		dbDelta( $sql );
 
+		//* Create the isbn table
+		$table_name = $wpdb->prefix . 'boekdb_isbns';
+		$sql        = "CREATE TABLE $table_name (
+    		 id INTEGER NOT NULL AUTO_INCREMENT,
+			 boek_id INTEGER NOT NULL,
+			 isbn CHAR(13) NOT NULL,
+			 PRIMARY KEY (id)
+			 ) $charset_collate;";
+		dbDelta( $sql );
 	}
 }
 

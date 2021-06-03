@@ -30,7 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
             <?php foreach($etalages as $etalage) : ?>
 			<tr>
 				<td><?php echo $etalage->name ?></td>
-                <td><?php echo $etalage->name ?></td>
+                <td><?php echo $etalage->boeken ?></td>
                 <td><?php echo $etalage->api_key ?></td>
                 <td><?php echo $etalage->last_import ?></td>
 			</tr>

@@ -104,7 +104,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		public static function get_etalages() {
 			global $wpdb;
 
-			$etalages = $wpdb->get_results( "SELECT id, name, api_key, DATE_FORMAT(last_import, '%Y-%m-%d %H:%i:%s') as last_import FROM {$wpdb->prefix}boekdb_etalages", OBJECT );
+			$etalages = $wpdb->get_results( "SELECT e.id, e.name, e.api_key, DATE_FORMAT(e.last_import, '%Y-%m-%d %H:%i:%s') as last_import, COUNT(eb.boek_id) as boeken FROM {$wpdb->prefix}boekdb_etalages e LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON e.id = eb.etalage_id GROUP BY e.id", OBJECT );
 			return $etalages;
 		}
 
