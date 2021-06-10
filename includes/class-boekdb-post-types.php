@@ -19,6 +19,8 @@ class Boekdb_Post_Types {
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'register_taxonomies' ), 5 );
 		add_action( 'init', array( __CLASS__, 'register_post_types' ), 5 );
+		add_action( 'init', array( __CLASS__, 'register_post_type_templates' ), 5 );
+
 		add_filter( 'posts_join', array( __CLASS__, 'search_join' ), 5 );
 		add_filter( 'posts_where', array( __CLASS__, 'search_where' ), 5 );
 		add_filter( 'posts_distinct', array( __CLASS__, 'search_distinct' ), 5 );
@@ -49,6 +51,26 @@ class Boekdb_Post_Types {
 		self::register_nstc_post_type();
 		self::register_boek_post_type();
 		self::register_betrokkene_post_type();
+	}
+
+	public static function register_post_type_templates() {
+		add_filter( 'single_template', array(__CLASS__, 'load_boek_template'), 50, 1 );
+		function load_my_custom_template( $template ) {
+
+			if ( is_singular( 'my_custom_post_type' ) ) {
+				$template = plugins_url( 'templates/my_custom_post_type.php', __FILE__ );
+			}
+
+			return $template;
+		}
+	}
+
+	public static function load_boek_template( $template ) {
+		if ( is_singular( 'boekdb_boek' ) ) {
+			$template = plugin_dir_path(__FILE__) . 'templates/boekdb_boek.php';
+		}
+
+		return $template;
 	}
 
 	protected static function register_nstc_post_type() {

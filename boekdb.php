@@ -12,15 +12,15 @@
  * @package BoekDB
  */
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
-if (!defined('BOEKDB_PLUGIN_FILE')) {
-    define('BOEKDB_PLUGIN_FILE', __FILE__);
+if ( ! defined( 'BOEKDB_PLUGIN_FILE' ) ) {
+	define( 'BOEKDB_PLUGIN_FILE', __FILE__ );
 }
 
 // Include the main BoekDB class.
-if (!class_exists('BoekDB', false)) {
-    include_once dirname(BOEKDB_PLUGIN_FILE) . '/includes/class-boekdb.php';
+if ( ! class_exists( 'BoekDB', false ) ) {
+	include_once dirname( BOEKDB_PLUGIN_FILE ) . '/includes/class-boekdb.php';
 }
 
 /**
@@ -28,9 +28,19 @@ if (!class_exists('BoekDB', false)) {
  *
  * @return BoekDB
  */
-function BoekDB()
-{ // phpcs:ignore WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid
-    return BoekDB::instance();
+function BoekDB() { // phpcs:ignore WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid
+	return BoekDB::instance();
 }
 
 BoekDB();
+
+function boekdb_boek_data( $id ) {
+	$data = array();
+	$meta = get_post_meta( $id );
+	foreach ( $meta as $name => $value ) {
+		if ( substr( $name, 0, 7 ) === 'boekdb_' ) {
+			$data[ substr( $name, 7 ) ] = $value[0];
+		}
+	}
+	return $data;
+}
