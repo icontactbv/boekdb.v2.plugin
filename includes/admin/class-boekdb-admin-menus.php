@@ -23,6 +23,8 @@ class BoekDB_Admin_Menus {
 	public function __construct() {
 		// Add menus.
 		add_action( 'admin_menu', array( $this, 'settings_menu' ), 50 );
+
+		add_action( 'wp_loaded', array( $this, 'save_settings' ) );
 	}
 
 	/**
@@ -37,6 +39,14 @@ class BoekDB_Admin_Menus {
 	 */
 	public function settings_page() {
 		BoekDB_Admin_Settings::output();
+	}
+
+	public function save_settings() {
+		// We should only save on the settings page.
+		if ( ! is_admin() || ! isset( $_GET['page'] ) || 'boekdb-settings' !== $_GET['page'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return;
+		}
+		BoekDB_Admin_Settings::save();
 	}
 
 }

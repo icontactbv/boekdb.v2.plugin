@@ -5,8 +5,6 @@
  * @package BoekDB\Admin
  */
 
-use Automattic\Jetpack\Constants;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -57,16 +55,34 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * Save the settings.
 		 */
 		public static function save() {
-			self::add_message( __( 'Your settings have been saved.', 'boekdb' ) );
+			global $wpdb;
+			var_dump( $_POST );
+			if ( isset( $_POST['save'] ) && 'save' === $_POST['save'] ) {
+				$api_key = $_POST['etalage_api_key'];
+				$name    = $_POST['etalage_name'];
 
-			BoekDB()->query->init_query_vars();
-			BoekDB()->query->add_endpoints();
+				if ( strlen( $api_key ) === 0 || strlen( $name ) === 0 ) {
+					self::add_error( 'Er is iets fout gegaan' );
+				}
+
+				$wpdb->query(
+					$wpdb->prepare(
+						"INSERT INTO {$wpdb->prefix}boekdb_etalages (`name`, `api_key`) VALUES (%s, %s)",
+						$name,
+						$api_key
+					)
+				);
+				self::add_message( 'Etalage opgeslagen.' );
+			} elseif ( isset( $_POST['run'] ) && 'run' === $_POST['run'] ) {
+				wp_schedule_single_event( time() + 5, BoekDB_Import::CRON_HOOK );
+				self::add_message( 'Import gestart...' );
+			}
 		}
 
 		/**
 		 * Add a message.
 		 *
-		 * @param string $text Message.
+		 * @param  string  $text  Message.
 		 */
 		public static function add_message( $text ) {
 			self::$messages[] = $text;
@@ -75,7 +91,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		/**
 		 * Add an error.
 		 *
-		 * @param string $text Message.
+		 * @param  string  $text  Message.
 		 */
 		public static function add_error( $text ) {
 			self::$errors[] = $text;
@@ -104,7 +120,9 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		public static function get_etalages() {
 			global $wpdb;
 
-			$etalages = $wpdb->get_results( "SELECT e.id, e.name, e.api_key, DATE_FORMAT(e.last_import, '%Y-%m-%d %H:%i:%s') as last_import, COUNT(eb.boek_id) as boeken FROM {$wpdb->prefix}boekdb_etalages e LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON e.id = eb.etalage_id GROUP BY e.id", OBJECT );
+			$etalages = $wpdb->get_results( "SELECT e.id, e.name, e.api_key, DATE_FORMAT(e.last_import, '%Y-%m-%d %H:%i:%s') as last_import, COUNT(eb.boek_id) as boeken FROM {$wpdb->prefix}boekdb_etalages e LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON e.id = eb.etalage_id GROUP BY e.id",
+				OBJECT );
+
 			return $etalages;
 		}
 

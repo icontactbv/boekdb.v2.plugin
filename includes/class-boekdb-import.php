@@ -17,13 +17,12 @@ class BoekDB_Import {
 	const LIMIT               = 250;
 	const DEFAULT_LAST_IMPORT = "2015-01-01T01:00:00+01:00";
 
-
 	/**
 	 * Hook in tabs.
 	 */
 	public static function init() {
 		// debug:
-		//add_action( 'init', array( self::class, 'import' ) );
+		// add_action( 'init', array( self::class, 'import') );
 
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
@@ -32,6 +31,8 @@ class BoekDB_Import {
 	}
 
 	public static function import() {
+		set_time_limit( 0 );
+
 		// we should set a transient to make sure we don't have concurrent imports
 		// we should also make it possible to force an import, probably?
 		// especially when a new etalage is added
@@ -40,11 +41,14 @@ class BoekDB_Import {
 
 		$etalages = self::fetch_etalages();
 		foreach ( $etalages as $etalage ) {
+			$reset = self::check_available_isbns( $etalage );
+
 			$offset      = 0;
 			$last_import = $etalage->last_import;
-			if ( is_null( $last_import ) ) {
+			if ( $reset || is_null( $last_import ) ) {
 				$last_import = self::DEFAULT_LAST_IMPORT;
 			}
+
 			$last_import = new DateTime( $last_import, wp_timezone() );
 			$last_import = $last_import->format( 'Y-m-d\TH:i:sP' );
 
@@ -63,18 +67,39 @@ class BoekDB_Import {
 							wp_set_object_terms( $boek_post_id, $term_id, 'boekdb_thema_tax' );
 						}
 					}
+
 					self::link_product( $boek_post_id, $isbn, $etalage->id );
 				}
 				$offset = $offset + self::LIMIT;
 			}
 			self::set_last_import( $etalage->id );
-
-			self::check_available_isbns( $etalage->id, $etalage->api_key );
 		}
 	}
 
-	private static function check_available_isbns( $etalage_id, $api_key ) {
-		// $isbns = self::fetch_isbns($api_key);
+
+	private static function check_available_isbns( $etalage ) {
+		global $wpdb;
+
+		$isbns = self::fetch_isbns( $etalage->api_key );
+
+		self::unpublish( $etalage->id, $isbns['isbns'] );
+
+		if ( $isbns['filters'] !== $etalage->filter_hash ) {
+			$wpdb->update(
+				$wpdb->prefix . 'boekdb_etalages',
+				array(
+					'filter_hash' => $isbns['filters'],
+					'last_import' => null,
+				),
+				array( 'id' => $etalage->id )
+			);
+
+			// reset
+			return true;
+		}
+
+		// no reset
+		return false;
 	}
 
 	private static function fetch_isbns( $api_key ) {
@@ -91,12 +116,12 @@ class BoekDB_Import {
 		$result = curl_exec( $curl );
 		curl_close( $curl );
 
-		$isbns = json_decode( $result );
-		if ( ! is_array( $isbns ) ) {
+		$result = json_decode( $result, true );
+		if ( ! is_array( $result ) || ! isset( $result['isbns'] ) ) {
 			return false;
 		}
 
-		return $isbns;
+		return $result;
 	}
 
 	private static function link_product( $boek_id, $isbn, $etalage_id ) {
@@ -107,22 +132,23 @@ class BoekDB_Import {
 			'boek_id'    => $boek_id,
 		) );
 		$wpdb->replace( $wpdb->prefix . 'boekdb_isbns', array(
-			'isbn' => $isbn,
-			'boek_id'    => $boek_id,
+			'isbn'    => $isbn,
+			'boek_id' => $boek_id,
 		) );
 	}
 
 	private static function set_last_import( $id ) {
 		global $wpdb;
+		$value = current_time( 'mysql', 1 );
 
-		return $wpdb->update( $wpdb->prefix . 'boekdb_etalages', array( 'last_import' => current_time( 'mysql', 1 ) ),
+		return $wpdb->update( $wpdb->prefix . 'boekdb_etalages', array( 'last_import' => $value ),
 			array( 'id' => $id ) );
 	}
 
 	private static function fetch_etalages() {
 		global $wpdb;
 
-		$etalages = $wpdb->get_results( "SELECT id, api_key, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import FROM {$wpdb->prefix}boekdb_etalages",
+		$etalages = $wpdb->get_results( "SELECT id, api_key, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages",
 			OBJECT );
 
 		return $etalages;
@@ -229,17 +255,6 @@ class BoekDB_Import {
 	 * @return array
 	 */
 	protected static function create_betrokkene_array( $betrokkene ) {
-		/*
-			 "id": 1,
-			"voornaam": "Ken",
-			"tussenvoegsel": null,
-			"achternaam": "Blanchard",
-			"organisatie": null,
-			"biografie": null,
-			"bibliografie": null,
-			"rol": "Auteur",
-			"bestanden": []
-		 */
 		$boekdb_betrokkene                         = array();
 		$boekdb_betrokkene['id']                   = $betrokkene->id;
 		$boekdb_betrokkene['naam']                 = $betrokkene->naam;
@@ -303,12 +318,12 @@ class BoekDB_Import {
 	protected static function handle_boek( $product ) {
 		global $wpdb;
 
-		$boek     = self::create_boek_array( $product );
+		$boek         = self::create_boek_array( $product );
 		$boek_post_id = $wpdb->get_col( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_isbns WHERE isbn = %s",
 			$boek['isbn'] ) );
 
-		if(count($boek_post_id) > 0) {
-			$boek_post_id = (int)$boek_post_id[0];
+		if ( count( $boek_post_id ) > 0 ) {
+			$boek_post_id = (int) $boek_post_id[0];
 		} else {
 			$boek_post_id = self::find_field( 'boekdb_boek', 'boekdb_isbn', $boek['isbn'] );
 		}
@@ -440,6 +455,58 @@ class BoekDB_Import {
 		wp_set_object_terms( $boek_post_id, $term_ids['spreker'], 'boekdb_spreker_tax', false );
 		foreach ( $betrokkenen_meta as $key => $value ) {
 			update_post_meta( $boek_post_id, 'boekdb_' . $key, $value );
+		}
+	}
+
+	/**
+	 * Unpublish posts and delete from custom table
+	 *
+	 * @param $etalage_id
+	 * @param $isbns
+	 */
+	private static function unpublish( $etalage_id, $isbns ) {
+		global $wpdb;
+
+		$prepared_query = $wpdb->prepare(
+			"SELECT i.boek_id 
+					FROM {$wpdb->prefix}boekdb_isbns i
+					    LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON eb.boek_id = i.boek_id
+					    INNER JOIN {$wpdb->posts} p ON p.ID = i.boek_id AND p.post_status = 'publish'
+					WHERE eb.etalage_id = %d",
+			$etalage_id );
+		$prepared_query .= " AND i.isbn NOT IN (";
+		foreach ( $isbns as $isbn ) {
+			$prepared_query .= $wpdb->prepare( '%s,', $isbn );
+		}
+		$prepared_query = substr( $prepared_query, 0, - 1 ) . ")";
+		$result         = $wpdb->get_results( $prepared_query );
+
+		$post_ids = array();
+		foreach ( $result as $boek ) {
+			$post_ids[] = (int) $boek->boek_id;
+		}
+
+		// delete from link table
+		if ( count( $post_ids ) > 0 ) {
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id = %d",
+					$etalage_id
+				) . " AND boek_id IN (" . implode( ',', $post_ids ) . ")"
+			);
+			$args  = array(
+				'post_type'   => 'boekdb_boek',
+				'include'     => $post_ids,
+				'numberposts' => - 1,
+			);
+			$posts = get_posts( $args );
+			foreach ( $posts as $post ) {
+				$query = array(
+					'ID'          => $post->ID,
+					'post_status' => 'draft',
+				);
+				wp_update_post( $query, true );
+			}
 		}
 	}
 }

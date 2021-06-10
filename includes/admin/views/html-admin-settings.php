@@ -38,11 +38,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</tbody>
 		</table>
 
+        <hr />
+
+        <h2>Nieuwe etalage toevoegen</h2>
+        <p>
+            <label for="etalage_name">Naam:</label>
+            <input type="text" name="etalage_name" placeholder="naam">
+        </p>
+        <p>
+            <label for="etalage_api_key">API Key:</label>
+            <input type="text" name="etalage_api_key" placeholder="api-key">
+        </p>
 		<p class="submit">
 			<?php if ( empty( $GLOBALS['hide_save_button'] ) ) : ?>
-				<button name="save" class="button-primary boekdb-save-button" type="submit" value="<?php esc_attr_e( 'Save changes', 'boekdb' ); ?>"><?php esc_html_e( 'Save changes', 'boekdb' ); ?></button>
+				<button name="save" class="button-primary boekdb-save-button" type="submit" value="save">Opslaan</button>
 			<?php endif; ?>
 			<?php wp_nonce_field( 'boekdb-settings' ); ?>
+            <button name="run" class="button-primary boekdb-save-button" type="submit" value="run">Draai import</button>
 		</p>
 	</form>
+
 </div>

@@ -27,7 +27,6 @@ class BoekDB_Install {
 	public static function check_version() {
 		if ( version_compare( get_option( 'boekdb_version' ), BoekDB()->version, '<' ) ) {
 			self::install();
-			//do_action( 'boekdb_updated' );
 		}
 	}
 
@@ -52,9 +51,6 @@ class BoekDB_Install {
 		self::register_tables();
 
 		delete_transient( 'boekdb_installing' );
-
-		//do_action( 'boekdb_flush_rewrite_rules' );
-		//do_action( 'boekdb_installed' );
 	}
 
 	/**
@@ -72,32 +68,31 @@ class BoekDB_Install {
 
 		//* Create the etalage table
 		$table_name = $wpdb->prefix . 'boekdb_etalages';
-		$sql        = "CREATE TABLE $table_name (
-			 id INTEGER NOT NULL AUTO_INCREMENT,
-			 name varchar(192) NOT NULL,
-			 api_key varchar(192) NOT NULL,
-			 last_import DATETIME DEFAULT NULL,
-			 PRIMARY KEY (id)
+		$sql        = "CREATE TABLE `$table_name` (
+			 `id` INTEGER NOT NULL AUTO_INCREMENT,
+			 `name` varchar(192) NOT NULL,
+			 `api_key` varchar(192) NOT NULL,
+			 `last_import` DATETIME DEFAULT NULL,
+			 `filter_hash` varchar(192) DEFAULT NULL,
+			 PRIMARY KEY (`id`)
 			 ) $charset_collate;";
 		dbDelta( $sql );
 
 		//* Create the etalage table
 		$table_name = $wpdb->prefix . 'boekdb_etalage_boeken';
-		$sql        = "CREATE TABLE $table_name (
-    		 id INTEGER NOT NULL AUTO_INCREMENT,
-			 etalage_id INTEGER NOT NULL,
-			 boek_id INTEGER NOT NULL,
-			 PRIMARY KEY (id)
+		$sql        = "CREATE TABLE `$table_name` (
+			 `etalage_id` INTEGER NOT NULL,
+			 `boek_id` INTEGER NOT NULL,
+			 PRIMARY KEY (`etalage_id`,`boek_id`)
 			 ) $charset_collate;";
 		dbDelta( $sql );
 
 		//* Create the isbn table
 		$table_name = $wpdb->prefix . 'boekdb_isbns';
-		$sql        = "CREATE TABLE $table_name (
-    		 id INTEGER NOT NULL AUTO_INCREMENT,
-			 boek_id INTEGER NOT NULL,
-			 isbn CHAR(13) NOT NULL,
-			 PRIMARY KEY (id)
+		$sql        = "CREATE TABLE `$table_name` (
+			 `boek_id` INTEGER NOT NULL,
+			 `isbn` CHAR(13) NOT NULL,
+			 PRIMARY KEY (`boek_id`,`isbn`)
 			 ) $charset_collate;";
 		dbDelta( $sql );
 	}
