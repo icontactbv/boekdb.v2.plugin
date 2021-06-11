@@ -56,7 +56,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 */
 		public static function save() {
 			global $wpdb;
-			var_dump( $_POST );
+
 			if ( isset( $_POST['save'] ) && 'save' === $_POST['save'] ) {
 				$api_key = $_POST['etalage_api_key'];
 				$name    = $_POST['etalage_name'];

@@ -103,18 +103,16 @@ class BoekDB_Import {
 	}
 
 	private static function fetch_isbns( $api_key ) {
-		$curl          = curl_init( self::BASE_URL . 'isbns' );
-		$authorization = "Authorization: Bearer " . $api_key;
+		$result = wp_remote_get(
+			self::BASE_URL . 'isbns',
+			array(
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $api_key,
+				)
+			)
+		);
 
-		curl_setopt( $curl, CURLOPT_HTTPHEADER, array(
-			$authorization
-		) );
-		curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, "GET" );
-		curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-		curl_setopt( $curl, CURLOPT_FOLLOWLOCATION, 1 );
-
-		$result = curl_exec( $curl );
-		curl_close( $curl );
+		$result = wp_remote_retrieve_body( $result );
 
 		$result = json_decode( $result, true );
 		if ( ! is_array( $result ) || ! isset( $result['isbns'] ) ) {
@@ -184,22 +182,18 @@ class BoekDB_Import {
 	 * @return array|boolean
 	 */
 	protected static function fetch_products( $api_key, $last_import, $offset ) {
-		$curl          = curl_init( self::BASE_URL . 'products?updated_at=' . urlencode( $last_import ) );
-		$authorization = "Authorization: Bearer " . $api_key;
+		$result = wp_remote_get(
+			self::BASE_URL . 'products?updated_at=' . urlencode( $last_import ),
+			array(
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $api_key,
+					'x-limit' => self::LIMIT,
+					'x-offset' => $offset,
+				)
+			)
+		);
 
-		curl_setopt( $curl, CURLOPT_HTTPHEADER, array(
-			'x-limit: ' . self::LIMIT,
-			'x-offset: ' . $offset,
-			$authorization
-		) );
-		curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, "GET" );
-		curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-		curl_setopt( $curl, CURLOPT_FOLLOWLOCATION, 1 );
-
-		// curl_setopt($curl, CURLOPT_HEADERFUNCTION, array(__class__, "handle_header"));
-
-		$result = curl_exec( $curl );
-		curl_close( $curl );
+		$result = wp_remote_retrieve_body( $result );
 
 		$products = json_decode( $result );
 		if ( ! is_array( $products ) ) {
