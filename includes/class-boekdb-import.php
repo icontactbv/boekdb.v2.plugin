@@ -33,9 +33,7 @@ class BoekDB_Import {
 	public static function import() {
 		set_time_limit( 0 );
 
-		// we should set a transient to make sure we don't have concurrent imports
-		// we should also make it possible to force an import, probably?
-		// especially when a new etalage is added
+		// @todo we should set a transient to make sure we don't have concurrent imports
 
 		require_once( ABSPATH . 'wp-admin/includes/image.php' );
 
@@ -187,8 +185,8 @@ class BoekDB_Import {
 			array(
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $api_key,
-					'x-limit' => self::LIMIT,
-					'x-offset' => $offset,
+					'x-limit'       => self::LIMIT,
+					'x-offset'      => $offset,
 				)
 			)
 		);
@@ -273,30 +271,32 @@ class BoekDB_Import {
 			return;
 		}
 		foreach ( $product->bestanden as $bestand ) {
-			if ( $bestand->soort === 'Cover' ) {
-				$hash          = md5( $bestand->url );
-				$attachment_id = self::find_field( 'attachment', 'hash', $hash );
-				if ( is_null( $attachment_id ) ) {
-					// delete old cover
-					// $cover_id      = get_attached_media( 'image', $boek_post_id );
-					$get   = wp_safe_remote_get( $bestand->url );
-					$type  = wp_remote_retrieve_header( $get, 'content-type' );
-					$image = wp_upload_bits( $bestand->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+			$hash          = md5( $bestand->url );
+			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+			if ( is_null( $attachment_id ) ) {
+				$get   = wp_safe_remote_get( $bestand->url );
+				$type  = wp_remote_retrieve_header( $get, 'content-type' );
+				$image = wp_upload_bits( $bestand->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
 
-					$attachment = array(
-						'post_title'     => $bestand->bestandsnaam,
-						'post_mime_type' => $type
-					);
+				$attachment = array(
+					'post_title'     => $bestand->soort,
+					'post_mime_type' => $type
+				);
 
-					$attachment_id   = wp_insert_attachment( $attachment, $image['file'], $boek_post_id );
-					$wp_upload_dir   = wp_upload_dir();
-					$attachment_data = wp_generate_attachment_metadata( $attachment_id,
-						$wp_upload_dir['path'] . '/' . $bestand->bestandsnaam );
+				$attachment_id   = wp_insert_attachment( $attachment, $image['file'], $boek_post_id );
+				$wp_upload_dir   = wp_upload_dir();
+				$attachment_data = wp_generate_attachment_metadata( $attachment_id,
+					$wp_upload_dir['path'] . '/' . $bestand->bestandsnaam );
 
-					wp_update_attachment_metadata( $attachment_id, $attachment_data );
+				wp_update_attachment_metadata( $attachment_id, $attachment_data );
 
-					update_post_meta( $attachment_id, 'hash', $hash );
+				update_post_meta( $attachment_id, 'hash', $hash );
+				if ( $bestand->soort === 'Cover' ) {
 					update_post_meta( $boek_post_id, '_thumbnail_id', $attachment_id );
+				} elseif ($bestand->soort === 'Back cover') {
+					update_post_meta ( $boek_post_id, 'boekdb_file_backcover_id', $attachment_id);
+				} elseif ($bestand->soort === 'Fragment') {
+					update_post_meta ( $boek_post_id, 'boekdb_file_voorbeeld_id', $attachment_id);
 				}
 			}
 		}
