@@ -2,8 +2,7 @@
 /**
  * Setup menus in WP admin.
  *
- * @package BoekDB\Admin
- * @version 2.5.0
+ * @package BoekDB
  */
 
 defined( 'ABSPATH' ) || exit;

@@ -2,7 +2,7 @@
 /**
  * BoekDB Admin Settings Class
  *
- * @package BoekDB\Admin
+ * @package BoekDB
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

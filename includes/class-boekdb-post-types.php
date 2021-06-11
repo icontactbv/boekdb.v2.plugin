@@ -4,7 +4,7 @@
  *
  * Registers post types and taxonomies.
  *
- * @package BoekDB\Classes\PostTypes
+ * @package BoekDB
  */
 
 defined( 'ABSPATH' ) || exit;

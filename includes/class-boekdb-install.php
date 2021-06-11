@@ -2,8 +2,7 @@
 /**
  * Installation related functions and actions.
  *
- * @package BoekDB\Classes
- * @version 0.0.1
+ * @package BoekDB
  */
 
 defined( 'ABSPATH' ) || exit;
