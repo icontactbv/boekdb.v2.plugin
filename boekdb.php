@@ -33,8 +33,9 @@ function BoekDB() { // phpcs:ignore WordPress.NamingConventions.ValidFunctionNam
 }
 
 function boekdb_debug( $message ) {
-	if(WP_DEBUG) {
+	if(WP_DEBUG && WP_DEBUG_LOG) {
 		// debug
+		error_log($message);
 	}
 }
 

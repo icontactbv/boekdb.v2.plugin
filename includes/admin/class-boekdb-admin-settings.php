@@ -75,7 +75,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				}
 			} elseif ( isset( $_POST['run'] ) && 'run' === $_POST['run'] ) {
 				if ( ! boekdb_is_import_running() ) {
-					wp_schedule_single_event( time() + 5, BoekDB_Import::CRON_HOOK );
+					wp_schedule_single_event( time() + 1, BoekDB_Import::CRON_HOOK );
 					boekdb_set_import_running();
 				} else {
 					self::add_error( 'Import draait al!' );
@@ -117,7 +117,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		/**
 		 * Add a message.
 		 *
-		 * @param  string  $text  Message.
+		 * @param string  $text  Message.
 		 */
 		public static function add_message( $text ) {
 			self::$messages[] = $text;
@@ -126,7 +126,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		/**
 		 * Add an error.
 		 *
-		 * @param  string  $text  Message.
+		 * @param string  $text  Message.
 		 */
 		public static function add_error( $text ) {
 			self::$errors[] = $text;

@@ -8,6 +8,7 @@
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<exclude-pattern>lib/</exclude-pattern>
+	<exclude-pattern>*example*</exclude-pattern>
 
 	<!-- Show progress, show the error codes for each message (source). -->
 	<arg value="ps" />
