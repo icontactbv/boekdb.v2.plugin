@@ -1,6 +1,6 @@
 <?php
 /**
- * Voorbeeld-template voor een boek
+ * Voorbeeld-template voor ophalen van boek-informatie
  */
 
 get_header();
