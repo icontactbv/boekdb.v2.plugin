@@ -26,6 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <th scope="col">Boeken</th>
                 <th scope="col">API Key</th>
                 <th scope="col">Laatste import</th>
+                <th scope="col">Actie</th>
             </tr>
             <?php foreach($etalages as $etalage) : ?>
 			<tr>
@@ -33,6 +34,12 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <td><?php echo $etalage->boeken ?></td>
                 <td><?php echo $etalage->api_key ?></td>
                 <td><?php echo $etalage->last_import ?></td>
+                <td>
+
+                    <button name="reset" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>" <?php if($import_running) { echo 'disabled="disabled" aria-disabled="true"'; } ?>>Reset</button>
+                    <button name="delete" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>" <?php if($import_running) { echo 'disabled="disabled" aria-disabled="true"'; } ?>>Verwijder</button>
+
+                </td>
 			</tr>
 			<?php endforeach; ?>
 			</tbody>
@@ -50,11 +57,14 @@ if ( ! defined( 'ABSPATH' ) ) {
             <input type="text" name="etalage_api_key" placeholder="api-key">
         </p>
 		<p class="submit">
-			<?php if ( empty( $GLOBALS['hide_save_button'] ) ) : ?>
-				<button name="save" class="button-primary boekdb-save-button" type="submit" value="save">Opslaan</button>
-			<?php endif; ?>
+            <button name="save" class="button-primary boekdb-save-button" type="submit" value="save">Toevoegen</button>
+        </p>
+
+        <hr />
+        <p class="submit">
+            <button name="run" class="button-primary boekdb-save-button" type="submit" value="run" <?php if($import_running) { echo 'disabled="disabled" aria-disabled="true"'; } ?>>Draai import</button>
+            <button name="test" class="button-primary boekdb-save-button" type="submit" value="test">Test</button>
 			<?php wp_nonce_field( 'boekdb-settings' ); ?>
-            <button name="run" class="button-primary boekdb-save-button" type="submit" value="run">Draai import</button>
 		</p>
 	</form>
 

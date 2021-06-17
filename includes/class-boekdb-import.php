@@ -32,12 +32,12 @@ class BoekDB_Import {
 	public static function import() {
 		set_time_limit( 0 );
 
-		// @todo we should set a transient to make sure we don't have concurrent imports
-
 		require_once( ABSPATH . 'wp-admin/includes/image.php' );
 
 		$etalages = self::fetch_etalages();
 		foreach ( $etalages as $etalage ) {
+			boekdb_set_import_running();
+			boekdb_set_import_etalage( $etalage->id );
 			$reset = self::check_available_isbns( $etalage );
 
 			$offset      = 0;
@@ -50,6 +50,10 @@ class BoekDB_Import {
 			$last_import = $last_import->format( 'Y-m-d\TH:i:sP' );
 
 			while ( $products = self::fetch_products( $etalage->api_key, $last_import, $offset ) ) {
+				boekdb_debug( 'Fetched ' . $etalage->name . ' with offset ' . $offset );
+
+				// keep updating transient
+				boekdb_set_import_etalage( $etalage->id );
 				foreach ( $products as $product ) {
 					list( $boek_post_id, $isbn ) = self::handle_boek( $product );
 					self::handle_betrokkenen( $product, $boek_post_id );
@@ -69,8 +73,12 @@ class BoekDB_Import {
 				}
 				$offset = $offset + self::LIMIT;
 			}
+			boekdb_debug( 'Finished import on ' . $etalage->name );
 			self::set_last_import( $etalage->id );
 		}
+
+		// All done, release transient
+		boekdb_reset_import_running();
 	}
 
 
@@ -143,7 +151,7 @@ class BoekDB_Import {
 	private static function fetch_etalages() {
 		global $wpdb;
 
-		$etalages = $wpdb->get_results( "SELECT id, api_key, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages",
+		$etalages = $wpdb->get_results( "SELECT id, name, api_key, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages",
 			OBJECT );
 
 		return $etalages;
@@ -234,6 +242,8 @@ class BoekDB_Import {
 		$boek['actieprijs']          = $product->actieprijs;
 		$boek['actieperiode_start']  = $product->actieperiode_start;
 		$boek['actieperiode_einde']  = $product->actieperiode_einde;
+		$boek['status']              = $product->status;
+		$boek['leverbaarheid']       = $product->leverbaarheid;
 
 		return $boek;
 	}
@@ -292,10 +302,10 @@ class BoekDB_Import {
 				update_post_meta( $attachment_id, 'hash', $hash );
 				if ( $bestand->soort === 'Cover' ) {
 					update_post_meta( $boek_post_id, '_thumbnail_id', $attachment_id );
-				} elseif ($bestand->soort === 'Back cover') {
-					update_post_meta ( $boek_post_id, 'boekdb_file_backcover_id', $attachment_id);
-				} elseif ($bestand->soort === 'Fragment') {
-					update_post_meta ( $boek_post_id, 'boekdb_file_voorbeeld_id', $attachment_id);
+				} elseif ( $bestand->soort === 'Back cover' ) {
+					update_post_meta( $boek_post_id, 'boekdb_file_backcover_id', $attachment_id );
+				} elseif ( $bestand->soort === 'Fragment' ) {
+					update_post_meta( $boek_post_id, 'boekdb_file_voorbeeld_id', $attachment_id );
 				}
 			}
 		}
