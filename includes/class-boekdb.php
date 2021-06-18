@@ -91,7 +91,6 @@ final class BoekDB {
 		register_activation_hook( BOEKDB_PLUGIN_FILE, array( 'BoekDB_Install', 'install' ) );
 	}
 
-
 	/**
 	 * Get the plugin url.
 	 *

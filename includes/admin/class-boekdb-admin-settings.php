@@ -75,7 +75,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				}
 			} elseif ( isset( $_POST['run'] ) && 'run' === $_POST['run'] ) {
 				if ( ! boekdb_is_import_running() ) {
-					wp_schedule_single_event( time() + 1, BoekDB_Import::CRON_HOOK );
+					wp_schedule_single_event( time(), BoekDB_Import::CRON_HOOK );
 					boekdb_set_import_running();
 				} else {
 					self::add_error( 'Import draait al!' );

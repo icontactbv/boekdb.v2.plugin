@@ -69,6 +69,8 @@ class BoekDB_Install {
 		self::update_boekdb_version();
 		self::register_tables();
 
+		flush_rewrite_rules();
+
 		delete_transient( 'boekdb_installing' );
 	}
 
