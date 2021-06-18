@@ -12,7 +12,8 @@ defined( 'ABSPATH' ) || exit;
  */
 class BoekDB_Import {
 	const CRON_HOOK           = 'boekdb_import';
-	const BASE_URL            = 'https://boekdbv2.nl/api/json/v1/';
+	const BOEKDB_DOMAIN       = 'https://boekdbv2.nl/';
+	const BASE_URL            = self::BOEKDB_DOMAIN . 'api/json/v1/';
 	const LIMIT               = 250;
 	const DEFAULT_LAST_IMPORT = "2015-01-01T01:00:00+01:00";
 

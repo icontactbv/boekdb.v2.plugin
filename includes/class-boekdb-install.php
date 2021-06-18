@@ -29,6 +29,22 @@ class BoekDB_Install {
 		}
 	}
 
+	public static function test_connection() {
+		$result = wp_remote_get( BoekDB_Import::BOEKDB_DOMAIN );
+		if ( ! is_wp_error( $result ) && 200 !== wp_remote_retrieve_response_code( $result ) ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	public static function boekdb_connection_error() {
+		$class   = 'notice notice-warning';
+		$message = 'Let op: kan geen verbinding maken met BoekDB!';
+
+		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
+	}
+
 	/**
 	 * Install BoekDB.
 	 */
@@ -40,6 +56,10 @@ class BoekDB_Install {
 		// Check if we are not already running this routine.
 		if ( 'yes' === get_transient( 'boekdb_installing' ) ) {
 			return;
+		}
+
+		if ( false === self::test_connection() ) {
+			add_action( 'admin_notices', array( __CLASS__, 'boekdb_connection_error' ) );
 		}
 
 		// If we made it till here nothing is running yet, lets set the transient now.
