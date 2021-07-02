@@ -37,6 +37,7 @@ class Boekdb_Post_Types {
 
 		self::register_betrokkenen_taxonomies();
 		self::register_onderwerpen_taxonomies();
+		self::register_serie_taxonomy();
 	}
 
 	/**
@@ -81,6 +82,25 @@ class Boekdb_Post_Types {
 				'show_in_rest' => true
 			)
 		);
+	}
+
+	protected static function register_serie_taxonomy() {
+		$args = array(
+			'hierarchical'      => false,
+			'public'            => false,
+			'rewrite'           => false,
+			'query_var'         => false,
+			'show_ui'           => true,
+			'show_admin_column' => true,
+			'show_in_nav_menus' => false,
+			'show_tagcloud'     => false,
+			'labels'            => array(
+				'name'          => 'Series',
+				'singular_name' => 'Serie',
+			)
+		);
+
+		register_taxonomy( 'boekdb_series_tax', 'boekdb_boek', $args );
 	}
 
 	protected static function register_onderwerpen_taxonomies() {
