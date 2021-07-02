@@ -364,6 +364,7 @@ class BoekDB_Import {
 			}
 		}
 
+		self::handle_collection( $product, $boek_post_id );
 		self::handle_boek_files( $product, $boek_post_id );
 
 		return array( $boek_post_id, $boek['isbn'] );
@@ -394,6 +395,16 @@ class BoekDB_Import {
 		}
 
 		return $term_id;
+	}
+
+	/**
+	 * Parse collection
+	 *
+	 * @param $product
+	 * @param $boek_post_id
+	 */
+	protected static function handle_serie( $product, $boek_post_id ) {
+
 	}
 
 	/**
