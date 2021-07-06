@@ -22,7 +22,7 @@ class BoekDB_Import {
 	 */
 	public static function init() {
 		// debug:
-		// add_action( 'init', array( self::class, 'import') );
+		// add_action( 'init', array( self::class, 'import' ) );
 
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
@@ -364,7 +364,7 @@ class BoekDB_Import {
 			}
 		}
 
-		self::handle_collection( $product, $boek_post_id );
+		self::handle_serie( $product, $boek_post_id );
 		self::handle_boek_files( $product, $boek_post_id );
 
 		return array( $boek_post_id, $boek['isbn'] );
@@ -404,7 +404,60 @@ class BoekDB_Import {
 	 * @param $boek_post_id
 	 */
 	protected static function handle_serie( $product, $boek_post_id ) {
+		if ( is_object( $product->serie ) && isset( $product->serie->id ) ) {
+			// clear old taxonomy
+			wp_set_object_terms( $boek_post_id, null, 'boekdb_serie_tax' );
 
+			// set new taxonomy
+			wp_set_object_terms( $boek_post_id, $product->serietitel, 'boekdb_serie_tax', false );
+
+			// get taxonomy
+			$result = wp_get_object_terms( $boek_post_id, 'boekdb_serie_tax', true );
+			/** @var WP_Term $tax */
+			$term = $result[0];
+
+			add_term_meta( $term->term_id, 'boekdb_id', $product->serie->id, true );
+			wp_update_term( $term->term_id, 'boekdb_serie_tax', array(
+				'description' => $product->serie->omschrijving
+			) );
+
+			self::handle_serie_files( $product, $term->term_id );
+		}
+	}
+
+	/**
+	 * Load files from boek
+	 *
+	 * @param $product
+	 * @param $term_id
+	 */
+	protected static function handle_serie_files( $product, $term_id ) {
+		if (is_null( $product->serie->beeld ) ) {
+			return;
+		}
+		$hash = md5( $product->serie->beeld->url );
+		$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+		if ( is_null( $attachment_id ) ) {
+			$get   = wp_safe_remote_get( $product->serie->beeld->url );
+			$type  = wp_remote_retrieve_header( $get, 'content-type' );
+			$image = wp_upload_bits( $product->serie->beeld->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+
+			$attachment = array(
+				'post_title'     => $product->serie->beeld->soort,
+				'post_mime_type' => $type
+			);
+
+			$attachment_id   = wp_insert_attachment( $attachment, $image['file'], $term_id );
+			$wp_upload_dir   = wp_upload_dir();
+			$attachment_data = wp_generate_attachment_metadata(
+				$attachment_id,
+				$wp_upload_dir['path'] . '/' . $product->serie->beeld->bestandsnaam );
+
+			wp_update_attachment_metadata( $attachment_id, $attachment_data );
+
+			update_post_meta( $attachment_id, 'hash', $hash );
+			update_term_meta( $term_id, 'boekdb_seriebeeld_id', $attachment_id );
+		}
 	}
 
 	/**

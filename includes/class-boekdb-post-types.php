@@ -100,7 +100,7 @@ class Boekdb_Post_Types {
 			)
 		);
 
-		register_taxonomy( 'boekdb_series_tax', 'boekdb_boek', $args );
+		register_taxonomy( 'boekdb_serie_tax', 'boekdb_boek', $args );
 	}
 
 	protected static function register_onderwerpen_taxonomies() {

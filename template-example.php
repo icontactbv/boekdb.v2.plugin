@@ -25,27 +25,37 @@ while ( have_posts() ) :
             <?php
 		the_content();
 
-		$data = boekdb_boek_data(get_the_ID());
+		$boek_data = boekdb_boek_data(get_the_ID());
 		echo '<table>';
 		echo '<tr><th>Key</th><th>Waarde</th></tr>';
-		foreach($data as $key => $value) {
+		foreach($boek_data as $key => $value) {
 		    echo '<tr><td>'.$key.'</td><td>'.$value.'</td></tr>';
         }
-		if(isset($data['file_voorbeeld_id'])) {
+		if(isset($boek_data['file_voorbeeld_id'])) {
 		    echo '<tr><td>Fragment</td><td>';
-		    echo wp_get_attachment_link( $data['file_voorbeeld_id'] );
+		    echo wp_get_attachment_link( $boek_data['file_voorbeeld_id'] );
 		    echo '</td></tr>';
 		}
-		if(isset($data['file_backcover_id'])) {
+		if(isset($boek_data['file_backcover_id'])) {
 		    echo '<tr><td>Back cover</td><td>';
-			$image_attributes = wp_get_attachment_image_src( $data['file_backcover_id'] );
+			$image_attributes = wp_get_attachment_image_src( $boek_data['file_backcover_id'] );
 			if ( $image_attributes ) : ?>
-                <a href="<?php echo wp_get_original_image_url( $data['file_backcover_id'] ) ?>">
+                <a href="<?php echo wp_get_original_image_url( $boek_data['file_backcover_id'] ) ?>">
                     <img src="<?php echo $image_attributes[0]; ?>" width="<?php echo $image_attributes[1]; ?>" height="<?php echo $image_attributes[2]; ?>" />
                 </a>
 			<?php endif;
 			echo '</td></tr>';
 		}
+        if(isset($boek_data['serie_beeld_id'])) {
+            echo '<tr><td>Seriebeeld</td><td>';
+            $image_attributes = wp_get_attachment_image_src( $boek_data['serie_beeld_id'] );
+            if ( $image_attributes ) : ?>
+                <a href="<?php echo wp_get_original_image_url( $boek_data['serie_beeld_id'] ) ?>">
+                    <img src="<?php echo $image_attributes[0]; ?>" width="<?php echo $image_attributes[1]; ?>" height="<?php echo $image_attributes[2]; ?>" />
+                </a>
+            <?php endif;
+            echo '</td></tr>';
+        }
 		echo '</table>';
 
 		wp_link_pages(

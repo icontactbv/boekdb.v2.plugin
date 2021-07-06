@@ -33,9 +33,12 @@ function BoekDB() { // phpcs:ignore WordPress.NamingConventions.ValidFunctionNam
 }
 
 function boekdb_debug( $message ) {
-	if(WP_DEBUG && WP_DEBUG_LOG) {
+	if ( WP_DEBUG && WP_DEBUG_LOG ) {
+		if ( ! is_string( $message ) ) {
+			$message = var_export( $message, true );
+		}
 		// debug
-		error_log($message);
+		error_log( $message );
 	}
 }
 
@@ -46,7 +49,8 @@ function boekdb_set_import_running() {
 }
 
 function boekdb_is_import_running() {
-	boekdb_debug( 'is import running transient: '. var_export(get_transient( 'boekdb_import_running' ), true) );
+	boekdb_debug( 'is import running transient: ' . var_export( get_transient( 'boekdb_import_running' ), true ) );
+
 	return get_transient( 'boekdb_import_running' );
 }
 
@@ -57,12 +61,13 @@ function boekdb_reset_import_running() {
 }
 
 function boekdb_get_import_etalage() {
-	boekdb_debug( 'get current etalage: '. var_export(get_transient( 'boekdb_import_etalage' ), true) );
+	boekdb_debug( 'get current etalage: ' . var_export( get_transient( 'boekdb_import_etalage' ), true ) );
+
 	return get_transient( 'boekdb_import_etalage' );
 }
 
 function boekdb_set_import_etalage( $etalage_id ) {
-	boekdb_debug( 'set current etalage to '. $etalage_id );
+	boekdb_debug( 'set current etalage to ' . $etalage_id );
 	set_transient( 'boekdb_import_etalage', $etalage_id );
 }
 
@@ -74,6 +79,26 @@ function boekdb_boek_data( $id ) {
 			$data[ substr( $name, 7 ) ] = $value[0];
 		}
 	}
+
+	$series = wp_get_object_terms( $id, 'boekdb_serie_tax' );
+	if ( ! empty( $series ) ) {
+		$data = array_merge( $data, boekdb_serie_data( $series[0]->term_id, $series[0] ) );
+	}
+
+	return $data;
+}
+
+function boekdb_serie_data( $id, $term = null ) {
+	if ( is_null( $term ) ) {
+		$term = get_term( $id );
+	}
+
+	$meta = get_term_meta( $term->term_id );
+	$beeld = isset( $meta['boekdb_seriebeeld_id'] ) ? $meta['boekdb_seriebeeld_id'][0] : null;
+
+	$data                       = array();
+	$data['serie_omschrijving'] = $term->description;
+	$data['serie_beeld_id']     = $beeld;
 
 	return $data;
 }
