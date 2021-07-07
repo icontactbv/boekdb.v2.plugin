@@ -50,7 +50,7 @@ class Boekdb_Post_Types {
 
 		self::register_nstc_post_type();
 		self::register_boek_post_type();
-		self::register_betrokkene_post_type();
+		//self::register_betrokkene_post_type();
 	}
 
 	protected static function register_nstc_post_type() {
@@ -155,7 +155,7 @@ class Boekdb_Post_Types {
 		);
 		$args['labels'] = $labels;
 
-		register_taxonomy( 'boekdb_auteur_tax', array( 'boekdb_boek', 'boekdb_betrokkene' ), $args );
+		register_taxonomy( 'boekdb_auteur_tax', array( 'boekdb_boek' ), $args );
 
 		$labels         = array(
 			'name'          => 'Illustrators',
@@ -163,7 +163,7 @@ class Boekdb_Post_Types {
 		);
 		$args['labels'] = $labels;
 
-		register_taxonomy( 'boekdb_illustrator_tax', array( 'boekdb_boek', 'boekdb_betrokkene' ), $args );
+		register_taxonomy( 'boekdb_illustrator_tax', array( 'boekdb_boek' ), $args );
 
 		$labels         = array(
 			'name'          => 'Sprekers',
@@ -171,39 +171,8 @@ class Boekdb_Post_Types {
 		);
 		$args['labels'] = $labels;
 
-		register_taxonomy( 'boekdb_spreker_tax', array( 'boekdb_boek', 'boekdb_betrokkene' ), $args );
-	}
+		register_taxonomy( 'boekdb_spreker_tax', array( 'boekdb_boek' ), $args );
 
-	protected static function register_betrokkene_post_type() {
-		if ( post_type_exists( 'boekdb_betrokkene' ) ) {
-			return;
-		}
-
-		$labels = array(
-			'name'          => 'Betrokkenen',
-			'singular_name' => 'Betrokkene',
-		);
-
-		register_post_type(
-			'boekdb_betrokkene', array(
-				'labels'          => $labels,
-				'has_archive'     => true,
-				'public'          => true,
-				'hierarchical'    => false,
-				'supports'        => array(
-					'title',
-					'custom-fields',
-					'thumbnail',
-				),
-				'capability_type' => 'page',
-				'capabilities'    => array(
-					'create_posts' => 'do_not_allow',
-				),
-				'map_meta_cap'    => true,
-				'rewrite'         => array( 'slug' => 'betrokkene' ),
-				'show_in_rest'    => true
-			)
-		);
 	}
 
 	protected static function register_boek_post_type() {

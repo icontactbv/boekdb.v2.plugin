@@ -22,7 +22,7 @@ class BoekDB_Import {
 	 */
 	public static function init() {
 		// debug:
-		// add_action( 'init', array( self::class, 'import' ) );
+		add_action( 'init', array( self::class, 'import' ) );
 
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
@@ -267,6 +267,8 @@ class BoekDB_Import {
 		$boekdb_betrokkene['boekdb_biografie']     = $betrokkene->biografie;
 		$boekdb_betrokkene['boekdb_bibliografie']  = $betrokkene->bibliografie;
 
+		// @todo handle files
+
 		return $boekdb_betrokkene;
 	}
 
@@ -398,6 +400,40 @@ class BoekDB_Import {
 	}
 
 	/**
+	 * Handle betrokkene
+	 *
+	 * @param $slug
+	 * @param $taxonomy
+	 * @param $value
+	 *
+	 * @return int|mixed
+	 */
+	protected static function handle_betrokkene( $betrokkene, $taxonomy ) {
+		echo '<pre>';var_dump($betrokkene);echo '</pre>';
+		$term = get_term_by( 'slug', $betrokkene['id'], 'boekdb_' . $taxonomy . '_tax' );
+		if ( $term ) {
+			$term_id = $term->term_id;
+		} else {
+			$result  = wp_insert_term(
+				$value,
+				'boekdb_' . $taxonomy . '_tax',
+				array(
+					'name' => $betrokkene['naam'],
+					'voornaam' => $betrokkene['boekdb_voornaam'],
+					'tussenvoegsel' => $betrokkene['boekdb_tussenvoegsel'],
+					'achternaam' => $betrokkene['boekdb_achternaam'],
+					'organisatie' => $betrokkene['boekdb_organisatie'],
+					'biografie' => $betrokkene['boekdb_biografie'],
+					'bibliografie' => $betrokkene['boekdb_bibliografie'],
+					'slug' => $betrokkene['id'],
+				) );
+			$term_id = $result['term_id'];
+		}
+
+		return $term_id;
+	}
+
+	/**
 	 * Parse collection
 	 *
 	 * @param $product
@@ -483,35 +519,7 @@ class BoekDB_Import {
 			}
 
 			if ( $rol === 'auteur' || $rol === 'illustrator' || $rol === 'spreker' ) {
-				$betrokkene_post_id = self::find_field( 'boekdb_betrokkene', 'boekdb_id', $betrokkene->id );
-				$post               = array(
-					'ID'          => $betrokkene_post_id,
-					'post_status' => 'publish',
-					'post_type'   => 'boekdb_betrokkene',
-					'post_title'  => $boekdb_betrokkene['naam'],
-					'post_name'   => sanitize_title( $boekdb_betrokkene['naam'] ),
-				);
-
-				// create/update post
-				if ( is_null( $betrokkene_post_id ) ) {
-					$betrokkene_post_id = wp_insert_post( $post );
-				} else {
-					$betrokkene_post_id = wp_update_post( $post );
-				}
-
-				// save post meta
-				foreach ( $boekdb_betrokkene as $key => $value ) {
-					switch ( $key ) {
-						default:
-							update_post_meta( $betrokkene_post_id, 'boekdb_' . $key, $value );
-							break;
-					}
-				}
-
-				$betrokkene_id = $boekdb_betrokkene['id'];
-
-				$term_id = self::get_taxonomy_term_id( $betrokkene_id, $rol, $betrokkene->naam );
-				wp_set_object_terms( $betrokkene_post_id, $term_id, 'boekdb_' . $rol . '_tax' );
+				$term_id = self::handle_betrokkene( $boekdb_betrokkene, $rol );
 				$term_ids[ $rol ][] = $term_id;
 			} else {
 				$betrokkenen_meta[ $rol ] = ( isset( $betrokkenen_meta[ $rol ] ) ? $betrokkenen_meta[ $rol ] . ', ' : '' ) . $boekdb_betrokkene['naam'];
@@ -521,6 +529,8 @@ class BoekDB_Import {
 		wp_set_object_terms( $boek_post_id, $term_ids['auteur'], 'boekdb_auteur_tax', false );
 		wp_set_object_terms( $boek_post_id, $term_ids['illustrator'], 'boekdb_illustrator_tax', false );
 		wp_set_object_terms( $boek_post_id, $term_ids['spreker'], 'boekdb_spreker_tax', false );
+
+		// Overige betrokkenen
 		foreach ( $betrokkenen_meta as $key => $value ) {
 			update_post_meta( $boek_post_id, 'boekdb_' . $key, $value );
 		}
