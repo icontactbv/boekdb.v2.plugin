@@ -48,40 +48,7 @@ class Boekdb_Post_Types {
 			return;
 		}
 
-		self::register_nstc_post_type();
 		self::register_boek_post_type();
-		//self::register_betrokkene_post_type();
-	}
-
-	protected static function register_nstc_post_type() {
-		if ( post_type_exists( 'boekdb_nstc' ) ) {
-			return;
-		}
-
-		$labels = array(
-			'name'          => 'NSTCs',
-			'singular_name' => 'NSTC',
-		);
-
-		register_post_type(
-			'boekdb_nstc', array(
-				'labels'       => $labels,
-				'has_archive'  => true,
-				'public'       => false,
-				'hierarchical' => false,
-				'supports'     => array(
-					'title',
-					'thumbnail',
-				),
-				'capabilities' => array(
-					'create_posts' => 'do_not_allow',
-				),
-				'map_meta_cap' => true,
-				//'taxonomies'   => 'category',
-				'rewrite'      => array( 'slug' => 'nstc' ),
-				'show_in_rest' => true
-			)
-		);
 	}
 
 	protected static function register_serie_taxonomy() {
@@ -214,7 +181,7 @@ class Boekdb_Post_Types {
 	 * @return bool
 	 */
 	public static function gutenberg_can_edit_post_type( $can_edit, $post_type ) {
-		$result = 'boekdb_boek' === $post_type || 'boekdb_betrokkene' === $post_type || 'boekdb_nstc' === $post_type;
+		$result = 'boekdb_boek' === $post_type;
 
 		return $result ? false : $can_edit;
 	}

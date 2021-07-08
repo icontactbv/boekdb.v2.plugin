@@ -334,20 +334,12 @@ class BoekDB_Import {
 			$boek_post_id = self::find_field( 'boekdb_boek', 'boekdb_isbn', $boek['isbn'] );
 		}
 
-		$nstc = null;
-		if ( ! is_null( $boek['nstc'] ) ) {
-			$nstc = self::find_field( 'boekdb_boek', 'boekdb_nstc', $boek['nstc'] );
-			if ( $nstc == $boek_post_id ) {
-				$nstc = null;
-			}
-		}
 		$post = array(
 			'ID'          => $boek_post_id,
 			'post_status' => 'publish',
 			'post_type'   => 'boekdb_boek',
 			'post_title'  => $boek['titel'],
 			'post_name'   => sanitize_title( $boek['titel'] ),
-			'post_parent' => $nstc,
 		);
 
 		// create/update post
