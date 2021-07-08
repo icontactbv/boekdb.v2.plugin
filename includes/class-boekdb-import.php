@@ -453,7 +453,6 @@ class BoekDB_Import {
 
 			// get taxonomy
 			$result = wp_get_object_terms( $boek_post_id, 'boekdb_serie_tax', true );
-			/** @var WP_Term $tax */
 			$term = $result[0];
 
 			add_term_meta( $term->term_id, 'boekdb_id', $product->serie->id, true );
