@@ -88,12 +88,38 @@ function boekdb_boek_data( $id ) {
 	return $data;
 }
 
+function boekdb_betrokkenen_data( $id ) {
+	$data = array();
+	foreach ( wp_get_post_terms( $id, 'boekdb_auteur_tax' ) as $term ) {
+		$data['auteurs'][] = array_merge(array('rol' => 'auteur'), boekdb_betrokkene_data( $term->id, $term ));
+	}
+	foreach ( wp_get_post_terms( $id, 'boekdb_spreker_tax' ) as $term ) {
+		$data['sprekers'][] = array_merge(array('rol' => 'spreker'), boekdb_betrokkene_data( $term->id, $term ));
+	}
+	foreach ( wp_get_post_terms( $id, 'boekdb_illustrator_tax' ) as $term ) {
+		$data['illustrators'][] = array_merge(array('rol' => 'illustrator'), boekdb_betrokkene_data( $term->id, $term ));
+	}
+	return $data;
+}
+
+function boekdb_betrokkene_data( $id, $term = null ) {
+	if ( is_null( $term ) ) {
+		$term = get_term( $id );
+	}
+
+	$data = array();
+	foreach(get_term_meta( $term->term_id ) as $key => $meta) {
+		$data[$key] = $meta[0];
+	}
+	return $data;
+}
+
 function boekdb_serie_data( $id, $term = null ) {
 	if ( is_null( $term ) ) {
 		$term = get_term( $id );
 	}
 
-	$meta = get_term_meta( $term->term_id );
+	$meta  = get_term_meta( $term->term_id );
 	$beeld = isset( $meta['boekdb_seriebeeld_id'] ) ? $meta['boekdb_seriebeeld_id'][0] : null;
 
 	$data                       = array();

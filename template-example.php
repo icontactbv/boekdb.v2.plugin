@@ -58,6 +58,14 @@ while ( have_posts() ) :
         }
 		echo '</table>';
 
+        $betrokkenen = boekdb_betrokkenen_data(get_the_ID());
+        echo '<table>';
+        foreach($betrokkenen as $rol => $betrokkene) {
+            echo '<pre>';
+            var_dump($betrokkene);
+            echo '</pre>';
+        }
+
 		wp_link_pages(
 			array(
 				'before'   => '<nav class="page-links" aria-label="' . esc_attr__( 'Page', 'twentytwentyone' ) . '">',

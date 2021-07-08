@@ -401,25 +401,37 @@ class BoekDB_Import {
 	 * @return int|mixed
 	 */
 	protected static function handle_betrokkene( $betrokkene, $taxonomy ) {
-		echo '<pre>';var_dump($betrokkene);echo '</pre>';
 		$term = get_term_by( 'slug', $betrokkene['id'], 'boekdb_' . $taxonomy . '_tax' );
 		if ( $term ) {
 			$term_id = $term->term_id;
-		} else {
-			$result  = wp_insert_term(
-				$value,
+			wp_update_term(
+				$term_id,
 				'boekdb_' . $taxonomy . '_tax',
 				array(
 					'name' => $betrokkene['naam'],
-					'voornaam' => $betrokkene['boekdb_voornaam'],
-					'tussenvoegsel' => $betrokkene['boekdb_tussenvoegsel'],
-					'achternaam' => $betrokkene['boekdb_achternaam'],
-					'organisatie' => $betrokkene['boekdb_organisatie'],
-					'biografie' => $betrokkene['boekdb_biografie'],
-					'bibliografie' => $betrokkene['boekdb_bibliografie'],
+					'slug' => $betrokkene['id'],
+				) );
+		} else {
+			$result  = wp_insert_term(
+				$betrokkene['naam'],
+				'boekdb_' . $taxonomy . '_tax',
+				array(
+					'name' => $betrokkene['naam'],
 					'slug' => $betrokkene['id'],
 				) );
 			$term_id = $result['term_id'];
+		}
+
+		$meta = array (
+			'voornaam' => $betrokkene['boekdb_voornaam'],
+			'tussenvoegsel' => $betrokkene['boekdb_tussenvoegsel'],
+			'achternaam' => $betrokkene['boekdb_achternaam'],
+			'organisatie' => $betrokkene['boekdb_organisatie'],
+			'biografie' => $betrokkene['boekdb_biografie'],
+			'bibliografie' => $betrokkene['boekdb_bibliografie'],
+		);
+		foreach($meta as $key => $value) {
+			update_term_meta($term_id, $key, $value);
 		}
 
 		return $term_id;
