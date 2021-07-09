@@ -62,12 +62,12 @@ class BoekDB_Import {
 					self::handle_betrokkenen( $product, $boek_post_id );
 					foreach ( $product->onderwerpen as $onderwerp ) {
 						if ( $onderwerp->type === 'NUR' || $onderwerp->type === 'BISAC' ) {
-							$term_id = self::get_taxonomy_term_id( $onderwerp->code, strtolower( $onderwerp->type ),
+							$term_id = self::get_taxonomy_term_id( sanitize_title($onderwerp->code), strtolower( $onderwerp->type ),
 								$onderwerp->waarde );
 							wp_set_object_terms( $boek_post_id, $term_id,
 								'boekdb_' . strtolower( $onderwerp->type ) . '_tax' );
 						} elseif ( substr( $onderwerp->type, 0, 5 ) === 'Thema' ) {
-							$term_id = self::get_taxonomy_term_id( $onderwerp->code, 'thema', $onderwerp->waarde );
+							$term_id = self::get_taxonomy_term_id( sanitize_title($onderwerp->code), 'thema', $onderwerp->waarde );
 							wp_set_object_terms( $boek_post_id, $term_id, 'boekdb_thema_tax' );
 						}
 					}
@@ -376,6 +376,8 @@ class BoekDB_Import {
 	 * @return int|mixed
 	 */
 	protected static function get_taxonomy_term_id( $slug, $taxonomy, $value ) {
+		var_dump($slug);
+		var_dump($value);
 		$term = get_term_by( 'slug', $slug, 'boekdb_' . $taxonomy . '_tax' );
 		if ( $term ) {
 			$term_id = $term->term_id;
@@ -403,7 +405,7 @@ class BoekDB_Import {
 	 * @return int|mixed
 	 */
 	protected static function handle_betrokkene( $betrokkene, $taxonomy ) {
-		$term = get_term_by( 'slug', $betrokkene['id'], 'boekdb_' . $taxonomy . '_tax' );
+		$term = get_term_by( 'slug', sanitize_title($betrokkene['naam'], $betrokkene['id']), 'boekdb_' . $taxonomy . '_tax' );
 		if ( $term ) {
 			$term_id = $term->term_id;
 			wp_update_term(
@@ -411,7 +413,7 @@ class BoekDB_Import {
 				'boekdb_' . $taxonomy . '_tax',
 				array(
 					'name' => $betrokkene['naam'],
-					'slug' => $betrokkene['id'],
+					'slug' => sanitize_title($betrokkene['naam'], $betrokkene['id']),
 				) );
 		} else {
 			$result  = wp_insert_term(
@@ -419,7 +421,7 @@ class BoekDB_Import {
 				'boekdb_' . $taxonomy . '_tax',
 				array(
 					'name' => $betrokkene['naam'],
-					'slug' => $betrokkene['id'],
+					'slug' => sanitize_title($betrokkene['naam'], $betrokkene['id']),
 				) );
 			$term_id = $result['term_id'];
 		}
