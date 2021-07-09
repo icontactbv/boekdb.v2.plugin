@@ -22,8 +22,10 @@ class BoekDB_Import {
 	 */
 	public static function init() {
 		// debug:
-		add_action( 'init', array( self::class, 'import' ) );
-
+		if(WP_DEBUG) {
+			// flush_rewrite_rules();
+			// add_action( 'init', array( self::class, 'import' ) );
+		}
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
 		}
