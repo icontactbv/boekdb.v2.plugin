@@ -122,7 +122,7 @@ class Boekdb_Post_Types {
 			'singular_name' => 'Auteur',
 		);
 		$args['labels'] = $labels;
-		$args['rewrite'] = array('slug' => 'auteurs', 'with_front' => true);
+		$args['rewrite'] = array('slug' => 'auteur', 'with_front' => true);
 		register_taxonomy( 'boekdb_auteur_tax', array( 'boekdb_boek' ), $args );
 
 		$labels         = array(
@@ -130,7 +130,7 @@ class Boekdb_Post_Types {
 			'singular_name' => 'Illustrator',
 		);
 		$args['labels'] = $labels;
-		$args['rewrite'] = array('slug' => 'illustrators', 'with_front' => true);
+		$args['rewrite'] = array('slug' => 'illustrator', 'with_front' => true);
 		register_taxonomy( 'boekdb_illustrator_tax', array( 'boekdb_boek' ), $args );
 
 		$labels         = array(
@@ -138,7 +138,7 @@ class Boekdb_Post_Types {
 			'singular_name' => 'Spreker',
 		);
 		$args['labels'] = $labels;
-		$args['rewrite'] = array('slug' => 'sprekers', 'with_front' => true);
+		$args['rewrite'] = array('slug' => 'spreker', 'with_front' => true);
 		register_taxonomy( 'boekdb_spreker_tax', array( 'boekdb_boek' ), $args );
 
 	}

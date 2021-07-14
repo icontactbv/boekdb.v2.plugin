@@ -22,7 +22,7 @@ class BoekDB_Import {
 	 */
 	public static function init() {
 		// debug:
-		if(WP_DEBUG) {
+		if ( WP_DEBUG ) {
 			// flush_rewrite_rules();
 			// add_action( 'init', array( self::class, 'import' ) );
 		}
@@ -62,12 +62,14 @@ class BoekDB_Import {
 					self::handle_betrokkenen( $product, $boek_post_id );
 					foreach ( $product->onderwerpen as $onderwerp ) {
 						if ( $onderwerp->type === 'NUR' || $onderwerp->type === 'BISAC' ) {
-							$term_id = self::get_taxonomy_term_id( sanitize_title($onderwerp->code), strtolower( $onderwerp->type ),
+							$term_id = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ),
+								strtolower( $onderwerp->type ),
 								$onderwerp->waarde );
 							wp_set_object_terms( $boek_post_id, $term_id,
 								'boekdb_' . strtolower( $onderwerp->type ) . '_tax' );
 						} elseif ( substr( $onderwerp->type, 0, 5 ) === 'Thema' ) {
-							$term_id = self::get_taxonomy_term_id( sanitize_title($onderwerp->code), 'thema', $onderwerp->waarde );
+							$term_id = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ), 'thema',
+								$onderwerp->waarde );
 							wp_set_object_terms( $boek_post_id, $term_id, 'boekdb_thema_tax' );
 						}
 					}
@@ -237,6 +239,15 @@ class BoekDB_Import {
 		$boek['annotatie']           = $product->annotatie;
 		$boek['taal']                = $product->taal;
 		$boek['illustraties']        = $product->illustraties;
+		$boek['lengte']              = $product->lengte;
+		$boek['breedte']             = $product->breedte;
+		$boek['dikte']               = $product->dikte;
+		$boek['gewicht']             = $product->gewicht;
+		$boek['paginas_hoofdwerk']   = $product->paginas_hoofdwerk;
+		$boek['paginas_proloog']     = $product->paginas_proloog;
+		$boek['paginas_epiloog']     = $product->paginas_epiloog;
+		$boek['duur']                = $product->duur;
+		$boek['bestandsgrootte']     = $product->bestandsgrootte;
 		$boek['leeftijdscategorie']  = $product->leeftijdscategorie;
 		$boek['avi']                 = $product->avi;
 		$boek['eersteuitleverdatum'] = $product->eersteuitleverdatum;
@@ -376,8 +387,6 @@ class BoekDB_Import {
 	 * @return int|mixed
 	 */
 	protected static function get_taxonomy_term_id( $slug, $taxonomy, $value ) {
-		var_dump($slug);
-		var_dump($value);
 		$term = get_term_by( 'slug', $slug, 'boekdb_' . $taxonomy . '_tax' );
 		if ( $term ) {
 			$term_id = $term->term_id;
@@ -405,7 +414,8 @@ class BoekDB_Import {
 	 * @return int|mixed
 	 */
 	protected static function handle_betrokkene( $betrokkene, $taxonomy ) {
-		$term = get_term_by( 'slug', sanitize_title($betrokkene['naam'], $betrokkene['id']), 'boekdb_' . $taxonomy . '_tax' );
+		$term = get_term_by( 'slug', sanitize_title( $betrokkene['naam'], $betrokkene['id'] ),
+			'boekdb_' . $taxonomy . '_tax' );
 		if ( $term ) {
 			$term_id = $term->term_id;
 			wp_update_term(
@@ -413,7 +423,7 @@ class BoekDB_Import {
 				'boekdb_' . $taxonomy . '_tax',
 				array(
 					'name' => $betrokkene['naam'],
-					'slug' => sanitize_title($betrokkene['naam'], $betrokkene['id']),
+					'slug' => sanitize_title( $betrokkene['naam'], $betrokkene['id'] ),
 				) );
 		} else {
 			$result  = wp_insert_term(
@@ -421,21 +431,21 @@ class BoekDB_Import {
 				'boekdb_' . $taxonomy . '_tax',
 				array(
 					'name' => $betrokkene['naam'],
-					'slug' => sanitize_title($betrokkene['naam'], $betrokkene['id']),
+					'slug' => sanitize_title( $betrokkene['naam'], $betrokkene['id'] ),
 				) );
 			$term_id = $result['term_id'];
 		}
 
-		$meta = array (
-			'voornaam' => $betrokkene['boekdb_voornaam'],
+		$meta = array(
+			'voornaam'      => $betrokkene['boekdb_voornaam'],
 			'tussenvoegsel' => $betrokkene['boekdb_tussenvoegsel'],
-			'achternaam' => $betrokkene['boekdb_achternaam'],
-			'organisatie' => $betrokkene['boekdb_organisatie'],
-			'biografie' => $betrokkene['boekdb_biografie'],
-			'bibliografie' => $betrokkene['boekdb_bibliografie'],
+			'achternaam'    => $betrokkene['boekdb_achternaam'],
+			'organisatie'   => $betrokkene['boekdb_organisatie'],
+			'biografie'     => $betrokkene['boekdb_biografie'],
+			'bibliografie'  => $betrokkene['boekdb_bibliografie'],
 		);
-		foreach($meta as $key => $value) {
-			update_term_meta($term_id, $key, $value);
+		foreach ( $meta as $key => $value ) {
+			update_term_meta( $term_id, $key, $value );
 		}
 
 		return $term_id;
@@ -457,7 +467,7 @@ class BoekDB_Import {
 
 			// get taxonomy
 			$result = wp_get_object_terms( $boek_post_id, 'boekdb_serie_tax', true );
-			$term = $result[0];
+			$term   = $result[0];
 
 			add_term_meta( $term->term_id, 'boekdb_id', $product->serie->id, true );
 			wp_update_term( $term->term_id, 'boekdb_serie_tax', array(
@@ -475,10 +485,10 @@ class BoekDB_Import {
 	 * @param $term_id
 	 */
 	protected static function handle_serie_files( $product, $term_id ) {
-		if (is_null( $product->serie->beeld ) ) {
+		if ( is_null( $product->serie->beeld ) ) {
 			return;
 		}
-		$hash = md5( $product->serie->beeld->url );
+		$hash          = md5( $product->serie->beeld->url );
 		$attachment_id = self::find_field( 'attachment', 'hash', $hash );
 		if ( is_null( $attachment_id ) ) {
 			$get   = wp_safe_remote_get( $product->serie->beeld->url );
@@ -526,7 +536,7 @@ class BoekDB_Import {
 			}
 
 			if ( $rol === 'auteur' || $rol === 'illustrator' || $rol === 'spreker' ) {
-				$term_id = self::handle_betrokkene( $boekdb_betrokkene, $rol );
+				$term_id            = self::handle_betrokkene( $boekdb_betrokkene, $rol );
 				$term_ids[ $rol ][] = $term_id;
 			} else {
 				$betrokkenen_meta[ $rol ] = ( isset( $betrokkenen_meta[ $rol ] ) ? $betrokkenen_meta[ $rol ] . ', ' : '' ) . $boekdb_betrokkene['naam'];
