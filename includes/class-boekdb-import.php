@@ -258,6 +258,7 @@ class BoekDB_Import {
 		$boek['actieperiode_einde']  = $product->actieperiode_einde;
 		$boek['status']              = $product->status;
 		$boek['leverbaarheid']       = $product->leverbaarheid;
+		$boek['biografie']           = $product->auteursbiografie;
 
 		return $boek;
 	}
