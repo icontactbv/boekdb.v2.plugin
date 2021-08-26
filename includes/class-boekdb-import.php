@@ -23,8 +23,8 @@ class BoekDB_Import {
 	public static function init() {
 		// debug:
 		if ( WP_DEBUG ) {
-			// flush_rewrite_rules();
-			// add_action( 'init', array( self::class, 'import' ) );
+			flush_rewrite_rules();
+			add_action( 'init', array( self::class, 'import' ) );
 		}
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
@@ -422,6 +422,7 @@ class BoekDB_Import {
 	 * @return int|mixed
 	 */
 	protected static function handle_betrokkene( $betrokkene, $taxonomy ) {
+		boekdb_debug($betrokkene);
 		$term = get_term_by( 'slug', sanitize_title( $betrokkene['naam'], $betrokkene['id'] ),
 			'boekdb_' . $taxonomy . '_tax' );
 		if ( $term ) {
@@ -487,7 +488,43 @@ class BoekDB_Import {
 	}
 
 	/**
-	 * Load files from boek
+	 * Load files for contributor
+	 *
+	 * @param $betrokkene
+	 * @param $term_id
+	 */
+	protected static function handle_betrokkene_files( $betrokkene, $term_id ) {
+
+//		if ( is_null( $product->serie->beeld ) ) {
+//			return;
+//		}
+//		$hash          = md5( $product->serie->beeld->url );
+//		$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+//		if ( is_null( $attachment_id ) ) {
+//			$get   = wp_safe_remote_get( $product->serie->beeld->url );
+//			$type  = wp_remote_retrieve_header( $get, 'content-type' );
+//			$image = wp_upload_bits( $product->serie->beeld->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+//
+//			$attachment = array(
+//				'post_title'     => $product->serie->beeld->soort,
+//				'post_mime_type' => $type
+//			);
+//
+//			$attachment_id   = wp_insert_attachment( $attachment, $image['file'], $term_id );
+//			$wp_upload_dir   = wp_upload_dir();
+//			$attachment_data = wp_generate_attachment_metadata(
+//				$attachment_id,
+//				$wp_upload_dir['path'] . '/' . $product->serie->beeld->bestandsnaam );
+//
+//			wp_update_attachment_metadata( $attachment_id, $attachment_data );
+//
+//			update_post_meta( $attachment_id, 'hash', $hash );
+//			update_term_meta( $term_id, 'boekdb_seriebeeld_id', $attachment_id );
+//		}
+	}
+
+	/**
+	 * Load files for serie
 	 *
 	 * @param $product
 	 * @param $term_id
