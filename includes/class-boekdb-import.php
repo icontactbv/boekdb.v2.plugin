@@ -253,9 +253,7 @@ class BoekDB_Import {
 		$boek['eersteuitleverdatum'] = $product->eersteuitleverdatum;
 		$boek['verschijningsdatum']  = $product->verschijningsdatum;
 		$boek['prijs']               = $product->prijs;
-		$boek['actieprijs']          = $product->actieprijs;
-		$boek['actieperiode_start']  = $product->actieperiode_start;
-		$boek['actieperiode_einde']  = $product->actieperiode_einde;
+		$boek['actieprijzen']        = $product->actieprijzen;
 		$boek['status']              = $product->status;
 		$boek['leverbaarheid']       = $product->leverbaarheid;
 		$boek['biografie']           = $product->auteursbiografie;
