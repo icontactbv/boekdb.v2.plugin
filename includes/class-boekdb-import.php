@@ -253,10 +253,19 @@ class BoekDB_Import {
 		$boek['eersteuitleverdatum'] = $product->eersteuitleverdatum;
 		$boek['verschijningsdatum']  = $product->verschijningsdatum;
 		$boek['prijs']               = $product->prijs;
-		$boek['actieprijzen']        = $product->actieprijzen;
 		$boek['status']              = $product->status;
 		$boek['leverbaarheid']       = $product->leverbaarheid;
-		$boek['biografie']           = $product->auteursbiografie;
+		$boek['biografie']           = $product->biografie;
+		$boek['actieprijzen']        = [];
+		if ( isset ( $product->actieprijzen ) && ! is_null( $product->actieprijzen ) ) {
+			foreach ( $product->actieprijzen as $actieprijs ) {
+				$boek['actieprijzen'][] = [
+					'actieprijs' => $actieprijs->actieprijs,
+					'actieperiode_start' => $actieprijs->actieperiode_start,
+					'actieperiode_einde' => $actieprijs->actieperiode_einde,
+				];
+			}
+		}
 
 		return $boek;
 	}
