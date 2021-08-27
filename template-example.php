@@ -71,9 +71,24 @@ while ( have_posts() ) :
 			$betrokkenen = boekdb_betrokkenen_data( get_the_ID() );
 			echo '<table>';
 			foreach ( $betrokkenen as $rol => $betrokkene ) {
-				echo '<pre>';
+				echo '<tr><td><pre>';
 				var_dump( $betrokkene );
-				echo '</pre>';
+				echo '</pre></td></tr>';
+				if ( isset( $betrokkene['boekdb_auteursfoto_id'] ) ) {
+					echo '<tr><td>Auteursfoto</td><td>';
+					$image_attributes = wp_get_attachment_image_src( $betrokkene['boekdb_auteursfoto_id'] );
+					if ( $image_attributes ) : ?>
+                        <a href="<?php
+						echo wp_get_original_image_url( $betrokkene['boekdb_auteursfoto_id'] ) ?>">
+                            <img src="<?php
+							echo $image_attributes[0]; ?>" width="<?php
+							echo $image_attributes[1]; ?>" height="<?php
+							echo $image_attributes[2]; ?>"/>
+                        </a>
+					<?php
+					endif;
+					echo '</td></tr>';
+				}
 			}
 
 			$actieprijzen = $boek_data['actieprijzen'];
