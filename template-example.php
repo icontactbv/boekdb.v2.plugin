@@ -68,26 +68,28 @@ while ( have_posts() ) :
 			}
 			echo '</table>';
 
-			$betrokkenen = boekdb_betrokkenen_data( get_the_ID() );
+			$alle_betrokkenen = boekdb_betrokkenen_data( get_the_ID() );
 			echo '<table>';
-			foreach ( $betrokkenen as $rol => $betrokkene ) {
-				echo '<tr><td><pre>';
-				var_dump( $betrokkene );
-				echo '</pre></td></tr>';
-				if ( isset( $betrokkene['boekdb_auteursfoto_id'] ) ) {
-					echo '<tr><td>Auteursfoto</td><td>';
-					$image_attributes = wp_get_attachment_image_src( $betrokkene['boekdb_auteursfoto_id'] );
-					if ( $image_attributes ) : ?>
-                        <a href="<?php
-						echo wp_get_original_image_url( $betrokkene['boekdb_auteursfoto_id'] ) ?>">
-                            <img src="<?php
-							echo $image_attributes[0]; ?>" width="<?php
-							echo $image_attributes[1]; ?>" height="<?php
-							echo $image_attributes[2]; ?>"/>
-                        </a>
-					<?php
-					endif;
-					echo '</td></tr>';
+			foreach ( $alle_betrokkenen as $rol => $betrokkenen ) {
+				foreach ( $betrokkenen as $betrokkene ) {
+					echo '<tr><td><pre>';
+					var_dump( $betrokkene );
+					echo '</pre>';
+					if ( isset( $betrokkene['auteursfoto_id'] ) ) {
+						echo '<strong>Auteursfoto</strong>:<br />';
+						$image_attributes = wp_get_attachment_image_src( $betrokkene['auteursfoto_id'] );
+						if ( $image_attributes ) : ?>
+                            <a href="<?php
+							echo wp_get_original_image_url( $betrokkene['auteursfoto_id'] ) ?>">
+                                <img src="<?php
+								echo $image_attributes[0]; ?>" width="<?php
+								echo $image_attributes[1]; ?>" height="<?php
+								echo $image_attributes[2]; ?>"/>
+                            </a>
+						<?php
+						endif;
+						echo '</td></tr>';
+					}
 				}
 			}
 
