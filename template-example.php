@@ -93,7 +93,7 @@ while ( have_posts() ) :
 				}
 			}
 
-			$actieprijzen = $boek_data['actieprijzen'];
+			$actieprijzen = unserialize( $boek_data['actieprijzen'] );
 			foreach ( $actieprijzen as $actieprijs ) {
 				echo 'Actieprijs: ' . $actieprijs['actieprijs'] . '<br />';
 				echo 'Van: ' . DateTime::createFromFormat( 'Y-m-d',
@@ -101,6 +101,11 @@ while ( have_posts() ) :
 				echo 'Tot: ' . DateTime::createFromFormat( 'Y-m-d',
 						$actieprijs['actieperiode_einde'] )->format( 'd-m-Y' ) . '<br/>';
 				echo '<br />';
+			}
+
+			$links = unserialize( $boek_data['links'] );
+			foreach ( $links as $link ) {
+				echo 'Link naar ' . $link['soort'] . ' : ' . link['url'] . '<br />';
 			}
 
 			wp_link_pages(

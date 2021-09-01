@@ -221,48 +221,57 @@ class BoekDB_Import {
 	 * @return array
 	 */
 	protected static function create_boek_array( $product ) {
-		$boek                        = array();
-		$boek['nstc']                = $product->nstc;
-		$boek['titel']               = $product->titel;
-		$boek['isbn']                = $product->isbn;
-		$boek['subtitel']            = $product->subtitel;
-		$boek['deeltitel']           = $product->deeltitel;
-		$boek['sectietitel']         = $product->sectietitel;
-		$boek['origineletitel']      = $product->origineletitel;
-		$boek['serietitel']          = $product->serietitel;
-		$boek['deel']                = $product->deel;
-		$boek['druk']                = $product->druk;
-		$boek['verschijningsvorm']   = $product->verschijningsvorm;
-		$boek['uitgever']            = $product->uitgever;
-		$boek['imprint']             = $product->imprint;
-		$boek['flaptekst']           = $product->flaptekst;
-		$boek['annotatie']           = $product->annotatie;
-		$boek['taal']                = $product->taal;
-		$boek['illustraties']        = $product->illustraties;
-		$boek['lengte']              = $product->lengte;
-		$boek['breedte']             = $product->breedte;
-		$boek['dikte']               = $product->dikte;
-		$boek['gewicht']             = $product->gewicht;
-		$boek['paginas_hoofdwerk']   = $product->paginas_hoofdwerk;
-		$boek['paginas_proloog']     = $product->paginas_proloog;
-		$boek['paginas_epiloog']     = $product->paginas_epiloog;
-		$boek['duur']                = $product->duur;
-		$boek['bestandsgrootte']     = $product->bestandsgrootte;
-		$boek['leeftijdscategorie']  = $product->leeftijdscategorie;
-		$boek['avi']                 = $product->avi;
-		$boek['eersteuitleverdatum'] = $product->eersteuitleverdatum;
-		$boek['verschijningsdatum']  = $product->verschijningsdatum;
-		$boek['prijs']               = $product->prijs;
-		$boek['status']              = $product->status;
-		$boek['leverbaarheid']       = $product->leverbaarheid;
-		$boek['biografie']           = $product->biografie;
-		$boek['actieprijzen']        = [];
+		$boek                          = array();
+		$boek['nstc']                  = $product->nstc;
+		$boek['titel']                 = $product->titel;
+		$boek['isbn']                  = $product->isbn;
+		$boek['subtitel']              = $product->subtitel;
+		$boek['deeltitel']             = $product->deeltitel;
+		$boek['sectietitel']           = $product->sectietitel;
+		$boek['origineletitel']        = $product->origineletitel;
+		$boek['serietitel']            = $product->serietitel;
+		$boek['deel']                  = $product->deel;
+		$boek['druk']                  = $product->druk;
+		$boek['verschijningsvorm']     = $product->verschijningsvorm;
+		$boek['uitgever']              = $product->uitgever;
+		$boek['imprint']               = $product->imprint;
+		$boek['flaptekst']             = $product->flaptekst;
+		$boek['annotatie']             = $product->annotatie;
+		$boek['taal']                  = $product->taal;
+		$boek['illustraties']          = $product->illustraties;
+		$boek['lengte']                = $product->lengte;
+		$boek['breedte']               = $product->breedte;
+		$boek['dikte']                 = $product->dikte;
+		$boek['gewicht']               = $product->gewicht;
+		$boek['paginas_hoofdwerk']     = $product->paginas_hoofdwerk;
+		$boek['paginas_proloog']       = $product->paginas_proloog;
+		$boek['paginas_epiloog']       = $product->paginas_epiloog;
+		$boek['duur']                  = $product->duur;
+		$boek['bestandsgrootte']       = $product->bestandsgrootte;
+		$boek['leeftijdscategorie']    = $product->leeftijdscategorie;
+		$boek['avi']                   = $product->avi;
+		$boek['beschikbaarheidsdatum'] = $product->beschikbaarheidsdatum;
+		$boek['publicatiedatum']       = $product->publicatiedatum;
+		$boek['prijs']                 = $product->prijs;
+		$boek['status']                = $product->status;
+		$boek['leverbaarheid']         = $product->leverbaarheid;
+		$boek['biografie']             = $product->biografie;
+		$boek['actieprijzen']          = [];
 		if ( isset ( $product->actieprijzen ) && ! is_null( $product->actieprijzen ) ) {
 			foreach ( $product->actieprijzen as $actieprijs ) {
 				$boek['actieprijzen'][] = [
 					'actieprijs'         => $actieprijs->actieprijs,
 					'actieperiode_start' => $actieprijs->actieperiode_start,
 					'actieperiode_einde' => $actieprijs->actieperiode_einde,
+				];
+			}
+		}
+		$boek['links'];
+		if ( isset ( $product->links ) && ! is_null( $product->links ) ) {
+			foreach ( $product->links as $link) {
+				$boek['links'][] = [
+					'soort' => strtolower($link->soort),
+					'url' => $link->url,
 				];
 			}
 		}
