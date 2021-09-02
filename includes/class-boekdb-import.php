@@ -23,8 +23,8 @@ class BoekDB_Import {
 	public static function init() {
 		// debug:
 		if ( WP_DEBUG ) {
-			// flush_rewrite_rules();
-			// add_action( 'init', array( self::class, 'import' ) );
+//			flush_rewrite_rules();
+//			add_action( 'init', array( self::class, 'import' ) );
 		}
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
@@ -221,48 +221,97 @@ class BoekDB_Import {
 	 * @return array
 	 */
 	protected static function create_boek_array( $product ) {
-		$boek                        = array();
-		$boek['nstc']                = $product->nstc;
-		$boek['titel']               = $product->titel;
-		$boek['isbn']                = $product->isbn;
-		$boek['subtitel']            = $product->subtitel;
-		$boek['deeltitel']           = $product->deeltitel;
-		$boek['sectietitel']         = $product->sectietitel;
-		$boek['origineletitel']      = $product->origineletitel;
-		$boek['serietitel']          = $product->serietitel;
-		$boek['deel']                = $product->deel;
-		$boek['druk']                = $product->druk;
-		$boek['verschijningsvorm']   = $product->verschijningsvorm;
-		$boek['uitgever']            = $product->uitgever;
-		$boek['imprint']             = $product->imprint;
-		$boek['flaptekst']           = $product->flaptekst;
-		$boek['annotatie']           = $product->annotatie;
-		$boek['taal']                = $product->taal;
-		$boek['illustraties']        = $product->illustraties;
-		$boek['lengte']              = $product->lengte;
-		$boek['breedte']             = $product->breedte;
-		$boek['dikte']               = $product->dikte;
-		$boek['gewicht']             = $product->gewicht;
-		$boek['paginas_hoofdwerk']   = $product->paginas_hoofdwerk;
-		$boek['paginas_proloog']     = $product->paginas_proloog;
-		$boek['paginas_epiloog']     = $product->paginas_epiloog;
-		$boek['duur']                = $product->duur;
-		$boek['bestandsgrootte']     = $product->bestandsgrootte;
-		$boek['leeftijdscategorie']  = $product->leeftijdscategorie;
-		$boek['avi']                 = $product->avi;
-		$boek['eersteuitleverdatum'] = $product->eersteuitleverdatum;
-		$boek['verschijningsdatum']  = $product->verschijningsdatum;
-		$boek['prijs']               = $product->prijs;
-		$boek['status']              = $product->status;
-		$boek['leverbaarheid']       = $product->leverbaarheid;
-		$boek['biografie']           = $product->biografie;
-		$boek['actieprijzen']        = [];
+		$boek                          = array();
+		$boek['nstc']                  = $product->nstc;
+		$boek['titel']                 = $product->titel;
+		$boek['isbn']                  = $product->isbn;
+		$boek['subtitel']              = $product->subtitel;
+		$boek['deeltitel']             = $product->deeltitel;
+		$boek['sectietitel']           = $product->sectietitel;
+		$boek['origineletitel']        = $product->origineletitel;
+		$boek['serietitel']            = $product->serietitel;
+		$boek['deel']                  = $product->deel;
+		$boek['druk']                  = $product->druk;
+		$boek['verschijningsvorm']     = $product->verschijningsvorm;
+		$boek['uitgever']              = $product->uitgever;
+		$boek['imprint']               = $product->imprint;
+		$boek['flaptekst']             = $product->flaptekst;
+		$boek['inhoudsopgave']         = $product->inhoudsopgave;
+		$boek['annotatie']             = $product->annotatie;
+		$boek['taal']                  = $product->taal;
+		$boek['illustraties']          = $product->illustraties;
+		$boek['lengte']                = $product->lengte;
+		$boek['breedte']               = $product->breedte;
+		$boek['dikte']                 = $product->dikte;
+		$boek['gewicht']               = $product->gewicht;
+		$boek['paginas_hoofdwerk']     = $product->paginas_hoofdwerk;
+		$boek['paginas_proloog']       = $product->paginas_proloog;
+		$boek['paginas_epiloog']       = $product->paginas_epiloog;
+		$boek['duur']                  = $product->duur;
+		$boek['bestandsgrootte']       = $product->bestandsgrootte;
+		$boek['leeftijdscategorie']    = $product->leeftijdscategorie;
+		$boek['avi']                   = $product->avi;
+		$boek['beschikbaarheidsdatum'] = $product->beschikbaarheidsdatum;
+		$boek['publicatiedatum']       = $product->publicatiedatum;
+		$boek['prijs']                 = $product->prijs;
+		$boek['status']                = $product->status;
+		$boek['leverbaarheid']         = $product->leverbaarheid;
+		$boek['biografie']             = $product->biografie;
+		$boek['actieprijzen']          = [];
+		$boek['links']                 = [];
+		$boek['literaireprijzen']      = [];
+		$boek['recensiequotes']        = [];
+		$boek['recensielinks']         = [];
+
 		if ( isset ( $product->actieprijzen ) && ! is_null( $product->actieprijzen ) ) {
 			foreach ( $product->actieprijzen as $actieprijs ) {
 				$boek['actieprijzen'][] = [
-					'actieprijs' => $actieprijs->actieprijs,
+					'actieprijs'         => $actieprijs->actieprijs,
 					'actieperiode_start' => $actieprijs->actieperiode_start,
 					'actieperiode_einde' => $actieprijs->actieperiode_einde,
+				];
+			}
+		}
+
+		if ( isset ( $product->links ) && ! is_null( $product->links ) ) {
+			foreach ( $product->links as $link ) {
+				$boek['links'][] = [
+					'soort' => strtolower( $link->soort ),
+					'url'   => $link->url,
+				];
+			}
+		}
+
+		if ( isset ( $product->literaireprijzen ) && ! is_null( $product->literaireprijzen ) ) {
+			foreach ( $product->literaireprijzen as $prijs ) {
+				$boek['literaireprijzen'][] = [
+					'prestatie'    => $prijs->prestatie,
+					'naam'         => $prijs->naam,
+					'jaar'         => $prijs->jaar,
+					'land'         => $prijs->land,
+					'omschrijving' => $prijs->omschrijving,
+				];
+			}
+		}
+
+		if ( isset( $product->recensiequotes ) && ! is_null( $product->recensiequotes ) ) {
+			foreach($product->recensiequotes as $quote) {
+				$boek['recensiequotes'][] = [
+					'tekst' => strtolower( $quote->tekst ),
+					'auteur' => $quote->auteur,
+					'bron' => $quote->bron,
+					'datum' => $quote->datum,
+				];
+			}
+		}
+
+		if ( isset( $product->recensielinks ) && ! is_null( $product->recensielinks ) ) {
+			foreach($product->recensielinks as $link) {
+				$boek['recensielinks'][] = [
+					'soort' => strtolower( $link->type ),
+					'url' => $link->url,
+					'bron' => $link->bron,
+					'datum' => $link->datum,
 				];
 			}
 		}
@@ -287,8 +336,7 @@ class BoekDB_Import {
 		$boekdb_betrokkene['boekdb_organisatie']   = $betrokkene->organisatie;
 		$boekdb_betrokkene['boekdb_biografie']     = $betrokkene->biografie;
 		$boekdb_betrokkene['boekdb_bibliografie']  = $betrokkene->bibliografie;
-
-		// @todo handle files
+		$boekdb_betrokkene['bestanden']            = $betrokkene->bestanden;
 
 		return $boekdb_betrokkene;
 	}
@@ -308,7 +356,7 @@ class BoekDB_Import {
 			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
 			if ( is_null( $attachment_id ) ) {
 				$get   = wp_safe_remote_get( $bestand->url );
-				$type  = wp_remote_retrieve_header( $get, 'content-type' );
+				$type  = $bestand->type;
 				$image = wp_upload_bits( $bestand->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
 
 				$attachment = array(
@@ -456,6 +504,10 @@ class BoekDB_Import {
 			update_term_meta( $term_id, $key, $value );
 		}
 
+		if ( isset( $betrokkene['bestanden'] ) && count( $betrokkene['bestanden'] ) > 0 ) {
+			self::handle_betrokkene_files( $betrokkene, $term_id );
+		}
+
 		return $term_id;
 	}
 
@@ -487,7 +539,49 @@ class BoekDB_Import {
 	}
 
 	/**
-	 * Load files from boek
+	 * Load files for contributor
+	 *
+	 * @param $betrokkene
+	 * @param $term_id
+	 */
+	protected static function handle_betrokkene_files( $betrokkene, $term_id ) {
+		foreach ( $betrokkene['bestanden'] as $bestand ) {
+			if ( $bestand->soort !== 'Auteursfoto' ) {
+				return;
+			}
+
+			$hash          = md5( $bestand->url );
+			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+
+			if ( is_null( $attachment_id ) ) {
+				$get   = wp_safe_remote_get( $bestand->url );
+				$type  = $bestand->type;
+				$image = wp_upload_bits( $bestand->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+
+				$attachment = array(
+					'post_title'     => 'Auteursfoto',
+					'post_mime_type' => $type
+				);
+
+				$attachment_id   = wp_insert_attachment( $attachment, $image['file'] );
+				$wp_upload_dir   = wp_upload_dir();
+				$attachment_data = wp_generate_attachment_metadata(
+					$attachment_id,
+					$wp_upload_dir['path'] . '/' . $bestand->bestandsnaam );
+
+				wp_update_attachment_metadata( $attachment_id, $attachment_data );
+
+				update_post_meta( $attachment_id, 'hash', $hash );
+				update_term_meta( $term_id, 'auteursfoto_id', $attachment_id );
+				if ( ! is_null( $bestand->copyright ) ) {
+					update_term_meta( $term_id, 'auteursfoto_copyright', $bestand->copyright );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Load files for serie
 	 *
 	 * @param $product
 	 * @param $term_id
@@ -496,23 +590,26 @@ class BoekDB_Import {
 		if ( is_null( $product->serie->beeld ) ) {
 			return;
 		}
-		$hash          = md5( $product->serie->beeld->url );
+
+		$bestand       = $product->serie->beeld;
+		$hash          = md5( $bestand->url );
 		$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+
 		if ( is_null( $attachment_id ) ) {
-			$get   = wp_safe_remote_get( $product->serie->beeld->url );
-			$type  = wp_remote_retrieve_header( $get, 'content-type' );
-			$image = wp_upload_bits( $product->serie->beeld->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+			$get   = wp_safe_remote_get( $bestand->url );
+			$type  = $bestand->type;
+			$image = wp_upload_bits( $bestand->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
 
 			$attachment = array(
-				'post_title'     => $product->serie->beeld->soort,
+				'post_title'     => $bestand->soort,
 				'post_mime_type' => $type
 			);
 
-			$attachment_id   = wp_insert_attachment( $attachment, $image['file'], $term_id );
+			$attachment_id   = wp_insert_attachment( $attachment, $image['file'] );
 			$wp_upload_dir   = wp_upload_dir();
 			$attachment_data = wp_generate_attachment_metadata(
 				$attachment_id,
-				$wp_upload_dir['path'] . '/' . $product->serie->beeld->bestandsnaam );
+				$wp_upload_dir['path'] . '/' . $bestand->bestandsnaam );
 
 			wp_update_attachment_metadata( $attachment_id, $attachment_data );
 
