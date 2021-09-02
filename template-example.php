@@ -91,36 +91,55 @@ while ( have_posts() ) :
 				}
 			}
 
-			if(isset($boek_data['actieprijzen'])) {
-			    echo '<strong>Actieprijzen</strong><br />';
-                $actieprijzen = unserialize( $boek_data['actieprijzen'] );
-                foreach ( $actieprijzen as $actieprijs ) {
-                    echo 'Actieprijs: ' . $actieprijs['actieprijs'] . '<br />';
-                    echo 'Van: ' . DateTime::createFromFormat( 'Y-m-d',
-                            $actieprijs['actieperiode_start'] )->format( 'd-m-Y' ) . '<br/>';
-                    echo 'Tot: ' . DateTime::createFromFormat( 'Y-m-d',
-                            $actieprijs['actieperiode_einde'] )->format( 'd-m-Y' ) . '<br/>';
-                    echo '<br />';
-                }
+			if ( isset( $boek_data['actieprijzen'] ) ) {
+				echo '<strong>Actieprijzen</strong><br />';
+				$actieprijzen = unserialize( $boek_data['actieprijzen'] );
+				foreach ( $actieprijzen as $actieprijs ) {
+					echo 'Actieprijs: ' . $actieprijs['actieprijs'] . '<br />';
+					echo 'Van: ' . DateTime::createFromFormat( 'Y-m-d',
+							$actieprijs['actieperiode_start'] )->format( 'd-m-Y' ) . '<br/>';
+					echo 'Tot: ' . DateTime::createFromFormat( 'Y-m-d',
+							$actieprijs['actieperiode_einde'] )->format( 'd-m-Y' ) . '<br/>';
+					echo '<br />';
+				}
 			}
 
-            if(isset($boek_data['links'])) {
-                echo '<strong>Links</strong><br />';
-                $links = unserialize( $boek_data['links'] );
-                foreach ( $links as $link ) {
-                    echo 'Link naar ' . $link['soort'] . ' : ' . $link['url'] . '<br />';
-                }
-            }
+			if ( isset( $boek_data['links'] ) ) {
+				echo '<strong>Links</strong><br />';
+				$links = unserialize( $boek_data['links'] );
+				foreach ( $links as $link ) {
+					echo 'Link naar ' . $link['soort'] . ' : ' . $link['url'] . '<br />';
+				}
+			}
 
-            if(isset($boek_data['literaireprijzen'])) {
-	            echo '<strong>Literaire prijzen</strong><br />';
-	            $literaireprijzen = unserialize( $boek_data['literaireprijzen'] );
-	            foreach ( $literaireprijzen as $literaireprijs ) {
-		            echo $literaireprijs['prestatie'] . ' ' . $literaireprijs['naam'] . ' ' . $literaireprijs['jaar'] . '<br />';
-		            echo $literaireprijs['omschrijving'] . '<br />';
-		            echo $literaireprijs['land'] . '<br />';
-	            }
-            }
+			if ( isset( $boek_data['literaireprijzen'] ) ) {
+				echo '<strong>Literaire prijzen</strong><br />';
+				$literaireprijzen = unserialize( $boek_data['literaireprijzen'] );
+				foreach ( $literaireprijzen as $literaireprijs ) {
+					echo $literaireprijs['prestatie'] . ' ' . $literaireprijs['naam'] . ' ' . $literaireprijs['jaar'] . '<br />';
+					echo $literaireprijs['omschrijving'] . '<br />';
+					echo $literaireprijs['land'] . '<br />';
+				}
+			}
+
+			if ( isset( $boek_data['recensielinks'] ) ) {
+				echo '<strong>Recensies</strong><br />';
+				$recensielinks = unserialize( $boek_data['recensielinks'] );
+				foreach ( $recensielinks as $link ) {
+					echo $link['bron'] . ' ' . $link['datum'] . ' ' . $link['soort'] . ':<br />';
+					echo $link['url'] . '<br />';
+				}
+			}
+
+			if ( isset( $boek_data['recensiequotes'] ) ) {
+				echo '<strong>Quotes</strong><br />';
+				$recensiequotes = unserialize( $boek_data['recensiequotes'] );
+				foreach ( $recensiequotes as $quote ) {
+					echo $quote['tekst'] . '<br />';
+					echo $quote['auteur'] . ' - ' . $quote['bron'] . ' - ' . $quote['datum'] . '<br />';
+				}
+			}
+
 
 			wp_link_pages(
 				array(

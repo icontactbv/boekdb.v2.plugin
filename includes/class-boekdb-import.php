@@ -308,7 +308,7 @@ class BoekDB_Import {
 		if ( isset( $product->recensielinks ) && ! is_null( $product->recensielinks ) ) {
 			foreach($product->recensielinks as $link) {
 				$boek['recensielinks'][] = [
-					'soort' => strtolower( $link->soort ),
+					'soort' => strtolower( $link->type ),
 					'url' => $link->url,
 					'bron' => $link->bron,
 					'datum' => $link->datum,
