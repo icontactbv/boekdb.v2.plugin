@@ -257,6 +257,9 @@ class BoekDB_Import {
 		$boek['leverbaarheid']         = $product->leverbaarheid;
 		$boek['biografie']             = $product->biografie;
 		$boek['actieprijzen']          = [];
+		$boek['links']                 = [];
+		$boek['literaireprijzen']      = [];
+
 		if ( isset ( $product->actieprijzen ) && ! is_null( $product->actieprijzen ) ) {
 			foreach ( $product->actieprijzen as $actieprijs ) {
 				$boek['actieprijzen'][] = [
@@ -266,12 +269,24 @@ class BoekDB_Import {
 				];
 			}
 		}
-		$boek['links'];
+
 		if ( isset ( $product->links ) && ! is_null( $product->links ) ) {
-			foreach ( $product->links as $link) {
+			foreach ( $product->links as $link ) {
 				$boek['links'][] = [
-					'soort' => strtolower($link->soort),
-					'url' => $link->url,
+					'soort' => strtolower( $link->soort ),
+					'url'   => $link->url,
+				];
+			}
+		}
+
+		if ( isset ( $product->literaireprijzen ) && ! is_null( $product->literaireprijzen ) ) {
+			foreach ( $product->literaireprijzen as $prijs ) {
+				$boek['literaireprijzen'][] = [
+					'prestatie'    => $prijs->prestatie,
+					'naam'         => $prijs->naam,
+					'jaar'         => $prijs->jaar,
+					'land'         => $prijs->land,
+					'omschrijving' => $prijs->omschrijving,
 				];
 			}
 		}
@@ -550,15 +565,18 @@ class BoekDB_Import {
 		if ( is_null( $product->serie->beeld ) ) {
 			return;
 		}
-		$hash          = md5( $product->serie->beeld->url );
+
+		$bestand       = $product->serie->beeld;
+		$hash          = md5( $bestand->url );
 		$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+
 		if ( is_null( $attachment_id ) ) {
-			$get   = wp_safe_remote_get( $product->serie->beeld->url );
+			$get   = wp_safe_remote_get( $bestand->url );
 			$type  = $bestand->type;
-			$image = wp_upload_bits( $product->serie->beeld->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+			$image = wp_upload_bits( $bestand->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
 
 			$attachment = array(
-				'post_title'     => $product->serie->beeld->soort,
+				'post_title'     => $bestand->soort,
 				'post_mime_type' => $type
 			);
 
@@ -566,7 +584,7 @@ class BoekDB_Import {
 			$wp_upload_dir   = wp_upload_dir();
 			$attachment_data = wp_generate_attachment_metadata(
 				$attachment_id,
-				$wp_upload_dir['path'] . '/' . $product->serie->beeld->bestandsnaam );
+				$wp_upload_dir['path'] . '/' . $bestand->bestandsnaam );
 
 			wp_update_attachment_metadata( $attachment_id, $attachment_data );
 
