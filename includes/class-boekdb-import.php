@@ -260,6 +260,8 @@ class BoekDB_Import {
 		$boek['actieprijzen']          = [];
 		$boek['links']                 = [];
 		$boek['literaireprijzen']      = [];
+		$boek['recensiequotes']        = [];
+		$boek['recensielinks']         = [];
 
 		if ( isset ( $product->actieprijzen ) && ! is_null( $product->actieprijzen ) ) {
 			foreach ( $product->actieprijzen as $actieprijs ) {
@@ -288,6 +290,28 @@ class BoekDB_Import {
 					'jaar'         => $prijs->jaar,
 					'land'         => $prijs->land,
 					'omschrijving' => $prijs->omschrijving,
+				];
+			}
+		}
+
+		if ( isset( $product->recensiequotes ) && ! is_null( $product->recensiequotes ) ) {
+			foreach($product->recensiequotes as $quote) {
+				$boek['recensiequotes'][] = [
+					'tekst' => strtolower( $quote->tekst ),
+					'auteur' => $quote->auteur,
+					'bron' => $quote->bron,
+					'datum' => $quote->datum,
+				];
+			}
+		}
+
+		if ( isset( $product->recensielinks ) && ! is_null( $product->recensielinks ) ) {
+			foreach($product->recensielinks as $link) {
+				$boek['recensielinks'][] = [
+					'soort' => strtolower( $link->soort ),
+					'url' => $link->url,
+					'bron' => $link->bron,
+					'datum' => $link->datum,
 				];
 			}
 		}
