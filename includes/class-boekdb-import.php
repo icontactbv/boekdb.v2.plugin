@@ -236,6 +236,7 @@ class BoekDB_Import {
 		$boek['uitgever']              = $product->uitgever;
 		$boek['imprint']               = $product->imprint;
 		$boek['flaptekst']             = $product->flaptekst;
+		$boek['inhoudsopgave']         = $product->inhoudsopgave;
 		$boek['annotatie']             = $product->annotatie;
 		$boek['taal']                  = $product->taal;
 		$boek['illustraties']          = $product->illustraties;
