@@ -23,6 +23,10 @@ if ( ! class_exists( 'BoekDB', false ) ) {
 	include_once dirname( BOEKDB_PLUGIN_FILE ) . '/includes/class-boekdb.php';
 }
 
+$boekdb_import_options = [
+	'overwrite_images',
+];
+
 /**
  * Returns the main instance of BoekDB.
  *
@@ -43,15 +47,32 @@ function boekdb_debug( $message ) {
 }
 
 BoekDB();
+
+function boekdb_set_import_option($name, $value) {
+	global $boekdb_import_options;
+	boekdb_debug( 'set import option '.$name.': '.$value );
+	if(in_array($name, $boekdb_import_options)) {
+		set_transient( 'boekdb_import_options_' . $name, $value, MINUTE_IN_SECONDS * 10 );
+	}
+}
+
+function boekdb_unset_import_options() {
+	global $boekdb_import_options;
+	foreach($boekdb_import_options as $option) {
+		delete_transient( 'boekdb_import_options_'.$option);
+	}
+
+}
+
 function boekdb_set_import_running() {
 	boekdb_debug( 'set import running transient' );
-	set_transient( 'boekdb_import_running', true, MINUTE_IN_SECONDS * 10 );
+	set_transient( 'boekdb_import_running', 1, MINUTE_IN_SECONDS * 10 );
 }
 
 function boekdb_is_import_running() {
-	boekdb_debug( 'is import running transient: ' . var_export( get_transient( 'boekdb_import_running' ), true ) );
+	boekdb_debug( 'is import running transient: ' . var_export( get_transient( 'boekdb_import_running' ) === 1, true ) );
 
-	return get_transient( 'boekdb_import_running' );
+	return get_transient( 'boekdb_import_running' ) === 1;
 }
 
 function boekdb_reset_import_running() {
@@ -62,6 +83,10 @@ function boekdb_reset_import_running() {
 
 function boekdb_get_import_etalage() {
 	boekdb_debug( 'get current etalage: ' . var_export( get_transient( 'boekdb_import_etalage' ), true ) );
+	if(get_transient('boekdb_import_etalage') === false) {
+		boekdb_reset_import_running();
+		boekdb_unset_import_options();
+	}
 
 	return get_transient( 'boekdb_import_etalage' );
 }

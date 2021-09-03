@@ -61,7 +61,12 @@ if ( ! defined( 'ABSPATH' ) ) {
         </p>
 
         <hr />
+        <p class="options">
+            <input type="checkbox" id="overwrite_images" name="overwrite_images" value="1">
+            <label for="overwrite_images">Overschrijf afbeeldingen bij import</label>
+        </p>
         <p class="submit">
+
             <button name="run" class="button-primary boekdb-save-button" type="submit" value="run" <?php if($import_running) { echo 'disabled="disabled" aria-disabled="true"'; } ?>>Draai import</button>
             <button name="test" class="button-primary boekdb-save-button" type="submit" value="test">Test</button>
 			<?php wp_nonce_field( 'boekdb-settings' ); ?>

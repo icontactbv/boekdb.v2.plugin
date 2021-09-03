@@ -17,14 +17,18 @@ class BoekDB_Import {
 	const LIMIT               = 250;
 	const DEFAULT_LAST_IMPORT = "2015-01-01T01:00:00+01:00";
 
+	protected static $options = [
+		'overwrite_images' => 0,
+	];
+
 	/**
 	 * Hook in tabs.
 	 */
 	public static function init() {
 		// debug:
 		if ( WP_DEBUG ) {
-//			flush_rewrite_rules();
-//			add_action( 'init', array( self::class, 'import' ) );
+			//flush_rewrite_rules();
+			//add_action( 'init', array( self::class, 'import' ) );
 		}
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
@@ -36,6 +40,10 @@ class BoekDB_Import {
 		set_time_limit( 0 );
 
 		require_once( ABSPATH . 'wp-admin/includes/image.php' );
+
+		// handle options
+		self::$options['overwrite_images'] = get_transient('boekdb_import_options_overwrite_images');
+		boekdb_unset_import_options();
 
 		$etalages = self::fetch_etalages();
 		foreach ( $etalages as $etalage ) {
@@ -552,6 +560,11 @@ class BoekDB_Import {
 
 			$hash          = md5( $bestand->url );
 			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+			boekdb_debug( self::$options['overwrite_images'] );
+			if(self::$options['overwrite_images'] === 1 && !is_null ($attachment_id)) {
+				wp_delete_attachment($attachment_id);
+				$attachment_id = null;
+			}
 
 			if ( is_null( $attachment_id ) ) {
 				$get   = wp_safe_remote_get( $bestand->url );
