@@ -83,6 +83,7 @@ function boekdb_reset_import_running() {
 
 function boekdb_get_import_etalage() {
 	boekdb_debug( 'get current etalage: ' . var_export( get_transient( 'boekdb_import_etalage' ), true ) );
+
 	if(get_transient('boekdb_import_etalage') === false) {
 		boekdb_reset_import_running();
 		boekdb_unset_import_options();

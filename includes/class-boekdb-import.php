@@ -99,7 +99,6 @@ class BoekDB_Import {
 		global $wpdb;
 
 		$isbns = self::fetch_isbns( $etalage->api_key );
-
 		self::unpublish( $etalage->id, $isbns['isbns'] );
 
 		if ( $isbns['filters'] !== $etalage->filter_hash ) {
@@ -560,7 +559,6 @@ class BoekDB_Import {
 
 			$hash          = md5( $bestand->url );
 			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
-			boekdb_debug( self::$options['overwrite_images'] );
 			if(self::$options['overwrite_images'] === 1 && !is_null ($attachment_id)) {
 				wp_delete_attachment($attachment_id);
 				$attachment_id = null;
