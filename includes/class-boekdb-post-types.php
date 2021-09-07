@@ -38,6 +38,7 @@ class Boekdb_Post_Types {
 		self::register_betrokkenen_taxonomies();
 		self::register_onderwerpen_taxonomies();
 		self::register_serie_taxonomy();
+		self::register_nstc_taxonomy();
 	}
 
 	/**
@@ -49,6 +50,25 @@ class Boekdb_Post_Types {
 		}
 
 		self::register_boek_post_type();
+	}
+
+	protected static function register_nstc_taxonomy() {
+		$args = array(
+			'hierarchical'      => false,
+			'public'            => true,
+			'rewrite'           => array('slug' => 'nstcs', 'with_front' => false),
+			'query_var'         => false,
+			'show_ui'           => false,
+			'show_admin_column' => false,
+			'show_in_nav_menus' => false,
+			'show_tagcloud'     => false,
+			'labels'            => array(
+				'name'          => 'NSTCs',
+				'singular_name' => 'NSTC',
+			)
+		);
+
+		register_taxonomy( 'boekdb_serie_tax', 'boekdb_boek', $args );
 	}
 
 	protected static function register_serie_taxonomy() {
