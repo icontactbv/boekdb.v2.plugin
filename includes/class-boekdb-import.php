@@ -223,6 +223,14 @@ class BoekDB_Import {
 	/**
 	 * Create boek array from product
 	 *
+	 * overschijfbaar:
+	 * - flaptekst
+	 * - annotatie
+	 * if($existing_boek['flaptekst_overschreven'] !== '1') {
+	 *
+	 * "uitschakelbaar":
+	 * - quotes
+	 *
 	 * @param $product
 	 *
 	 * @return array
@@ -268,6 +276,9 @@ class BoekDB_Import {
 		$boek['links']                 = [];
 		$boek['literaireprijzen']      = [];
 		$boek['recensiequotes']        = [];
+		// als leeg: automatisch vullen met alle recensiequotes en bitjes "tonen" op true
+		// als niet leeg: quotes updaten, maar bitje "tonen" met rust laten
+		$boek['recensiequotes_tonen']  = [];
 		$boek['recensielinks']         = [];
 
 		if ( isset ( $product->actieprijzen ) && ! is_null( $product->actieprijzen ) ) {
@@ -303,11 +314,13 @@ class BoekDB_Import {
 
 		if ( isset( $product->recensiequotes ) && ! is_null( $product->recensiequotes ) ) {
 			foreach($product->recensiequotes as $quote) {
+				// check op hash
 				$boek['recensiequotes'][] = [
 					'tekst' => strtolower( $quote->tekst ),
 					'auteur' => $quote->auteur,
 					'bron' => $quote->bron,
 					'datum' => $quote->datum,
+					'tonen' => true,
 				];
 			}
 		}

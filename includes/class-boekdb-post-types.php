@@ -57,7 +57,7 @@ class Boekdb_Post_Types {
 			'public'            => true,
 			'rewrite'           => array( 'slug' => 'series', 'with_front' => true ),
 			'query_var'         => false,
-			'show_ui'           => true,
+			'show_ui'           => false,
 			'show_admin_column' => true,
 			'show_in_nav_menus' => false,
 			'show_tagcloud'     => false,
@@ -75,7 +75,7 @@ class Boekdb_Post_Types {
 			'hierarchical'      => false,
 			'public'            => true,
 			'query_var'         => false,
-			'show_ui'           => true,
+			'show_ui'           => false,
 			'show_admin_column' => true,
 			'show_in_nav_menus' => false,
 			'show_tagcloud'     => false,
@@ -175,8 +175,8 @@ class Boekdb_Post_Types {
 	/**
 	 * Disable Gutenberg
 	 *
-	 * @param  bool  $can_edit  Whether the post type can be edited or not.
-	 * @param  string  $post_type  The post type being checked.
+	 * @param bool  $can_edit  Whether the post type can be edited or not.
+	 * @param string  $post_type  The post type being checked.
 	 *
 	 * @return bool
 	 */

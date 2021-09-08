@@ -103,6 +103,9 @@ function boekdb_boek_data( $id ) {
 		if ( substr( $name, 0, 7 ) === 'boekdb_' ) {
 			$data[ substr( $name, 7 ) ] = $value[0];
 		}
+		if($name === 'recensiequotes') {
+			// parsen op 'tonen'-bitje
+		}
 	}
 
 	$series = wp_get_object_terms( $id, 'boekdb_serie_tax' );
