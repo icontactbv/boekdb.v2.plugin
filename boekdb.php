@@ -48,20 +48,19 @@ function boekdb_debug( $message ) {
 
 BoekDB();
 
-function boekdb_set_import_option($name, $value) {
+function boekdb_set_import_option( $name, $value ) {
 	global $boekdb_import_options;
-	boekdb_debug( 'set import option '.$name.': '.$value );
-	if(in_array($name, $boekdb_import_options)) {
+	boekdb_debug( 'set import option ' . $name . ': ' . $value );
+	if ( in_array( $name, $boekdb_import_options ) ) {
 		set_transient( 'boekdb_import_options_' . $name, $value, MINUTE_IN_SECONDS * 10 );
 	}
 }
 
 function boekdb_unset_import_options() {
 	global $boekdb_import_options;
-	foreach($boekdb_import_options as $option) {
-		delete_transient( 'boekdb_import_options_'.$option);
+	foreach ( $boekdb_import_options as $option ) {
+		delete_transient( 'boekdb_import_options_' . $option );
 	}
-
 }
 
 function boekdb_set_import_running() {
@@ -70,7 +69,7 @@ function boekdb_set_import_running() {
 }
 
 function boekdb_is_import_running() {
-	boekdb_debug( 'is import running transient: ' . var_export( get_transient( 'boekdb_import_running' ) === 1, true ) );
+	boekdb_debug( 'is import running transient: ' . var_export( get_transient( 'boekdb_import_running' ), true ) );
 
 	return get_transient( 'boekdb_import_running' ) === 1;
 }
@@ -84,7 +83,7 @@ function boekdb_reset_import_running() {
 function boekdb_get_import_etalage() {
 	boekdb_debug( 'get current etalage: ' . var_export( get_transient( 'boekdb_import_etalage' ), true ) );
 
-	if(get_transient('boekdb_import_etalage') === false) {
+	if ( get_transient( 'boekdb_import_etalage' ) === false ) {
 		boekdb_reset_import_running();
 		boekdb_unset_import_options();
 	}
@@ -117,14 +116,16 @@ function boekdb_boek_data( $id ) {
 function boekdb_betrokkenen_data( $id ) {
 	$data = array();
 	foreach ( wp_get_post_terms( $id, 'boekdb_auteur_tax' ) as $term ) {
-		$data['auteurs'][] = array_merge(array('rol' => 'auteur'), boekdb_betrokkene_data( $term->id, $term ));
+		$data['auteurs'][] = array_merge( array( 'rol' => 'auteur' ), boekdb_betrokkene_data( $term->id, $term ) );
 	}
 	foreach ( wp_get_post_terms( $id, 'boekdb_spreker_tax' ) as $term ) {
-		$data['sprekers'][] = array_merge(array('rol' => 'spreker'), boekdb_betrokkene_data( $term->id, $term ));
+		$data['sprekers'][] = array_merge( array( 'rol' => 'spreker' ), boekdb_betrokkene_data( $term->id, $term ) );
 	}
 	foreach ( wp_get_post_terms( $id, 'boekdb_illustrator_tax' ) as $term ) {
-		$data['illustrators'][] = array_merge(array('rol' => 'illustrator'), boekdb_betrokkene_data( $term->id, $term ));
+		$data['illustrators'][] = array_merge( array( 'rol' => 'illustrator' ),
+			boekdb_betrokkene_data( $term->id, $term ) );
 	}
+
 	return $data;
 }
 
@@ -134,9 +135,10 @@ function boekdb_betrokkene_data( $id, $term = null ) {
 	}
 
 	$data = array();
-	foreach(get_term_meta( $term->term_id ) as $key => $meta) {
-		$data[$key] = $meta[0];
+	foreach ( get_term_meta( $term->term_id ) as $key => $meta ) {
+		$data[ $key ] = $meta[0];
 	}
+
 	return $data;
 }
 
@@ -154,3 +156,26 @@ function boekdb_serie_data( $id, $term = null ) {
 
 	return $data;
 }
+
+function boekdb_nstc_groupby( $groupby ) {
+	global $wpdb;
+	$groupby .= "nstc.meta_value";
+
+	return $groupby;
+}
+
+function boekdb_nstc_join( $join ) {
+	global $wpdb;
+	$join .= "LEFT JOIN $wpdb->postmeta AS nstc ON $wpdb->posts.ID = nstc.post_id AND nstc.meta_key = 'boekdb_nstc'";
+
+	return $join;
+}
+
+function boekdb_archive_by_nstc( $query ) {
+	if ( ! is_admin() && $query->get( 'post_type' ) === 'boekdb_boek' ) {
+		add_filter( 'posts_join', 'boekdb_nstc_join' );
+		add_filter( 'posts_groupby', 'boekdb_nstc_groupby' );
+	}
+}
+
+add_filter( 'pre_get_posts', 'boekdb_archive_by_nstc' );
