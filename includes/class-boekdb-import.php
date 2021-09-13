@@ -94,7 +94,6 @@ class BoekDB_Import {
 
 		// All done, release transients
 		boekdb_reset_import_running();
-		boekdb_unset_import_options();
 	}
 
 
