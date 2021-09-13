@@ -55,7 +55,7 @@ class Boekdb_Post_Types {
 		$args = array(
 			'hierarchical'      => false,
 			'public'            => true,
-			'rewrite'           => array('slug' => 'series', 'with_front' => true),
+			'rewrite'           => array( 'slug' => 'series', 'with_front' => true ),
 			'query_var'         => false,
 			'show_ui'           => true,
 			'show_admin_column' => true,
@@ -81,28 +81,28 @@ class Boekdb_Post_Types {
 			'show_tagcloud'     => false,
 		);
 
-		$labels         = array(
+		$labels          = array(
 			'name'          => 'NUR',
 			'singular_name' => 'NUR',
 		);
-		$args['labels'] = $labels;
-		$args['rewrite'] = array('slug' => 'nur', 'with_front' => true);
+		$args['labels']  = $labels;
+		$args['rewrite'] = array( 'slug' => 'nur', 'with_front' => true );
 		register_taxonomy( 'boekdb_nur_tax', 'boekdb_boek', $args );
 
-		$labels         = array(
+		$labels          = array(
 			'name'          => 'BISAC',
 			'singular_name' => 'BISAC',
 		);
-		$args['labels'] = $labels;
-		$args['rewrite'] = array('slug' => 'bisac', 'with_front' => true);
+		$args['labels']  = $labels;
+		$args['rewrite'] = array( 'slug' => 'bisac', 'with_front' => true );
 		register_taxonomy( 'boekdb_bisac_tax', 'boekdb_boek', $args );
 
-		$labels         = array(
+		$labels          = array(
 			'name'          => 'THEMA',
 			'singular_name' => 'THEMA',
 		);
-		$args['labels'] = $labels;
-		$args['rewrite'] = array('slug' => 'thema', 'with_front' => true);
+		$args['labels']  = $labels;
+		$args['rewrite'] = array( 'slug' => 'thema', 'with_front' => true );
 		register_taxonomy( 'boekdb_thema_tax', 'boekdb_boek', $args );
 	}
 
@@ -117,30 +117,29 @@ class Boekdb_Post_Types {
 			'show_tagcloud'     => false,
 		);
 
-		$labels         = array(
+		$labels          = array(
 			'name'          => 'Auteurs',
 			'singular_name' => 'Auteur',
 		);
-		$args['labels'] = $labels;
-		$args['rewrite'] = array('slug' => 'auteur', 'with_front' => true);
+		$args['labels']  = $labels;
+		$args['rewrite'] = array( 'slug' => 'auteur', 'with_front' => true );
 		register_taxonomy( 'boekdb_auteur_tax', array( 'boekdb_boek' ), $args );
 
-		$labels         = array(
+		$labels          = array(
 			'name'          => 'Illustrators',
 			'singular_name' => 'Illustrator',
 		);
-		$args['labels'] = $labels;
-		$args['rewrite'] = array('slug' => 'illustrator', 'with_front' => true);
+		$args['labels']  = $labels;
+		$args['rewrite'] = array( 'slug' => 'illustrator', 'with_front' => true );
 		register_taxonomy( 'boekdb_illustrator_tax', array( 'boekdb_boek' ), $args );
 
-		$labels         = array(
+		$labels          = array(
 			'name'          => 'Sprekers',
 			'singular_name' => 'Spreker',
 		);
-		$args['labels'] = $labels;
-		$args['rewrite'] = array('slug' => 'spreker', 'with_front' => true);
+		$args['labels']  = $labels;
+		$args['rewrite'] = array( 'slug' => 'spreker', 'with_front' => true );
 		register_taxonomy( 'boekdb_spreker_tax', array( 'boekdb_boek' ), $args );
-
 	}
 
 	protected static function register_boek_post_type() {
@@ -176,8 +175,8 @@ class Boekdb_Post_Types {
 	/**
 	 * Disable Gutenberg
 	 *
-	 * @param bool  $can_edit  Whether the post type can be edited or not.
-	 * @param string  $post_type  The post type being checked.
+	 * @param  bool  $can_edit  Whether the post type can be edited or not.
+	 * @param  string  $post_type  The post type being checked.
 	 *
 	 * @return bool
 	 */

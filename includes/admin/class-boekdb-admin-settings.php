@@ -75,7 +75,10 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				}
 			} elseif ( isset( $_POST['run'] ) && 'run' === $_POST['run'] ) {
 				if ( ! boekdb_is_import_running() ) {
-					wp_schedule_single_event( time(), BoekDB_Import::CRON_HOOK );
+					if(isset( $_POST['overwrite_images'] ) && $_POST['overwrite_images'] === '1') {
+						boekdb_set_import_option('overwrite_images', true);
+					}
+					wp_schedule_single_event( time() + 5, BoekDB_Import::CRON_HOOK );
 					boekdb_set_import_running();
 				} else {
 					self::add_error( 'Import draait al!' );
@@ -153,9 +156,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			if ( $import_running ) {
 				$currently_running = boekdb_get_import_etalage();
 				if ( $currently_running ) {
-					if ( ! isset( $etalages[ $currently_running ] ) ) {
-						boekdb_reset_import_running();
-					} else {
+					if ( isset( $etalages[ $currently_running ] ) ) {
 						self::add_message( 'Er draait op dit moment een import (' . $etalages[ $currently_running ]->name . ')' );
 					}
 				} else {
