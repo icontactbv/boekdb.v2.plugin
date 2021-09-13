@@ -58,6 +58,7 @@ function boekdb_set_import_option( $name, $value ) {
 
 function boekdb_unset_import_options() {
 	global $boekdb_import_options;
+	boekdb_debug('Unsetting import options');
 	foreach ( $boekdb_import_options as $option ) {
 		delete_transient( 'boekdb_import_options_' . $option );
 	}
@@ -69,25 +70,24 @@ function boekdb_set_import_running() {
 }
 
 function boekdb_is_import_running() {
-	boekdb_debug( 'is import running transient: ' . var_export( get_transient( 'boekdb_import_running' ), true ) );
-
-	return get_transient( 'boekdb_import_running' ) === 1;
+	$running = (int)get_transient( 'boekdb_import_running' ) === 1;
+	if($running) {
+		boekdb_debug('Import is running');
+	} else {
+		boekdb_debug('Import is not running');
+	}
+	return $running;
 }
 
 function boekdb_reset_import_running() {
-	boekdb_debug( 'reset import running transient' );
+	boekdb_debug( 'Resetting import running and etalage transients' );
 	delete_transient( 'boekdb_import_running' );
 	delete_transient( 'boekdb_import_etalage' );
+	boekdb_unset_import_options();
 }
 
 function boekdb_get_import_etalage() {
-	boekdb_debug( 'get current etalage: ' . var_export( get_transient( 'boekdb_import_etalage' ), true ) );
-
-	if ( get_transient( 'boekdb_import_etalage' ) === false ) {
-		boekdb_reset_import_running();
-		boekdb_unset_import_options();
-	}
-
+	boekdb_debug( 'Current etalage: ' . var_export( get_transient( 'boekdb_import_etalage' ), true ) );
 	return get_transient( 'boekdb_import_etalage' );
 }
 
