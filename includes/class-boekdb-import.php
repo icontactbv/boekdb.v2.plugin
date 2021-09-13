@@ -43,7 +43,6 @@ class BoekDB_Import {
 
 		// handle options
 		self::$options['overwrite_images'] = get_transient('boekdb_import_options_overwrite_images');
-		boekdb_unset_import_options();
 
 		$etalages = self::fetch_etalages();
 		foreach ( $etalages as $etalage ) {
@@ -62,6 +61,9 @@ class BoekDB_Import {
 
 			while ( $products = self::fetch_products( $etalage->api_key, $last_import, $offset ) ) {
 				boekdb_debug( 'Fetched ' . $etalage->name . ' with offset ' . $offset );
+				if(self::$options['overwrite_images'] === '1') {
+					boekdb_debug('overwriting images');
+				}
 
 				// keep updating transient
 				boekdb_set_import_etalage( $etalage->id );
@@ -90,7 +92,7 @@ class BoekDB_Import {
 			self::set_last_import( $etalage->id );
 		}
 
-		// All done, release transient
+		// All done, release transients
 		boekdb_reset_import_running();
 	}
 
@@ -374,6 +376,11 @@ class BoekDB_Import {
 		foreach ( $product->bestanden as $bestand ) {
 			$hash          = md5( $bestand->url );
 			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+			if(self::$options['overwrite_images'] === '1' && !is_null ($attachment_id)) {
+				wp_delete_attachment($attachment_id);
+				$attachment_id = null;
+			}
+
 			if ( is_null( $attachment_id ) ) {
 				$get   = wp_safe_remote_get( $bestand->url );
 				$type  = $bestand->type;
@@ -572,7 +579,7 @@ class BoekDB_Import {
 
 			$hash          = md5( $bestand->url );
 			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
-			if(self::$options['overwrite_images'] === 1 && !is_null ($attachment_id)) {
+			if(self::$options['overwrite_images'] === '1' && !is_null ($attachment_id)) {
 				wp_delete_attachment($attachment_id);
 				$attachment_id = null;
 			}
@@ -580,7 +587,8 @@ class BoekDB_Import {
 			if ( is_null( $attachment_id ) ) {
 				$get   = wp_safe_remote_get( $bestand->url );
 				$type  = $bestand->type;
-				$image = wp_upload_bits( $bestand->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+				$bestandsnaam = sanitize_file_name($bestand->bestandsnaam);
+				$image = wp_upload_bits( $bestandsnaam, null, wp_remote_retrieve_body( $get ) );
 
 				$attachment = array(
 					'post_title'     => 'Auteursfoto',
@@ -591,7 +599,7 @@ class BoekDB_Import {
 				$wp_upload_dir   = wp_upload_dir();
 				$attachment_data = wp_generate_attachment_metadata(
 					$attachment_id,
-					$wp_upload_dir['path'] . '/' . $bestand->bestandsnaam );
+					$wp_upload_dir['path'] . '/' . $bestandsnaam );
 
 				wp_update_attachment_metadata( $attachment_id, $attachment_data );
 
@@ -618,6 +626,10 @@ class BoekDB_Import {
 		$bestand       = $product->serie->beeld;
 		$hash          = md5( $bestand->url );
 		$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+		if(self::$options['overwrite_images'] === '1' && !is_null ($attachment_id)) {
+			wp_delete_attachment($attachment_id);
+			$attachment_id = null;
+		}
 
 		if ( is_null( $attachment_id ) ) {
 			$get   = wp_safe_remote_get( $bestand->url );
