@@ -14,7 +14,7 @@ final class BoekDB {
 	 *
 	 * @var string
 	 */
-	public $version = '0.1.8';
+	public $version = '0.1.9';
 
 	/**
 	 * The single instance of the class.

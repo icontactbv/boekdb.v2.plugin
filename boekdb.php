@@ -3,7 +3,7 @@
  * Plugin Name: BoekDB.v2
  * Plugin URI: https://www.boekdbv2.nl/
  * Description: Wordpress plugin for BoekDBv2 data.
- * Version: 0.1.8
+ * Version: 0.1.9
  * Author: Icontact B.V.
  * Author URI: http://www.icontact.nl
  * Requires at least: 5.5
@@ -159,14 +159,17 @@ function boekdb_serie_data( $id, $term = null ) {
 
 function boekdb_nstc_groupby( $groupby ) {
 	global $wpdb;
-	$groupby .= "nstc.meta_value";
-
+	if(strlen($groupby) > 0) {
+		$groupby = 'nstc.meta_value, ' . $groupby;
+	} else {
+		$groupby .= "nstc.meta_value ";
+	}
 	return $groupby;
 }
 
 function boekdb_nstc_join( $join ) {
 	global $wpdb;
-	$join .= "LEFT JOIN $wpdb->postmeta AS nstc ON $wpdb->posts.ID = nstc.post_id AND nstc.meta_key = 'boekdb_nstc'";
+	$join .= " LEFT JOIN $wpdb->postmeta AS nstc ON $wpdb->posts.ID = nstc.post_id AND nstc.meta_key = 'boekdb_nstc'";
 
 	return $join;
 }
