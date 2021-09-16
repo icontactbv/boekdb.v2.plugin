@@ -418,8 +418,7 @@ class BoekDB_Import {
 		global $wpdb;
 
 		$boek         = self::create_boek_array( $product );
-		$boek_post_id = $wpdb->get_col( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_isbns WHERE isbn = %s",
-			$boek['isbn'] ) );
+		$boek_post_id = $wpdb->get_col( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_isbns WHERE isbn = %s", $boek['isbn'] ) );
 
 		if ( count( $boek_post_id ) > 0 ) {
 			$array = $boek_post_id;
@@ -464,9 +463,12 @@ class BoekDB_Import {
 	}
 
 	protected static function delete_doubles( $post_ids ) {
+		global $wpdb;
+
 		foreach($post_ids as $post_id) {
 			boekdb_debug('deleted '.$post_id);
 			wp_delete_post($post_id, true);
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = " . $post_id ) );
 		}
 	}
 
