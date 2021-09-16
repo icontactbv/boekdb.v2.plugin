@@ -26,9 +26,9 @@ class BoekDB_Import {
 	 */
 	public static function init() {
 		if ( WP_DEBUG ) {
-			boekdb_debug('DEBUG MODE IS ON');
+			boekdb_debug( 'DEBUG MODE IS ON' );
 			// flush_rewrite_rules();
-			// add_action( 'init', array( self::class, 'import' ) );
+			add_action( 'init', array( self::class, 'import' ) );
 		}
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
@@ -61,6 +61,8 @@ class BoekDB_Import {
 
 			while ( $products = self::fetch_products( $etalage->api_key, $last_import, $offset ) ) {
 				boekdb_debug( 'Fetched ' . $etalage->name . ' with offset ' . $offset );
+				boekdb_debug( 'Contains ' . count( $products ) . ' books' );
+
 				if ( self::$options['overwrite_images'] === '1' ) {
 					boekdb_debug( 'overwriting images' );
 				}
@@ -98,10 +100,10 @@ class BoekDB_Import {
 	}
 
 	private static function check_nstc( $post_id, $nstc ) {
-		boekdb_debug('NSTC IS '.$nstc);
+		boekdb_debug( 'NSTC IS ' . $nstc );
 		// if nstc is null, set current book to primary
-		if(is_null($nstc)) {
-			boekdb_debug('NSTC IS NULL, '.$post_id.' SHOULD BE PRIMARY');
+		if ( is_null( $nstc ) ) {
+			boekdb_debug( 'NSTC IS NULL, ' . $post_id . ' SHOULD BE PRIMARY' );
 		}
 		// get list of books by nstc
 		// check each book for productform
@@ -134,6 +136,7 @@ class BoekDB_Import {
 	}
 
 	private static function fetch_isbns( $api_key ) {
+		// @todo: handle errors
 		$result = wp_remote_get(
 			self::BASE_URL . 'isbns',
 			array(
@@ -142,9 +145,10 @@ class BoekDB_Import {
 				)
 			)
 		);
-
+		if(is_wp_error($result)) {
+			die($result->get_error_message());
+		}
 		$result = wp_remote_retrieve_body( $result );
-
 		$result = json_decode( $result, true );
 		if ( ! is_array( $result ) || ! isset( $result['isbns'] ) ) {
 			return false;
@@ -222,12 +226,12 @@ class BoekDB_Import {
 			)
 		);
 
-		$result = wp_remote_retrieve_body( $result );
-
+		$result   = wp_remote_retrieve_body( $result );
 		$products = json_decode( $result );
 		if ( ! is_array( $products ) ) {
 			return false;
 		}
+		boekdb_debug( count( $products ) . ' products for offset ' . $offset );
 
 		return $products;
 	}
@@ -418,17 +422,23 @@ class BoekDB_Import {
 		global $wpdb;
 
 		$boek         = self::create_boek_array( $product );
-		$boek_post_id = $wpdb->get_col( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_isbns WHERE isbn = %s", $boek['isbn'] ) );
+		$boek_post_id = $wpdb->get_col( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_isbns WHERE isbn = %s",
+			$boek['isbn'] ) );
 
 		if ( count( $boek_post_id ) > 0 ) {
-			$array = $boek_post_id;
-			$boek_post_id = (int) array_pop($array);
+			$array        = $boek_post_id;
+			$boek_post_id = (int) array_pop( $array );
 
-			if(count($array) > 0) {
-				self::delete_doubles($array);
+			if ( count( $array ) > 0 ) {
+				self::delete_posts( $array );
 			}
 		} else {
 			$boek_post_id = self::find_field( 'boekdb_boek', 'boekdb_isbn', $boek['isbn'] );
+		}
+
+		// Sanity check
+		if((int)$boek_post_id === 0) {
+			$boek_post_id = null;
 		}
 
 		$post = array(
@@ -445,7 +455,6 @@ class BoekDB_Import {
 		} else {
 			$boek_post_id = wp_update_post( $post );
 		}
-		boekdb_debug('Final = ' . $boek_post_id);
 
 		// save post meta
 		foreach ( $boek as $key => $value ) {
@@ -462,13 +471,13 @@ class BoekDB_Import {
 		return array( $boek_post_id, $boek['isbn'], $boek['nstc'] );
 	}
 
-	protected static function delete_doubles( $post_ids ) {
+	protected static function delete_posts( $post_ids ) {
 		global $wpdb;
 
-		foreach($post_ids as $post_id) {
-			boekdb_debug('deleted '.$post_id);
-			wp_delete_post($post_id, true);
-			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = " . $post_id ) );
+		foreach ( $post_ids as $post_id ) {
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d", $post_id ) );
+			wp_delete_post( $post_id, true );
+			boekdb_debug( 'deleted ' . $post_id );
 		}
 	}
 
@@ -733,24 +742,16 @@ class BoekDB_Import {
 		foreach ( $result as $boek ) {
 			$post_ids[] = (int) $boek->boek_id;
 		}
-
 		// delete from link table
 		if ( count( $post_ids ) > 0 ) {
 			$wpdb->query(
-				$wpdb->prepare(
-					"DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id = %d",
-					$etalage_id
-				) . " AND boek_id IN (" . implode( ',', $post_ids ) . ")"
+				$wpdb->prepare("DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id = %d", $etalage_id) . " AND boek_id IN (" . implode( ',', $post_ids ) . ")"
 			);
-			$args  = array(
-				'post_type'   => 'boekdb_boek',
-				'include'     => $post_ids,
-				'numberposts' => - 1,
-			);
-			$posts = get_posts( $args );
-			foreach ( $posts as $post ) {
-				$result = $wpdb->get_results($wpdb->prepare('SELECT FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = '.$post->ID));
-				wp_delete_post($post->ID, true);
+			foreach($post_ids as $post_id) {
+				$result = $wpdb->get_results( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d", $post_id ) );
+				if(!is_wp_error($result) && count($result) === 0) {
+					self::delete_posts([$post_id]);
+				}
 			}
 		}
 	}
