@@ -25,11 +25,10 @@ class BoekDB_Import {
 	 * Hook in tabs.
 	 */
 	public static function init() {
-		// debug:
-		/** @noinspection MissingOrEmptyGroupStatementInspection */
 		if ( WP_DEBUG ) {
-			flush_rewrite_rules();
-			add_action( 'init', array( self::class, 'import' ) );
+			boekdb_debug('DEBUG MODE IS ON');
+			// flush_rewrite_rules();
+			// add_action( 'init', array( self::class, 'import' ) );
 		}
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
