@@ -14,7 +14,7 @@ final class BoekDB {
 	 *
 	 * @var string
 	 */
-	public $version = '0.1.9';
+	public $version = '0.1.10';
 
 	/**
 	 * The single instance of the class.
@@ -44,20 +44,9 @@ final class BoekDB {
 	 * BoekDb Constructor.
 	 */
 	public function __construct() {
-		$this->define_constants();
+		$this->define( 'BOEKDB_VERSION', $this->version );
 		$this->includes();
 		$this->init_hooks();
-	}
-
-	/**
-	 * Define BoekDB Constants.
-	 */
-	private function define_constants() {
-		$upload_dir = wp_upload_dir( null, false );
-
-		$this->define( 'BOEKDB_ABSPATH', dirname( BOEKDB_PLUGIN_FILE ) . '/' );
-		$this->define( 'BOEKDB_PLUGIN_BASENAME', plugin_basename( BOEKDB_PLUGIN_FILE ) );
-		$this->define( 'BOEKDB_VERSION', $this->version );
 	}
 
 	/**
