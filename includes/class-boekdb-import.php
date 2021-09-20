@@ -28,7 +28,7 @@ class BoekDB_Import {
 		if ( WP_DEBUG ) {
 			boekdb_debug( 'DEBUG MODE IS ON' );
 			// flush_rewrite_rules();
-			add_action( 'init', array( self::class, 'import' ) );
+			// add_action( 'init', array( self::class, 'import' ) );
 		}
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
@@ -100,15 +100,76 @@ class BoekDB_Import {
 	}
 
 	private static function check_nstc( $post_id, $nstc ) {
-		boekdb_debug( 'NSTC IS ' . $nstc );
+		global $wpdb;
 		// if nstc is null, set current book to primary
 		if ( is_null( $nstc ) ) {
-			boekdb_debug( 'NSTC IS NULL, ' . $post_id . ' SHOULD BE PRIMARY' );
+			update_post_meta( $post_id, 'boekdb_primary', 1 );
+			return;
 		}
 		// get list of books by nstc
-		// check each book for productform
-		// make 1 book primary based on productform
+		$query = new WP_Query(array(
+			'posts_per_page' => -1,
+			'post_type' => 'boekdb_boek',
+			'post_status' => 'publish',
+			'meta_query' => array(
+				array(
+					'key'   => 'boekdb_nstc',
+					'value' => $nstc,
+				)
+			)
+		));
+		// get productform for each book
+		$books = array();
+		if($query->have_posts()) {
+			$posts = $query->get_posts();
+			foreach($posts as $post) {
+				$books[$post->ID] = substr(get_post_meta($post->ID, 'boekdb_verschijningsvorm', true), 0, 5);
+			}
+		}
+		// uasort books by productform
+		// @todo: make sort configurable
+		uasort($books, array(self::class, 'sort_books_by_productform'));
+		$post_ids = array_keys($books);
+
+		// make first book primary
+		$first_id = array_shift($post_ids);
+		unset($books[$first_id]);
+		update_post_meta( $first_id, 'boekdb_primair', 1 );
+
 		// disable primary bit on all other books
+		foreach($books as $book_id => $val) {
+			update_post_meta( $book_id, 'boekdb_primair', 0 );
+		}
+	}
+
+	/**
+	 * @param $a
+	 * @param $b
+	 *
+	 * @return int
+	 */
+	private static function sort_books_by_productform($a, $b) {
+		$sort = array(
+			'Hardb' => 1,
+			'Paper' => 2,
+			'Ebook' => 3,
+			'Luist' => 4
+		);
+		if(isset($sort[$a])) {
+			$a = $sort[$a];
+		} else {
+			$a = 99;
+		}
+
+		if(isset($sort[$b])) {
+			$b = $sort[$b];
+		} else {
+			$b = 99;
+		}
+		if ($a == $b) {
+			return 0;
+		}
+		return ($a < $b) ? -1 : 1;
 	}
 
 	private static function check_available_isbns( $etalage ) {
