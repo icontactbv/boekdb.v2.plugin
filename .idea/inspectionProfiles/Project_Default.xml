@@ -1,6 +1,7 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Project Default" />
+    <inspection_tool class="AutoloadingIssuesInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ForgottenDebugOutputInspection" enabled="true" level="ERROR" enabled_by_default="true">
       <option name="configuration">
         <list>
@@ -74,6 +75,9 @@
       <option name="USE_INSTALLED_PATHS" value="true" />
       <option name="INSTALLED_PATHS" value="$PROJECT_DIR$/vendor/wp-coding-standards/wpcs" />
       <option name="EXTENSIONS" value="php,js,css,inc" />
+    </inspection_tool>
+    <inspection_tool class="PhpStatementHasEmptyBodyInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="myCommentsCountAsContent" value="true" />
     </inspection_tool>
     <inspection_tool class="SecurityAdvisoriesInspection" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="optionConfiguration">
