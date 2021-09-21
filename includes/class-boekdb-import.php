@@ -152,8 +152,8 @@ class BoekDB_Import {
 		$sort = array(
 			'Hardb' => 1,
 			'Paper' => 2,
-			'Ebook' => 3,
-			'Luist' => 4
+			'Luist' => 3,
+			'Ebook' => 4
 		);
 		if(isset($sort[$a])) {
 			$a = $sort[$a];
