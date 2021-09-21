@@ -3,7 +3,7 @@
  * Plugin Name: BoekDB.v2
  * Plugin URI: https://www.boekdbv2.nl/
  * Description: Wordpress plugin for BoekDBv2 data.
- * Version: 0.1.9
+ * Version: 0.1.10
  * Author: Icontact B.V.
  * Author URI: http://www.icontact.nl
  * Requires at least: 5.5
@@ -16,6 +16,12 @@ defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'BOEKDB_PLUGIN_FILE' ) ) {
 	define( 'BOEKDB_PLUGIN_FILE', __FILE__ );
+}
+if ( ! defined ('BOEKDB_ABSPATH')) {
+	define( 'BOEKDB_ABSPATH', dirname( BOEKDB_PLUGIN_FILE ) . '/' );
+}
+if ( ! defined ('BOEKDB_PLUGIN_BASENAME')) {
+	define( 'BOEKDB_PLUGIN_BASENAME', plugin_basename( BOEKDB_PLUGIN_FILE ) );
 }
 
 // Include the main BoekDB class.
@@ -41,7 +47,7 @@ function boekdb_debug( $message ) {
 		if ( ! is_string( $message ) ) {
 			$message = var_export( $message, true );
 		}
-		// debug
+		/** @noinspection ForgottenDebugOutputInspection */
 		error_log( $message );
 	}
 }
@@ -58,7 +64,7 @@ function boekdb_set_import_option( $name, $value ) {
 
 function boekdb_unset_import_options() {
 	global $boekdb_import_options;
-	boekdb_debug('Unsetting import options');
+	boekdb_debug( 'Unsetting import options' );
 	foreach ( $boekdb_import_options as $option ) {
 		delete_transient( 'boekdb_import_options_' . $option );
 	}
@@ -70,12 +76,13 @@ function boekdb_set_import_running() {
 }
 
 function boekdb_is_import_running() {
-	$running = (int)get_transient( 'boekdb_import_running' ) === 1;
-	if($running) {
-		boekdb_debug('Import is running');
+	$running = (int) get_transient( 'boekdb_import_running' ) === 1;
+	if ( $running ) {
+		boekdb_debug( 'Import is running' );
 	} else {
-		boekdb_debug('Import is not running');
+		boekdb_debug( 'Import is not running' );
 	}
+
 	return $running;
 }
 
@@ -88,6 +95,7 @@ function boekdb_reset_import_running() {
 
 function boekdb_get_import_etalage() {
 	boekdb_debug( 'Current etalage: ' . var_export( get_transient( 'boekdb_import_etalage' ), true ) );
+
 	return get_transient( 'boekdb_import_etalage' );
 }
 
@@ -160,25 +168,3 @@ function boekdb_serie_data( $id, $term = null ) {
 	return $data;
 }
 
-function boekdb_nstc_groupby( $groupby ) {
-	global $wpdb;
-	$groupby .= "nstc.meta_value";
-
-	return $groupby;
-}
-
-function boekdb_nstc_join( $join ) {
-	global $wpdb;
-	$join .= "LEFT JOIN $wpdb->postmeta AS nstc ON $wpdb->posts.ID = nstc.post_id AND nstc.meta_key = 'boekdb_nstc'";
-
-	return $join;
-}
-
-function boekdb_archive_by_nstc( $query ) {
-	if ( ! is_admin() && $query->get( 'post_type' ) === 'boekdb_boek' ) {
-		add_filter( 'posts_join', 'boekdb_nstc_join' );
-		add_filter( 'posts_groupby', 'boekdb_nstc_groupby' );
-	}
-}
-
-add_filter( 'pre_get_posts', 'boekdb_archive_by_nstc' );
