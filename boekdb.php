@@ -166,12 +166,9 @@ function boekdb_serie_data( $id, $term = null ) {
 }
 
 function boekdb_thema_omschrijving( $code ) {
-	global $boekdb_thema_codes;
-
 	$code = strtoupper( $code );
-
-	if ( isset( $boekdb_thema_codes[ $code ] ) ) {
-		return $boekdb_thema_codes[ $code ];
+	if ( isset( BoekDB_Thema::$codes[ $code ] ) ) {
+		return BoekDB_Thema::$codes[ $code ];
 	}
 
 	return $code;
