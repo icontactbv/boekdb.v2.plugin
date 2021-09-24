@@ -80,7 +80,7 @@ class BoekDB_Import {
 							wp_set_object_terms( $boek_post_id, $term_id,
 								'boekdb_' . strtolower( $onderwerp->type ) . '_tax' );
 						} elseif ( substr( $onderwerp->type, 0, 5 ) === 'Thema' ) {
-							$term_id = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ), 'thema', $onderwerp->waarde );
+							$term_id = self::get_taxonomy_term_id( sanitize_title( boekdb_thema_omschrijving($onderwerp->code) ), 'thema', boekdb_thema_omschrijving($onderwerp->code) );
 							wp_set_object_terms( $boek_post_id, $term_id, 'boekdb_thema_tax' );
 						}
 					}
