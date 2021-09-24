@@ -116,6 +116,8 @@ class BoekDB_Install {
 			 PRIMARY KEY (`boek_id`,`isbn`)
 			 ) $charset_collate;";
 		dbDelta( $sql );
+
+
 	}
 }
 
