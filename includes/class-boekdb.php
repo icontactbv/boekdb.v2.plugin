@@ -14,7 +14,7 @@ final class BoekDB {
 	 *
 	 * @var string
 	 */
-	public $version = '0.1.10';
+	public $version = '0.1.11';
 
 	/**
 	 * The single instance of the class.
@@ -59,6 +59,7 @@ final class BoekDB {
 
 		include_once BOEKDB_ABSPATH . 'includes/admin/class-boekdb-admin-meta-boxes.php';
 		include_once BOEKDB_ABSPATH . 'includes/admin/class-boekdb-admin.php';
+		include_once BOEKDB_ABSPATH . 'includes/codes/thema.php';
 	}
 
 	/**

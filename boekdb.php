@@ -3,7 +3,7 @@
  * Plugin Name: BoekDB.v2
  * Plugin URI: https://www.boekdbv2.nl/
  * Description: Wordpress plugin for BoekDBv2 data.
- * Version: 0.1.10
+ * Version: 0.1.11
  * Author: Icontact B.V.
  * Author URI: http://www.icontact.nl
  * Requires at least: 5.5
@@ -17,10 +17,10 @@ defined( 'ABSPATH' ) || exit;
 if ( ! defined( 'BOEKDB_PLUGIN_FILE' ) ) {
 	define( 'BOEKDB_PLUGIN_FILE', __FILE__ );
 }
-if ( ! defined ('BOEKDB_ABSPATH')) {
+if ( ! defined( 'BOEKDB_ABSPATH' ) ) {
 	define( 'BOEKDB_ABSPATH', dirname( BOEKDB_PLUGIN_FILE ) . '/' );
 }
-if ( ! defined ('BOEKDB_PLUGIN_BASENAME')) {
+if ( ! defined( 'BOEKDB_PLUGIN_BASENAME' ) ) {
 	define( 'BOEKDB_PLUGIN_BASENAME', plugin_basename( BOEKDB_PLUGIN_FILE ) );
 }
 
@@ -165,3 +165,14 @@ function boekdb_serie_data( $id, $term = null ) {
 	return $data;
 }
 
+function boekdb_thema_omschrijving( $code ) {
+	global $boekdb_thema_codes;
+
+	$code = strtoupper( $code );
+
+	if ( isset( $boekdb_thema_codes[ $code ] ) ) {
+		return $boekdb_thema_codes[ $code ];
+	}
+
+	return $code;
+}
