@@ -176,3 +176,18 @@ function boekdb_thema_omschrijving( $code ) {
 
 	return $code;
 }
+
+function boekdb_etalage_join( $join, $query) {
+	global $wpdb;
+	if ( ! is_admin() && ! $query->is_single() && $query->get('post_type') === 'boekdb_boek' && $query->get('etalage', false) && strlen($query->get('etalage', false)) > 0) {
+		$table1 = $wpdb->prefix . 'boekdb_etalage_boeken';
+		$table2 = $wpdb->prefix . 'boekdb_etalages';
+		$join .= $wpdb->prepare(" LEFT JOIN {$table2} boekdb_e ON boekdb_e.name = %s", $query->get('etalage'));
+		$join .= " INNER JOIN {$table1} boekdb_eb ON boekdb_eb.boek_id = {$wpdb->posts}.ID AND boekdb_eb.etalage_id = boekdb_e.id";
+	}
+	return $join;
+}
+add_filter('posts_join', 'boekdb_etalage_join', 10, 2);
+
+
+
