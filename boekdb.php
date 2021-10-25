@@ -47,7 +47,9 @@ function boekdb_debug( $message ) {
 		if ( ! is_string( $message ) ) {
 			$message = var_export( $message, true );
 		}
-		/** @noinspection ForgottenDebugOutputInspection */
+		/**
+		 * @noinspection ForgottenDebugOutputInspection
+		 */
 		error_log( $message );
 	}
 }
@@ -111,7 +113,7 @@ function boekdb_boek_data( $id ) {
 		if ( substr( $name, 0, 7 ) === 'boekdb_' ) {
 			$data[ substr( $name, 7 ) ] = $value[0];
 		}
-		if($name === 'recensiequotes') {
+		if ( $name === 'recensiequotes' ) {
 			// @wip: parsen op 'tonen'-bitje
 		}
 	}

@@ -1,9 +1,12 @@
 <?php
 /**
- * BoekDB Thema Codes
+ * BoekDB Thema
+ *
+ * Translation array for Thema
  *
  * @package BoekDB
  */
+
 final class BoekDB_Thema {
 	public static $codes = array(
 		'A'              => 'Kunst',
