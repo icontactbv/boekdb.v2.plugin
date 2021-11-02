@@ -96,8 +96,17 @@ class BoekDB_Admin_Meta_Boxes {
 
 	public static function meta_boek_fields_html( $boek ) {
 		$meta = get_post_meta( $boek->ID );
+		echo '<h5>Annotatie</h5>';
+		echo '<p>'.$meta['boekdb_annotatie'][0].'</p>';
+		echo '<h5>Flaptekst</h5>';
+		echo '<p>'.$meta['boekdb_flaptekst'][0].'</p>';
+
 		echo '<table>';
 		foreach ( $meta as $name => $value ) {
+			if($name === 'boekdb_flaptekst' || $name === 'boekdb_annotatie') {
+				// skip
+				continue;
+			}
 			if ( substr( $name, 0, 7 ) === 'boekdb_' ) {
 				$name = substr( $name, 7 );
 				echo '<tr><th style="vertical-align: top; text-align: left;">' . $name . '</th><td>' . $value[0] . '</td></tr>';
