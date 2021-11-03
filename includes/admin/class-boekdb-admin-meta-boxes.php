@@ -89,7 +89,7 @@ class BoekDB_Admin_Meta_Boxes {
 		echo '<textarea name="boekdb_flaptekst" id="boekdb_flaptekst" cols="80" rows="8">' . $meta['boekdb_flaptekst'][0] . '</textarea>';
 		if ( $flaptekst_overwritten === '1' ) {
 			echo '<br /><em>Originele flaptekst uit BoekDB:</em>';
-			echo '<p>' . $meta['boekdb_flaptekst_org'][0] . '</p>';
+			echo '<p>' . htmlspecialchars($meta['boekdb_flaptekst_org'][0]) . '</p>';
 		}
 		echo '<hr />';
 
