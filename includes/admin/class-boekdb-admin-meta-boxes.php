@@ -32,7 +32,7 @@ class BoekDB_Admin_Meta_Boxes {
 	public function __construct() {
 		add_action( 'add_meta_boxes', array( $this, 'remove_meta_boxes' ), 10 );
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ), 30 );
-		// add_action('save_post', array($this, 'save_meta_boxes'), 1, 2);
+		add_action( 'save_post', array( $this, 'save_meta_boxes' ), 1, 2 );
 
 		// Error handling (for showing errors from meta boxes on next page load).
 		add_action( 'admin_notices', array( $this, 'output_errors' ) );
@@ -48,6 +48,28 @@ class BoekDB_Admin_Meta_Boxes {
 		self::$meta_box_errors[] = $text;
 	}
 
+	public static function save_meta_boxes( $post_id ) {
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
+			return $post_id;
+
+		$boekdb_annotatie = $_POST['boekdb_annotatie'];
+		$boekdb_flaptekst = $_POST['boekdb_flaptekst'];
+
+		$meta = get_post_meta( $post_id );
+		$annotatie_overwritten = isset( $meta['boekdb_annotatie_overwritten'][0] ) ? $meta['boekdb_annotatie_overwritten'][0] : '0';
+		$flaptekst_overwritten = isset( $meta['boekdb_flaptekst_overwritten'][0] ) ? $meta['boekdb_flaptekst_overwritten'][0] : '0';
+		if($annotatie_overwritten === '1' || $meta['boekdb_annotatie'][0] !== $boekdb_annotatie) {
+			update_post_meta($post_id, 'boekdb_annotatie', $boekdb_annotatie);
+			update_post_meta($post_id, 'boekdb_annotatie_overwritten', '1');
+		}
+
+		if($flaptekst_overwritten === '1' || $meta['boekdb_flaptekst'][0] !== $boekdb_flaptekst) {
+			update_post_meta($post_id, 'boekdb_flaptekst', $boekdb_flaptekst);
+			update_post_meta($post_id, 'boekdb_flaptekst_overwritten', '1');
+		}
+		return $post_id;
+	}
+
 	public static function meta_boek_fields_html( $boek ) {
 		$meta = get_post_meta( $boek->ID );
 
@@ -58,15 +80,15 @@ class BoekDB_Admin_Meta_Boxes {
 		echo '<h4>Annotatie</h4>';
 		echo '<textarea name="boekdb_annotatie" id="boekdb_annotatie" cols="80" rows="4">' . $meta['boekdb_annotatie'][0] . '</textarea>';
 		if ( $annotatie_overwritten === '1' ) {
-			echo '<em>Uit BoekDB:</em>';
+			echo '<br /><em>Originele annotatie uit BoekDB:</em>';
 			echo '<p>' . $meta['boekdb_annotatie_org'][0] . '</p>';
 		}
 		echo '<hr />';
 
 		echo '<h4>Flaptekst</h4>';
 		echo '<textarea name="boekdb_flaptekst" id="boekdb_flaptekst" cols="80" rows="8">' . $meta['boekdb_flaptekst'][0] . '</textarea>';
-		if ( $annotatie_overwritten === '1' ) {
-			echo '<em>Uit BoekDB:</em>';
+		if ( $flaptekst_overwritten === '1' ) {
+			echo '<br /><em>Originele flaptekst uit BoekDB:</em>';
 			echo '<p>' . $meta['boekdb_flaptekst_org'][0] . '</p>';
 		}
 		echo '<hr />';
