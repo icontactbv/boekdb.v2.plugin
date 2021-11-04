@@ -279,6 +279,7 @@ class BoekDB_Import {
 
 		// save post meta
 		foreach ( $boek as $key => $value ) {
+			// handle flaptekst and annotatie
 			if ( $key === 'flaptekst' || $key === 'annotatie' ) {
 				// check for existing
 				$overwritten = get_post_meta( $boek_post_id, 'boekdb_' . $key . '_overwritten', true );
@@ -288,6 +289,28 @@ class BoekDB_Import {
 				update_post_meta( $boek_post_id, 'boekdb_' . $key . '_org', $value );
 			} else {
 				update_post_meta( $boek_post_id, 'boekdb_' . $key, $value );
+				update_post_meta( $boek_post_id, 'boekdb_' . $key . '_org', $value );
+			}
+
+			// handle recensiequotes
+			if ( $key === 'recensiequotes' ) {
+				$current_quotes = get_post_meta( $boek_post_id, 'boekdb_recensiequotes' )[0];
+				if(count($value) > 0) {
+					$import_quotes = array();
+					foreach($value as $hash => $quote) {
+						// check if quote exists currently
+						if(isset($current_quotes[$hash])) {
+							// get value for tonen
+							$quote['tonen'] = $current_quotes[$hash]['tonen'];
+						}
+						$import_quotes[$hash] = $quote;
+					}
+					// overwrite post_meta with parsed quotes
+					update_post_meta($boek_post_id, 'boekdb_recensiequotes', $import_quotes);
+				} else {
+					// just write to post_meta
+					update_post_meta($boek_post_id, 'boekdb_recensiequotes', $value);
+				}
 			}
 		}
 
@@ -345,10 +368,6 @@ class BoekDB_Import {
 		$boek['recensiequotes']        = [];
 		$boek['recensielinks']         = [];
 
-		// @wip als leeg: automatisch vullen met alle recensiequotes en bitjes "tonen" op true
-		// als niet leeg: quotes updaten, maar bitje "tonen" met rust laten
-		$boek['recensiequotes_tonen'] = [];
-
 		// @wip overschrijfbare velden
 		$boek['annotatie'] = $product->annotatie;
 		$boek['flaptekst'] = $product->flaptekst;
@@ -386,9 +405,8 @@ class BoekDB_Import {
 
 		if ( isset( $product->recensiequotes ) && ! is_null( $product->recensiequotes ) ) {
 			foreach ( $product->recensiequotes as $quote ) {
-				// check op hash
-				$boek['recensiequotes'][] = [
-					'tekst'  => strtolower( $quote->tekst ),
+				$boek['recensiequotes'][md5($quote->tekst)] = [
+					'tekst'  => $quote->tekst,
 					'auteur' => $quote->auteur,
 					'bron'   => $quote->bron,
 					'datum'  => $quote->datum,
