@@ -68,13 +68,13 @@ class BoekDB_Admin_Meta_Boxes {
 			}
 		}
 		if ( isset( $_POST['boekdb_flaptekst'] ) ) {
-			$boekdb_flaptekst      = $_POST['boekdb_flaptekst'];
+			$boekdb_flaptekst      = str_replace("\r\n","\n", $_POST['boekdb_flaptekst']);
 			$flaptekst_overwritten = isset( $meta['boekdb_flaptekst_overwritten'][0] ) ? $meta['boekdb_flaptekst_overwritten'][0] : '0';
 			if(strlen(trim($boekdb_flaptekst)) === 0 && $flaptekst_overwritten === '1' ) {
-				update_post_meta( $post_id, 'boekdb_flaptekst', $meta['boekdb_flaptekst_org'][0] );
+				update_post_meta( $post_id, 'boekdb_flaptekst', trim($meta['boekdb_flaptekst_org'][0]) );
 				update_post_meta( $post_id, 'boekdb_flaptekst_overwritten', '0' );
 			} else {
-				if ( $flaptekst_overwritten === '1' || $meta['boekdb_flaptekst'][0] !== $boekdb_flaptekst ) {
+				if ( $flaptekst_overwritten === '1' || trim($meta['boekdb_flaptekst'][0]) !== $boekdb_flaptekst ) {
 					update_post_meta( $post_id, 'boekdb_flaptekst', $boekdb_flaptekst );
 					update_post_meta( $post_id, 'boekdb_flaptekst_overwritten', '1' );
 				}
