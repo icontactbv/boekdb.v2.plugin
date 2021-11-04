@@ -113,8 +113,16 @@ function boekdb_boek_data( $id ) {
 		if ( substr( $name, 0, 7 ) === 'boekdb_' ) {
 			$data[ substr( $name, 7 ) ] = $value[0];
 		}
-		if ( $name === 'recensiequotes' ) {
-			// @wip: parsen op 'tonen'-bitje
+		if ( $name === 'boekdb_recensiequotes' ) {
+			$quotes = unserialize($value[0]);
+			$parsed = array();
+			foreach($quotes as $quote) {
+				if($quote['tonen']) {
+					unset($quote['tonen']);
+					$parsed[] = $quote;
+				}
+			}
+			$data[ substr( $name, 7 ) ] = serialize($parsed);
 		}
 	}
 
