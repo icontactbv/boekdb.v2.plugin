@@ -178,6 +178,10 @@ function boekdb_serie_data( $id, $term = null ) {
 	return $data;
 }
 
+function boekdb_startswith( $haystack, $needle ) {
+	return 0 === strpos( $haystack, $needle );
+}
+
 function boekdb_thema_omschrijving( $code ) {
 	$code = strtoupper( $code );
 	if ( isset( BoekDB_Thema::$codes[ $code ] ) ) {

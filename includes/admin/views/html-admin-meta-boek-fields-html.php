@@ -70,7 +70,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 ); ?>
 <table class="widefat fixed">
 <?php foreach ( $meta as $name => $value ) : ?>
-	<?php if ( wp_startswith( $name, 'boekdb_' ) ) : ?>
+	<?php if ( boekdb_startswith( $name, 'boekdb_' ) ) : ?>
 		<?php $name = substr( $name, 7 ); if ( in_array( $name, $skip ) ) continue; ?>
 		<tr>
 			<th style="vertical-align: top; text-align: left;"><?php echo $name; ?></th>
