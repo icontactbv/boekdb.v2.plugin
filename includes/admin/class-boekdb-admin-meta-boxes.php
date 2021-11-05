@@ -101,69 +101,7 @@ class BoekDB_Admin_Meta_Boxes {
 		$flaptekst_overwritten = isset( $meta['boekdb_flaptekst_overwritten'][0] ) ? $meta['boekdb_flaptekst_overwritten'][0] : '0';
 		$quotes                = isset( $meta['boekdb_recensiequotes'][0] ) ? unserialize( $meta['boekdb_recensiequotes'][0] ) : null;
 
-		if ( isset( $meta['boekdb_annotatie'] ) ) {
-			echo '<h4>Annotatie</h4>';
-			echo '<textarea name="boekdb_annotatie" id="boekdb_annotatie" cols="80" rows="4">' . $meta['boekdb_annotatie'][0] . '</textarea>';
-			if ( $annotatie_overwritten === '1' ) {
-				echo '<br /><em>Originele annotatie uit BoekDB:</em>';
-				echo '<p>' . $meta['boekdb_annotatie_org'][0] . '</p>';
-			}
-			echo '<hr />';
-		}
-
-		if ( isset( $meta['boekdb_flaptekst'] ) ) {
-			echo '<h4>Flaptekst</h4>';
-			echo '<textarea name="boekdb_flaptekst" id="boekdb_flaptekst" cols="80" rows="8">' . $meta['boekdb_flaptekst'][0] . '</textarea>';
-			if ( $flaptekst_overwritten === '1' ) {
-				echo '<br /><em>Originele flaptekst uit BoekDB:</em>';
-				echo '<p>' . htmlspecialchars( $meta['boekdb_flaptekst_org'][0] ) . '</p>';
-			}
-			echo '<hr />';
-		}
-
-		if ( ! is_null( $quotes ) ) {
-			echo '<h4>Recensiequotes</h4>';
-			echo '<table class="widefat fixed">';
-			echo '<tr><th style="text-align: left;">Tonen</th><th style="text-align: left;">Tekst</th><th style="text-align: left;">Auteur</th><th style="text-align: left;">Bron</th><th style="text-align: left;">Datum</th></tr>';
-			foreach ( $quotes as $hash => $quote ) {
-				$checked = $quote['tonen'] ? 'checked' : '';
-				echo '<input type="hidden" id="quote[' . $hash . ']" value="off" name="quote[' . $hash . ']">';
-				echo '<tr>';
-				echo '<td><input type="checkbox" id="quote[' . $hash . ']" value="on" name="quote[' . $hash . ']" ' . $checked . '></td>';
-				echo '<td style="width: 450px;">' . strip_tags( $quote['tekst'] ) . '</td>';
-				echo '<td>' . $quote['auteur'] . '</td>';
-				echo '<td>' . $quote['bron'] . '</td>';
-				echo '<td>' . $quote['datum'] . '</td>';
-			}
-			echo '</table>';
-		}
-
-		echo '<h4>Overige velden:</h4>';
-
-		$skip = array(
-			'flaptekst',
-			'annotatie',
-			'flaptekst_org',
-			'annotatie_org',
-			'recensiequotes',
-			'recensiequotes_org',
-			'file_voorbeeld_id',
-			'0',
-			'primair'
-		);
-		echo '<table class="widefat fixed">';
-		foreach ( $meta as $name => $value ) {
-			if ( wp_startswith( $name, 'boekdb_' ) ) {
-				$name = substr( $name, 7 );
-				if ( in_array( $name, $skip ) ) {
-					continue;
-				}
-
-
-				echo '<tr><th style="vertical-align: top; text-align: left;">' . $name . '</th><td>' . $value[0] . '</td></tr>';
-			}
-		}
-		echo '</table>';
+		include __DIR__ . '/views/html-admin-meta-boek-fields-html.php';
 	}
 
 	/**
