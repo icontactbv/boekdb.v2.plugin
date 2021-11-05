@@ -131,7 +131,6 @@ class BoekDB_Import {
 	}
 
 	private static function fetch_isbns( $api_key ) {
-		// @todo: handle errors
 		$result = wp_remote_get(
 			self::BASE_URL . 'isbns',
 			array(
@@ -798,7 +797,7 @@ class BoekDB_Import {
 			}
 		}
 		// uasort books by productform
-		// @todo: make sort configurable
+		// @note: make sort configurable?
 		uasort( $books, array( self::class, 'sort_books_by_productform' ) );
 		$post_ids = array_keys( $books );
 
