@@ -30,7 +30,8 @@ class BoekDB_Admin_Menus {
 	 * Add menu item.
 	 */
 	public function settings_menu() {
-		$settings_page = add_options_page( 'BoekDB', 'BoekDB', 'activate_plugins', 'boekdb-settings', array( $this, 'settings_page' ) );
+		$settings_page = add_options_page( 'BoekDB', 'BoekDB', 'activate_plugins', 'boekdb-settings',
+			array( $this, 'settings_page' ) );
 	}
 
 	/**

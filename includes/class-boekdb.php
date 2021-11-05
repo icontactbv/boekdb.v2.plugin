@@ -10,35 +10,17 @@ defined( 'ABSPATH' ) || exit;
 
 final class BoekDB {
 	/**
-	 * BoekDB version.
-	 *
-	 * @var string
-	 */
-	public $version = '0.1.13';
-
-	/**
 	 * The single instance of the class.
 	 *
 	 * @var BoekDB
 	 */
 	protected static $_instance = null;
-
 	/**
-	 * Main BoekDB Instance.
+	 * BoekDB version.
 	 *
-	 * Ensures only one instance of BoekDB is loaded or can be loaded.
-	 *
-	 * @static
-	 * @return BoekDB - Main instance.
-	 * @see    BoekDB()
+	 * @var string
 	 */
-	public static function instance() {
-		if ( is_null( self::$_instance ) ) {
-			self::$_instance = new self();
-		}
-
-		return self::$_instance;
-	}
+	public $version = '0.1.13';
 
 	/**
 	 * BoekDb Constructor.
@@ -47,6 +29,18 @@ final class BoekDB {
 		$this->define( 'BOEKDB_VERSION', $this->version );
 		$this->includes();
 		$this->init_hooks();
+	}
+
+	/**
+	 * Define constant if not already set.
+	 *
+	 * @param  string  $name  Constant name.
+	 * @param  string|bool  $value  Constant value.
+	 */
+	private function define( $name, $value ) {
+		if ( ! defined( $name ) ) {
+			define( $name, $value );
+		}
 	}
 
 	/**
@@ -63,22 +57,27 @@ final class BoekDB {
 	}
 
 	/**
-	 * Define constant if not already set.
-	 *
-	 * @param  string  $name  Constant name.
-	 * @param  string|bool  $value  Constant value.
-	 */
-	private function define( $name, $value ) {
-		if ( ! defined( $name ) ) {
-			define( $name, $value );
-		}
-	}
-
-	/**
 	 * Hook into actions and filters.
 	 */
 	private function init_hooks() {
 		register_activation_hook( BOEKDB_PLUGIN_FILE, array( 'BoekDB_Install', 'install' ) );
+	}
+
+	/**
+	 * Main BoekDB Instance.
+	 *
+	 * Ensures only one instance of BoekDB is loaded or can be loaded.
+	 *
+	 * @static
+	 * @return BoekDB - Main instance.
+	 * @see    BoekDB()
+	 */
+	public static function instance() {
+		if ( is_null( self::$_instance ) ) {
+			self::$_instance = new self();
+		}
+
+		return self::$_instance;
 	}
 
 	/**

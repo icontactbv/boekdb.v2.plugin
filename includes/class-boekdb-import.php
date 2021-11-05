@@ -294,21 +294,21 @@ class BoekDB_Import {
 			// handle recensiequotes
 			if ( $key === 'recensiequotes' ) {
 				$current_quotes = get_post_meta( $boek_post_id, 'boekdb_recensiequotes' )[0];
-				if(count($value) > 0) {
+				if ( count( $value ) > 0 ) {
 					$import_quotes = array();
-					foreach($value as $hash => $quote) {
+					foreach ( $value as $hash => $quote ) {
 						// check if quote exists currently
-						if(isset($current_quotes[$hash])) {
+						if ( isset( $current_quotes[ $hash ] ) ) {
 							// get value for tonen
-							$quote['tonen'] = $current_quotes[$hash]['tonen'];
+							$quote['tonen'] = $current_quotes[ $hash ]['tonen'];
 						}
-						$import_quotes[$hash] = $quote;
+						$import_quotes[ $hash ] = $quote;
 					}
 					// overwrite post_meta with parsed quotes
-					update_post_meta($boek_post_id, 'boekdb_recensiequotes', $import_quotes);
+					update_post_meta( $boek_post_id, 'boekdb_recensiequotes', $import_quotes );
 				} else {
 					// just write to post_meta
-					update_post_meta($boek_post_id, 'boekdb_recensiequotes', $value);
+					update_post_meta( $boek_post_id, 'boekdb_recensiequotes', $value );
 				}
 			}
 		}
@@ -404,7 +404,7 @@ class BoekDB_Import {
 
 		if ( isset( $product->recensiequotes ) && ! is_null( $product->recensiequotes ) ) {
 			foreach ( $product->recensiequotes as $quote ) {
-				$boek['recensiequotes'][md5($quote->tekst)] = [
+				$boek['recensiequotes'][ md5( $quote->tekst ) ] = [
 					'tekst'  => $quote->tekst,
 					'auteur' => $quote->auteur,
 					'bron'   => $quote->bron,

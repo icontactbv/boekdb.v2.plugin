@@ -40,34 +40,40 @@ class Boekdb_Post_Types {
 		self::register_serie_taxonomy();
 	}
 
-	/**
-	 * Register core post types.
-	 */
-	public static function register_post_types() {
-		if ( ! is_blog_installed() ) {
-			return;
-		}
-
-		self::register_boek_post_type();
-	}
-
-	protected static function register_serie_taxonomy() {
+	protected static function register_betrokkenen_taxonomies() {
 		$args = array(
 			'hierarchical'      => false,
 			'public'            => true,
-			'rewrite'           => array( 'slug' => 'series', 'with_front' => true ),
 			'query_var'         => false,
-			'show_ui'           => false,
+			'show_ui'           => true,
 			'show_admin_column' => true,
 			'show_in_nav_menus' => false,
 			'show_tagcloud'     => false,
-			'labels'            => array(
-				'name'          => 'Series',
-				'singular_name' => 'Serie',
-			)
 		);
 
-		register_taxonomy( 'boekdb_serie_tax', 'boekdb_boek', $args );
+		$labels          = array(
+			'name'          => 'Auteurs',
+			'singular_name' => 'Auteur',
+		);
+		$args['labels']  = $labels;
+		$args['rewrite'] = array( 'slug' => 'auteur', 'with_front' => true );
+		register_taxonomy( 'boekdb_auteur_tax', array( 'boekdb_boek' ), $args );
+
+		$labels          = array(
+			'name'          => 'Illustrators',
+			'singular_name' => 'Illustrator',
+		);
+		$args['labels']  = $labels;
+		$args['rewrite'] = array( 'slug' => 'illustrator', 'with_front' => true );
+		register_taxonomy( 'boekdb_illustrator_tax', array( 'boekdb_boek' ), $args );
+
+		$labels          = array(
+			'name'          => 'Sprekers',
+			'singular_name' => 'Spreker',
+		);
+		$args['labels']  = $labels;
+		$args['rewrite'] = array( 'slug' => 'spreker', 'with_front' => true );
+		register_taxonomy( 'boekdb_spreker_tax', array( 'boekdb_boek' ), $args );
 	}
 
 	protected static function register_onderwerpen_taxonomies() {
@@ -106,40 +112,34 @@ class Boekdb_Post_Types {
 		register_taxonomy( 'boekdb_thema_tax', 'boekdb_boek', $args );
 	}
 
-	protected static function register_betrokkenen_taxonomies() {
+	protected static function register_serie_taxonomy() {
 		$args = array(
 			'hierarchical'      => false,
 			'public'            => true,
+			'rewrite'           => array( 'slug' => 'series', 'with_front' => true ),
 			'query_var'         => false,
-			'show_ui'           => true,
+			'show_ui'           => false,
 			'show_admin_column' => true,
 			'show_in_nav_menus' => false,
 			'show_tagcloud'     => false,
+			'labels'            => array(
+				'name'          => 'Series',
+				'singular_name' => 'Serie',
+			)
 		);
 
-		$labels          = array(
-			'name'          => 'Auteurs',
-			'singular_name' => 'Auteur',
-		);
-		$args['labels']  = $labels;
-		$args['rewrite'] = array( 'slug' => 'auteur', 'with_front' => true );
-		register_taxonomy( 'boekdb_auteur_tax', array( 'boekdb_boek' ), $args );
+		register_taxonomy( 'boekdb_serie_tax', 'boekdb_boek', $args );
+	}
 
-		$labels          = array(
-			'name'          => 'Illustrators',
-			'singular_name' => 'Illustrator',
-		);
-		$args['labels']  = $labels;
-		$args['rewrite'] = array( 'slug' => 'illustrator', 'with_front' => true );
-		register_taxonomy( 'boekdb_illustrator_tax', array( 'boekdb_boek' ), $args );
+	/**
+	 * Register core post types.
+	 */
+	public static function register_post_types() {
+		if ( ! is_blog_installed() ) {
+			return;
+		}
 
-		$labels          = array(
-			'name'          => 'Sprekers',
-			'singular_name' => 'Spreker',
-		);
-		$args['labels']  = $labels;
-		$args['rewrite'] = array( 'slug' => 'spreker', 'with_front' => true );
-		register_taxonomy( 'boekdb_spreker_tax', array( 'boekdb_boek' ), $args );
+		self::register_boek_post_type();
 	}
 
 	protected static function register_boek_post_type() {

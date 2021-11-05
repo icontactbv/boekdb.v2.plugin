@@ -29,22 +29,6 @@ class BoekDB_Install {
 		}
 	}
 
-	public static function test_connection() {
-		$result = wp_remote_get( BoekDB_Import::BOEKDB_DOMAIN );
-		if ( ! is_wp_error( $result ) && 200 !== wp_remote_retrieve_response_code( $result ) ) {
-			return false;
-		}
-
-		return true;
-	}
-
-	public static function boekdb_connection_error() {
-		$class   = 'notice notice-warning';
-		$message = 'Let op: kan geen verbinding maken met BoekDB!';
-
-		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
-	}
-
 	/**
 	 * Install BoekDB.
 	 */
@@ -72,6 +56,15 @@ class BoekDB_Install {
 		flush_rewrite_rules();
 
 		delete_transient( 'boekdb_installing' );
+	}
+
+	public static function test_connection() {
+		$result = wp_remote_get( BoekDB_Import::BOEKDB_DOMAIN );
+		if ( ! is_wp_error( $result ) && 200 !== wp_remote_retrieve_response_code( $result ) ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -116,10 +109,15 @@ class BoekDB_Install {
 			 PRIMARY KEY (`boek_id`,`isbn`)
 			 ) $charset_collate;";
 		dbDelta( $sql );
-
-
 	}
-}
 
+	public static function boekdb_connection_error() {
+		$class   = 'notice notice-warning';
+		$message = 'Let op: kan geen verbinding maken met BoekDB!';
+
+		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
+	}
+
+}
 
 BoekDB_Install::init();
