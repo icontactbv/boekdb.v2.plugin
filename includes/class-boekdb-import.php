@@ -288,7 +288,6 @@ class BoekDB_Import {
 				update_post_meta( $boek_post_id, 'boekdb_' . $key . '_org', $value );
 			} else {
 				update_post_meta( $boek_post_id, 'boekdb_' . $key, $value );
-				update_post_meta( $boek_post_id, 'boekdb_' . $key . '_org', $value );
 			}
 
 			// handle recensiequotes
