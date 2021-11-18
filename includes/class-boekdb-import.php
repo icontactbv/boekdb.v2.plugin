@@ -895,7 +895,7 @@ class BoekDB_Import {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id NOT IN ( $placeholders )",
 				$etalage_ids ) );
 		} else {
-			$wpdb->query("DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id NOT NULL");
+			$wpdb->query("DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id IS NOT NULL");
 		}
 
 		// cleanup boekdb_isbns
@@ -905,7 +905,7 @@ class BoekDB_Import {
 			$placeholders = implode( ', ', array_fill( 0, count( $post_ids ), '%d' ) );
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id NOT IN ( $placeholders )", $post_ids ) );
 		} else {
-			$wpdb->query("DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id NOT NULL");
+			$wpdb->query("DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id IS NOT NULL");
 		}
 
 		$result   = $wpdb->get_results( "SELECT p.ID
