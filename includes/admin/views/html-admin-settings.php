@@ -71,7 +71,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         </p>
         <p class="submit">
             <button name="run" class="button-primary boekdb-save-button" type="submit" value="run" <?php echo $disabled ?>>Draai import</button>
-            <button name="cleanup" class="button-primary boekdb-save-button" type="submit" value="cleanup">Oude data opruimen</button>
+            <button name="cleanup" class="button-primary boekdb-save-button" type="submit" value="cleanup" <?php echo $disabled ?>>Oude data opruimen</button>
             <button name="test" class="button-primary boekdb-save-button" type="submit" value="test">Test verbinding met BoekDB</button>
 			<?php
 			wp_nonce_field( 'boekdb-settings' ); ?>

@@ -225,6 +225,9 @@ class BoekDB_Import {
 
 			boekdb_debug( 'deleted post ' . $post_id );
 		}
+
+		boekdb_debug( 'running cleanup' );
+		self::clean_up();
 	}
 
 	/**
@@ -289,7 +292,7 @@ class BoekDB_Import {
 			'post_status' => 'publish',
 			'post_type'   => 'boekdb_boek',
 			'post_title'  => $boek['titel'],
-			'post_name'   => sanitize_title( $boek['titel'] ),
+			'post_name'   => sanitize_title( $boek['titel'].' '.$boek['verschijningsvorm'] ),
 		);
 
 		// create/update post
