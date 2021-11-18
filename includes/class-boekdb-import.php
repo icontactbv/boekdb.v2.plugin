@@ -26,10 +26,9 @@ class BoekDB_Import {
 	 */
 	public static function init() {
 		if ( WP_DEBUG ) {
-			boekdb_debug( 'DEBUG MODE IS ON' );
 			// flush_rewrite_rules();
 			// add_action( 'init', array( self::class, 'import' ) );
-			//add_action('init', array(self::class, 'clean_up'));
+			// add_action('init', array(self::class, 'clean_up'));
 		}
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
@@ -158,7 +157,7 @@ class BoekDB_Import {
 	 * @param $etalage_id
 	 * @param $isbns
 	 */
-	private static function trash_removed( $etalage_id, $isbns ) {
+	public static function trash_removed( $etalage_id, $isbns ) {
 		global $wpdb;
 
 		$prepared_query = $wpdb->prepare(
@@ -195,16 +194,44 @@ class BoekDB_Import {
 		}
 	}
 
-	protected static function delete_posts( $post_ids ) {
+	public static function delete_etalage_posts( $post_ids, $deleted_etalage ) {
 		global $wpdb;
+		// check if post is still related to etalage
+		foreach($post_ids as $key => $post_id) {
+			$result = $wpdb->get_results( $wpdb->prepare("SELECT boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id != %d", $deleted_etalage));
+			if(count($result) > 0) {
+				unset($post_ids[$key]);
+			}
+		}
+		self::delete_posts($post_ids);
+	}
+
+	private static function delete_posts( $post_ids ) {
+		global $wpdb;
+
+		add_action( 'before_delete_post', function ( $id ) {
+			$attachments = get_attached_media( '', $id );
+			foreach ( $attachments as $attachment ) {
+				wp_delete_attachment( $attachment->ID, 'true' );
+			}
+			boekdb_debug( 'deleted attachments' );
+		} );
+
 		foreach ( $post_ids as $post_id ) {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d", $post_id ) );
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d",
 				$post_id ) );
 			wp_delete_post( $post_id, true );
-			wp_delete_object_term_relationships( $post_id, [
+			wp_delete_object_term_relationships( $post_id, array(
+				'boekdb_serie_tax',
+				'boekdb_auteur_tax',
+				'boekdb_illustrator_tax',
+				'boekdb_spreker_tax',
+				'boekdb_nur_tax',
+				'boekdb_bisac_tax',
+				'boekdb_thema_tax',
+			) );
 
-			] );
 			boekdb_debug( 'deleted post ' . $post_id );
 		}
 	}
@@ -566,6 +593,21 @@ class BoekDB_Import {
 				} elseif ( $bestand->soort === 'Back cover' ) {
 					update_post_meta( $boek_post_id, 'boekdb_file_backcover_id', $attachment_id );
 				} elseif ( $bestand->soort === 'Fragment' ) {
+					update_post_meta( $boek_post_id, 'boekdb_file_voorbeeld_id', $attachment_id );
+				}
+			} else {
+				$attachment = array(
+					'ID' => $attachment_id,
+					'post_parent' => $boek_post_id
+				);
+				wp_update_post( $attachment );
+
+				$attachment = get_post( $attachment_id );
+				if ( $attachment->post_title === 'Cover' ) {
+					update_post_meta( $boek_post_id, '_thumbnail_id', $attachment_id );
+				} elseif ( $attachment->post_title === 'Back cover' ) {
+					update_post_meta( $boek_post_id, 'boekdb_file_backcover_id', $attachment_id );
+				} elseif ( $attachment->post_title === 'Fragment' ) {
 					update_post_meta( $boek_post_id, 'boekdb_file_voorbeeld_id', $attachment_id );
 				}
 			}

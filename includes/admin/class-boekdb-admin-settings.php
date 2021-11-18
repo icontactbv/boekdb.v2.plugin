@@ -75,8 +75,8 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				}
 			} elseif ( isset( $_POST['run'] ) && 'run' === $_POST['run'] ) {
 				if ( ! boekdb_is_import_running() ) {
-					if(isset( $_POST['overwrite_images'] ) && $_POST['overwrite_images'] === '1') {
-						boekdb_set_import_option('overwrite_images', true);
+					if ( isset( $_POST['overwrite_images'] ) && $_POST['overwrite_images'] === '1' ) {
+						boekdb_set_import_option( 'overwrite_images', true );
 					}
 					wp_schedule_single_event( time() + 5, BoekDB_Import::CRON_HOOK );
 					boekdb_set_import_running();
@@ -111,7 +111,13 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				if ( $id > 0 ) {
 					$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d",
 						$id ) );
-
+					$result   = $wpdb->get_results( $wpdb->prepare( "SELECT eb.boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken eb WHERE eb.etalage_id = %d",
+						$id ) );
+					$post_ids = array();
+					foreach ( $result as $boek ) {
+						$post_ids[] = (int) $boek->boek_id;
+					}
+					BoekDB_Import::delete_etalage_posts( $post_ids, $id );
 					self::add_message( 'Etalage is verwijderd.' );
 				}
 			}
@@ -120,7 +126,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		/**
 		 * Add a message.
 		 *
-		 * @param string  $text  Message.
+		 * @param  string  $text  Message.
 		 */
 		public static function add_message( $text ) {
 			self::$messages[] = $text;
@@ -129,7 +135,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		/**
 		 * Add an error.
 		 *
-		 * @param string  $text  Message.
+		 * @param  string  $text  Message.
 		 */
 		public static function add_error( $text ) {
 			self::$errors[] = $text;
