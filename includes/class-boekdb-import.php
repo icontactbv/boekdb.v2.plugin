@@ -29,6 +29,7 @@ class BoekDB_Import {
 			boekdb_debug( 'DEBUG MODE IS ON' );
 			// flush_rewrite_rules();
 			// add_action( 'init', array( self::class, 'import' ) );
+			//add_action('init', array(self::class, 'clean_up'));
 		}
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
@@ -196,11 +197,15 @@ class BoekDB_Import {
 
 	protected static function delete_posts( $post_ids ) {
 		global $wpdb;
-
 		foreach ( $post_ids as $post_id ) {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d", $post_id ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d",
+				$post_id ) );
 			wp_delete_post( $post_id, true );
-			boekdb_debug( 'deleted ' . $post_id );
+			wp_delete_object_term_relationships( $post_id, [
+
+			] );
+			boekdb_debug( 'deleted post ' . $post_id );
 		}
 	}
 
@@ -817,6 +822,43 @@ class BoekDB_Import {
 
 		return $wpdb->update( $wpdb->prefix . 'boekdb_etalages', array( 'last_import' => $value ),
 			array( 'id' => $id ) );
+	}
+
+	public static function clean_up() {
+		global $wpdb;
+
+		$result   = $wpdb->get_results( "SELECT p.ID
+					FROM $wpdb->posts p
+					    LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON eb.boek_id = p.ID
+					    LEFT JOIN {$wpdb->prefix}boekdb_etalages et ON et.id = eb.etalage_id
+					WHERE p.post_type = 'boekdb_boek' AND et.id IS NULL" );
+		$post_ids = array();
+		foreach ( $result as $boek ) {
+			$post_ids[] = (int) $boek->ID;
+		}
+		self::delete_posts( $post_ids );
+
+		$result   = $wpdb->get_results( "SELECT t.term_id, tt.taxonomy FROM $wpdb->terms t INNER JOIN $wpdb->term_taxonomy tt ON tt.term_id = t.term_id WHERE tt.taxonomy LIKE 'boekdb_%_tax'" );
+		$term_ids = array();
+		foreach ( $result as $term ) {
+			$term_ids[ (int) $term->term_id ] = $term->taxonomy;
+		}
+		self::delete_terms( $term_ids );
+	}
+
+	public static function delete_terms( $term_ids ) {
+		global $wpdb;
+
+		foreach ( $term_ids as $term_id => $taxonomy ) {
+			$posts = get_posts( [
+				'numberposts' => 1,
+				'category'    => $term_id,
+			] );
+			if ( count( $posts ) === 0 ) {
+				wp_delete_term( $term_id, $taxonomy );
+			}
+			boekdb_debug( 'deleted term ' . $term_id );
+		}
 	}
 
 	private static function sort_books_by_productform( $a, $b ) {

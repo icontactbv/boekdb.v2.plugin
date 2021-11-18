@@ -25,7 +25,9 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <th scope="col">Laatste import</th>
                 <th scope="col">Actie</th>
             </tr>
-			<?php foreach ( $etalages as $etalage ) :
+			<?php
+            $disabled = '';
+            foreach ( $etalages as $etalage ) :
 				$disabled = $import_running ? 'disabled="disabled" aria-disabled="true"' : ''; ?>
                 <tr>
                     <td><?php
@@ -51,11 +53,11 @@ if ( ! defined( 'ABSPATH' ) ) {
         <h2>Nieuwe etalage toevoegen</h2>
         <p>
             <label for="etalage_name">Naam:</label>
-            <input type="text" name="etalage_name" placeholder="naam">
+            <input type="text" name="etalage_name" id="etalage_name" placeholder="naam">
         </p>
         <p>
             <label for="etalage_api_key">API Key:</label>
-            <input type="text" name="etalage_api_key" placeholder="api-key">
+            <input type="text" name="etalage_api_key" id="etalage_api_key" placeholder="api-key">
         </p>
         <p class="submit">
             <button name="save" class="button-primary boekdb-save-button" type="submit" value="save">Toevoegen</button>
