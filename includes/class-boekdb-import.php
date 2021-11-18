@@ -30,7 +30,7 @@ class BoekDB_Import {
 		if ( WP_DEBUG ) {
 			// flush_rewrite_rules();
 			// add_action( 'init', array( self::class, 'import' ) );
-			// add_action('init', array(self::class, 'clean_up'));
+			// add_action( 'init', array( self::class, 'clean_up' ) );
 		}
 		if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::IMPORT_HOOK );
@@ -225,9 +225,6 @@ class BoekDB_Import {
 
 			boekdb_debug( 'deleted post ' . $post_id );
 		}
-
-		boekdb_debug( 'running cleanup' );
-		self::clean_up();
 	}
 
 	/**
@@ -292,7 +289,7 @@ class BoekDB_Import {
 			'post_status' => 'publish',
 			'post_type'   => 'boekdb_boek',
 			'post_title'  => $boek['titel'],
-			'post_name'   => sanitize_title( $boek['titel'].' '.$boek['verschijningsvorm'] ),
+			'post_name'   => sanitize_title( $boek['titel'] . ' ' . $boek['verschijningsvorm'] ),
 		);
 
 		// create/update post
@@ -392,7 +389,7 @@ class BoekDB_Import {
 		$boek['recensiequotes']        = [];
 		$boek['recensielinks']         = [];
 
-		// @wip overschrijfbare velden
+		// overschrijfbare velden
 		$boek['annotatie'] = $product->annotatie;
 		$boek['flaptekst'] = $product->flaptekst;
 
@@ -862,15 +859,22 @@ class BoekDB_Import {
 
 	public static function delete_etalage_posts( $post_ids, $deleted_etalage ) {
 		global $wpdb;
-		// check if post is still related to etalage
-		foreach ( $post_ids as $key => $post_id ) {
-			$result = $wpdb->get_results( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id != %d",
-				$deleted_etalage ) );
-			if ( count( $result ) > 0 ) {
-				unset( $post_ids[ $key ] );
+
+		if ( $deleted_etalage > 0 ) {
+			// check if post is still related to etalage
+			foreach ( $post_ids as $key => $post_id ) {
+				$result = $wpdb->get_results( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id != %d AND boek_id = %d LIMIT 1",
+					$deleted_etalage, $post_id ) );
+				if ( count( $result ) > 0 ) {
+					unset( $post_ids[ $key ] );
+				}
 			}
+			boekdb_debug( 'deleting ' . count( $post_ids ) . ' posts' );
+			self::delete_posts( $post_ids );
+
+			boekdb_debug( 'running cleanup' );
+			self::clean_up();
 		}
-		self::delete_posts( $post_ids );
 	}
 
 	public static function clean_up() {
@@ -880,7 +884,7 @@ class BoekDB_Import {
 					FROM $wpdb->posts p
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON eb.boek_id = p.ID
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalages et ON et.id = eb.etalage_id
-					WHERE p.post_type = 'boekdb_boek' AND et.id IS NULL" );
+					WHERE p.post_type = 'boekdb_boek' GROUP BY et.id HAVING COUNT(et.id) = 0" );
 		$post_ids = array();
 		foreach ( $result as $boek ) {
 			$post_ids[] = (int) $boek->ID;
@@ -899,14 +903,14 @@ class BoekDB_Import {
 		global $wpdb;
 
 		foreach ( $term_ids as $term_id => $taxonomy ) {
-			$args = array(
+			$args  = array(
 				'posts_per_page' => 1,
-				'post_type' => 'boekdb_boek',
-				'tax_query' => array(
+				'post_type'      => 'boekdb_boek',
+				'tax_query'      => array(
 					array(
 						'taxonomy' => $taxonomy,
-						'field' => 'term_id',
-						'terms' => $term_id
+						'field'    => 'term_id',
+						'terms'    => $term_id
 					)
 				)
 			);
