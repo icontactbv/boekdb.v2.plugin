@@ -78,8 +78,12 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 					if ( isset( $_POST['overwrite_images'] ) && $_POST['overwrite_images'] === '1' ) {
 						boekdb_set_import_option( 'overwrite_images', true );
 					}
-					wp_schedule_single_event( time() + 5, BoekDB_Import::IMPORT_HOOK );
-					boekdb_set_import_running();
+					if(WP_DEBUG) {
+						BoekDB_Import::import();
+					} else {
+						wp_schedule_single_event( time() + 5, BoekDB_Import::IMPORT_HOOK );
+						boekdb_set_import_running();
+					}
 				} else {
 					self::add_error( 'Import draait al!' );
 				}
@@ -99,7 +103,11 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 					}
 				}
 			} elseif ( isset($_POST['cleanup']) && 'cleanup' === $_POST['cleanup']) {
-				wp_schedule_single_event( time() + 5, BoekDB_Import::CLEANUP_HOOK );
+				if(WP_DEBUG) {
+					BoekDB_Import::clean_up();
+				} else {
+					wp_schedule_single_event( time() + 5, BoekDB_Import::CLEANUP_HOOK );
+				}
 				self::add_message('Opruimen gestart');
 			} elseif ( isset ( $_POST['reset'] ) ) {
 				$id = (int) $_POST['reset'];

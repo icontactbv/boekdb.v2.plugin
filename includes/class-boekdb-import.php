@@ -27,11 +27,6 @@ class BoekDB_Import {
 	 * Hook in tabs.
 	 */
 	public static function init() {
-		if ( WP_DEBUG ) {
-			// flush_rewrite_rules();
-			// add_action( 'init', array( self::class, 'import' ) );
-			// add_action( 'init', array( self::class, 'clean_up' ) );
-		}
 		if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::IMPORT_HOOK );
 		}
@@ -75,19 +70,26 @@ class BoekDB_Import {
 				foreach ( $products as $product ) {
 					list( $boek_post_id, $isbn, $nstc ) = self::handle_boek( $product );
 					self::handle_betrokkenen( $product, $boek_post_id );
+
+					$thema = array();
+					$nur   = array();
+					$bisac = array();
+
 					foreach ( $product->onderwerpen as $onderwerp ) {
-						if ( $onderwerp->type === 'NUR' || $onderwerp->type === 'BISAC' ) {
-							$term_id = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ),
-								strtolower( $onderwerp->type ),
-								$onderwerp->waarde );
-							wp_set_object_terms( $boek_post_id, $term_id,
-								'boekdb_' . strtolower( $onderwerp->type ) . '_tax' );
+						if ( $onderwerp->type === 'NUR' ) {
+							$nur[] = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ),
+								'nur', $onderwerp->waarde );
+						} elseif ( $onderwerp->type === 'BISAC' ) {
+							$bisac[] = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ),
+								'bisac', $onderwerp->waarde );
 						} elseif ( substr( $onderwerp->type, 0, 5 ) === 'Thema' ) {
-							$term_id = self::get_taxonomy_term_id( sanitize_title( boekdb_thema_omschrijving( $onderwerp->code ) ),
+							$thema[] = self::get_taxonomy_term_id( sanitize_title( boekdb_thema_omschrijving( $onderwerp->code ) ),
 								'thema', boekdb_thema_omschrijving( $onderwerp->code ) );
-							wp_set_object_terms( $boek_post_id, $term_id, 'boekdb_thema_tax' );
 						}
 					}
+					wp_set_object_terms( $boek_post_id, $nur, 'boekdb_nur_tax' );
+					wp_set_object_terms( $boek_post_id, $bisac, 'boekdb_bisac_tax' );
+					wp_set_object_terms( $boek_post_id, $thema, 'boekdb_thema_tax' );
 
 					self::link_product( $boek_post_id, $isbn, $etalage->id );
 					self::check_nstc( $boek_post_id, $nstc );
@@ -523,7 +525,8 @@ class BoekDB_Import {
 		if ( is_null( $attachment_id ) ) {
 			$get   = wp_safe_remote_get( $bestand->url );
 			$type  = $bestand->type;
-			$image = wp_upload_bits( $bestand->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+			$bestandsnaam = sanitize_file_name( $bestand->bestandsnaam );
+			$image = wp_upload_bits( $bestandsnaam, null, wp_remote_retrieve_body( $get ) );
 
 			$attachment = array(
 				'post_title'     => $bestand->soort,
@@ -534,7 +537,7 @@ class BoekDB_Import {
 			$wp_upload_dir   = wp_upload_dir();
 			$attachment_data = wp_generate_attachment_metadata(
 				$attachment_id,
-				$wp_upload_dir['path'] . '/' . $bestand->bestandsnaam );
+				$wp_upload_dir['path'] . '/' . $bestandsnaam );
 
 			wp_update_attachment_metadata( $attachment_id, $attachment_data );
 
@@ -564,7 +567,8 @@ class BoekDB_Import {
 			if ( is_null( $attachment_id ) ) {
 				$get   = wp_safe_remote_get( $bestand->url );
 				$type  = $bestand->type;
-				$image = wp_upload_bits( $bestand->bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+				$bestandsnaam = sanitize_file_name( $bestand->bestandsnaam );
+				$image = wp_upload_bits( $bestandsnaam, null, wp_remote_retrieve_body( $get ) );
 
 				$attachment = array(
 					'post_title'     => $bestand->soort,
@@ -574,7 +578,7 @@ class BoekDB_Import {
 				$attachment_id   = wp_insert_attachment( $attachment, $image['file'], $boek_post_id );
 				$wp_upload_dir   = wp_upload_dir();
 				$attachment_data = wp_generate_attachment_metadata( $attachment_id,
-					$wp_upload_dir['path'] . '/' . $bestand->bestandsnaam );
+					$wp_upload_dir['path'] . '/' . $bestandsnaam );
 
 				wp_update_attachment_metadata( $attachment_id, $attachment_data );
 
@@ -880,21 +884,42 @@ class BoekDB_Import {
 	public static function clean_up() {
 		global $wpdb;
 
-		// @ todo cleanup boekdb_etalage_boeken based on boekdb_etalages
-		// @todo cleanup boekdb_isbns based on wp_posst
+		// cleanup etalage_boeken
+		$etalages    = self::fetch_etalages();
+		$etalage_ids = array();
+		foreach ( $etalages as $etalage ) {
+			$etalage_ids[] = $etalage->id;
+		}
+		if(count($etalage_ids) > 0) {
+			$placeholders = implode( ', ', array_fill( 0, count( $etalage_ids ), '%d' ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id NOT IN ( $placeholders )",
+				$etalage_ids ) );
+		} else {
+			$wpdb->query("DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id NOT NULL");
+		}
+
+		// cleanup boekdb_isbns
+		$post_ids     = array_reduce( $wpdb->get_results( "SELECT ID FROM $wpdb->posts WHERE post_type = 'boekdb_boek'",
+			ARRAY_N ), 'array_merge', array() );
+		if(count($post_ids) > 0) {
+			$placeholders = implode( ', ', array_fill( 0, count( $post_ids ), '%d' ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id NOT IN ( $placeholders )", $post_ids ) );
+		} else {
+			$wpdb->query("DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id NOT NULL");
+		}
 
 		$result   = $wpdb->get_results( "SELECT p.ID
 					FROM $wpdb->posts p
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON eb.boek_id = p.ID
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalages et ON et.id = eb.etalage_id
-					WHERE p.post_type = 'boekdb_boek' GROUP BY et.id HAVING COUNT(et.id) = 0" );
+					WHERE p.post_type = 'boekdb_boek' GROUP BY p.ID HAVING COUNT(et.id) = 0" );
 		$post_ids = array();
 		foreach ( $result as $boek ) {
 			$post_ids[] = (int) $boek->ID;
 		}
 		self::delete_posts( $post_ids );
 
-		$result   = $wpdb->get_results( "SELECT t.term_id, tt.taxonomy FROM $wpdb->terms t INNER JOIN $wpdb->term_taxonomy tt ON tt.term_id = t.term_id WHERE tt.taxonomy LIKE 'boekdb_%_tax'" );
+		$result   = $wpdb->get_results( "SELECT tt.term_id, tt.taxonomy FROM $wpdb->term_taxonomy tt WHERE tt.taxonomy LIKE 'boekdb_%_tax'" );
 		$term_ids = array();
 		foreach ( $result as $term ) {
 			$term_ids[ (int) $term->term_id ] = $term->taxonomy;
@@ -920,7 +945,7 @@ class BoekDB_Import {
 			$query = new WP_Query( $args );
 			if ( $query->post_count === 0 ) {
 				wp_delete_term( $term_id, $taxonomy );
-				boekdb_debug( 'deleted term ' . $term_id );
+				boekdb_debug( 'deleted term ' . $term_id . ' from ' . $taxonomy );
 			}
 		}
 	}
