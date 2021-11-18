@@ -880,6 +880,9 @@ class BoekDB_Import {
 	public static function clean_up() {
 		global $wpdb;
 
+		// @ todo cleanup boekdb_etalage_boeken based on boekdb_etalages
+		// @todo cleanup boekdb_isbns based on wp_posst
+
 		$result   = $wpdb->get_results( "SELECT p.ID
 					FROM $wpdb->posts p
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON eb.boek_id = p.ID
