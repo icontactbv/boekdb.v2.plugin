@@ -155,7 +155,7 @@ class Boekdb_Post_Types {
 		register_post_type(
 			'boekdb_boek', array(
 				'labels'       => $labels,
-				'has_archive'  => 'boeken',
+				'has_archive'  => true,
 				'public'       => true,
 				'hierarchical' => false,
 				'supports'     => array(
