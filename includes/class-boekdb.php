@@ -20,7 +20,7 @@ final class BoekDB {
 	 *
 	 * @var string
 	 */
-	public $version = '1.0.2';
+	public $version = '1.0.3';
 
 	/**
 	 * BoekDb Constructor.
