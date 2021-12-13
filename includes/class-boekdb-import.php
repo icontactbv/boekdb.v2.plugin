@@ -840,9 +840,9 @@ class BoekDB_Import {
 		if ( $query->have_posts() ) {
 			$posts = $query->get_posts();
 			foreach ( $posts as $post ) {
-				$status             = get_post_meta( $post->ID, 'boekdb_status', true );
-				$verschijningsvorm  = get_post_meta( $post->ID, 'boekdb_verschijningsvorm', true );
-				if($status !== '21' && $status !== '23') {
+				$status            = get_post_meta( $post->ID, 'boekdb_status', true );
+				$verschijningsvorm = get_post_meta( $post->ID, 'boekdb_verschijningsvorm', true );
+				if ( (int) $status < 30 ) {
 					$books[ $post->ID ] = 'xxxxx';
 				} else {
 					$books[ $post->ID ] = substr( $verschijningsvorm, 0, 5 );
