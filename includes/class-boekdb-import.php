@@ -843,8 +843,7 @@ class BoekDB_Import {
 			foreach ( $posts as $post ) {
 				$status                 = get_post_meta( $post->ID, 'boekdb_status', true );
 				$verschijningsvorm      = get_post_meta( $post->ID, 'boekdb_verschijningsvorm', true );
-				$verschijningsvorm_code = get_post_meta( $post->ID, 'boekdb_verschijningsvorm_code', true );
-				$verschijningsvorm_slug = boekdb_verschijningsvorm_slug( $verschijningsvorm_code );
+				$verschijningsvorm_slug = boekdb_verschijningsvorm_slug( $verschijningsvorm );
 
 				if ( (int) $status > 30 ) {
 					$books[ $post->ID ] = 'xxxxx';
