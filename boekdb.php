@@ -183,7 +183,6 @@ function boekdb_startswith( $haystack, $needle ) {
 }
 
 function boekdb_verschijningsvorm_slug( $code ) {
-	$code = strtoupper( $code );
 	if ( isset ( BoekDB_Translations::$verschijningsvorm[ $code ])) {
 		return sanitize_title(BoekDB_Translations::$verschijningsvorm[ $code]);
 	}

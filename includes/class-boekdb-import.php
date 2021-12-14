@@ -845,7 +845,7 @@ class BoekDB_Import {
 				$verschijningsvorm      = get_post_meta( $post->ID, 'boekdb_verschijningsvorm', true );
 				$verschijningsvorm_slug = boekdb_verschijningsvorm_slug( $verschijningsvorm );
 
-				if ( (int) $status > 30 ) {
+				if($status !== '10' && $status !== '21' && $status !== '23') {
 					$books[ $post->ID ] = 'xxxxx';
 				} else {
 					$books[ $post->ID ] = substr( $verschijningsvorm, 0, 5 );
