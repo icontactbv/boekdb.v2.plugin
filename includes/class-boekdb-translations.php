@@ -1,14 +1,83 @@
 <?php
 /**
- * BoekDB Thema
+ * BoekDB Translations
  *
- * Translation array for Thema
+ * Translation arrays
  *
  * @package BoekDB
  */
 
-final class BoekDB_Thema {
-	public static $codes = array(
+final class BoekDB_Translations {
+	public static $verschijningsvorm = array(
+		'AA' => 'Luisterboek',
+		'AC' => 'Luisterboek',
+		'AI' => 'DVD-Audio',
+		'AJ' => 'Luisterboek',
+		'AK' => 'Audio op MP3-speler',
+		'AL' => 'Audio, SD card',
+		'AB' => 'Audiocassette (analoog)',
+		'AD' => 'Audiocassette (digitaal)',
+		'AE' => 'Audiodisc',
+		'AF' => 'Audiotape',
+		'VO' => 'Blu Ray',
+		'DN' => 'CD-Audio',
+		'DC' => 'CDI',
+		'DK' => 'Compact Memory Card',
+		'FC' => 'Dia',
+		'DJ' => 'Digitaal, SD-card',
+		'DF' => 'Diskette',
+		'DI' => 'DVD',
+		'EA' => 'Ebook',
+		'ED' => 'Ebook',
+		'LA' => 'Ebook',
+		'FA' => 'Film',
+		'FE' => 'Filmstrip',
+		'DE' => 'Game cartridge',
+		'VN' => 'HDVD',
+		'DL' => 'Memory Stick',
+		'MA' => 'Microfiche',
+		'MA' => 'Microfilm',
+		'MA' => 'Microvorm',
+		'AG' => 'Minidisc (Sony)',
+		'FD' => 'Overhead Projector Transparant',
+		'VM' => 'Super Video CD',
+		'DM' => 'USB Flash Drive',
+		'VA' => 'Video',
+		'VK' => 'Betamax Video',
+		'VL' => 'Video CD',
+		'VP' => 'UMD Video',
+		'VJ' => 'VHS Video',
+		'VF' => 'Videodisc',
+		'PB' => 'Agenda',
+		'BB' => 'Hardback',
+		'PI' => 'Bladmuziek',
+		'BC' => 'Paperback',
+		'PH' => 'Bouwkaart, Bouwpakket',
+		'PC' => 'Kalender',
+		'SA' => 'Samengesteld pakket',
+		'PT' => 'Bladwijzer',
+		'BD' => 'Loose/leaf',
+		'PA' => 'Drukwerk',
+		'PJ' => 'Kaarten',
+		'PD' => 'Kaartspellen',
+		'PM' => 'Opbergmap',
+		'BF' => 'Pamflet',
+		'PK' => 'Poster',
+		'PP' => 'Stickers',
+		'CA' => 'Topografische kaarten',
+		'PO' => 'Wandkaart',
+		'XL' => 'Samenstelling',
+		'XC' => 'Display (gevuld)',
+		'XB' => 'Display (leeg)',
+		'XA' => 'Promotiemateriaal',
+		'BP' => 'Schuimboek',
+		'ZB' => 'Speelgoed',
+		'ZE' => 'Spel',
+		'ZF' => 'T-shirt',
+		'00' => 'Diversen',
+	);
+
+	public static $thema = array(
 		'A'              => 'Kunst',
 		'AB'             => 'Kunst: algemene onderwerpen',
 		'ABA'            => 'Kunsttheorie',

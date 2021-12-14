@@ -76,6 +76,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php
 			wp_nonce_field( 'boekdb-settings' ); ?>
         </p>
+        <p class="settings">
+            
+        </p>
     </form>
 
 </div>

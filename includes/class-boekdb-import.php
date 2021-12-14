@@ -352,45 +352,46 @@ class BoekDB_Import {
 	 * @return array
 	 */
 	protected static function create_boek_array( $product ) {
-		$boek                          = array();
-		$boek['nstc']                  = $product->nstc;
-		$boek['titel']                 = $product->titel;
-		$boek['isbn']                  = $product->isbn;
-		$boek['subtitel']              = $product->subtitel;
-		$boek['deeltitel']             = $product->deeltitel;
-		$boek['sectietitel']           = $product->sectietitel;
-		$boek['origineletitel']        = $product->origineletitel;
-		$boek['serietitel']            = $product->serietitel;
-		$boek['deel']                  = $product->deel;
-		$boek['druk']                  = $product->druk;
-		$boek['verschijningsvorm']     = $product->verschijningsvorm;
-		$boek['uitgever']              = $product->uitgever;
-		$boek['imprint']               = $product->imprint;
-		$boek['inhoudsopgave']         = $product->inhoudsopgave;
-		$boek['taal']                  = $product->taal;
-		$boek['illustraties']          = $product->illustraties;
-		$boek['lengte']                = $product->lengte;
-		$boek['breedte']               = $product->breedte;
-		$boek['dikte']                 = $product->dikte;
-		$boek['gewicht']               = $product->gewicht;
-		$boek['paginas_hoofdwerk']     = $product->paginas_hoofdwerk;
-		$boek['paginas_proloog']       = $product->paginas_proloog;
-		$boek['paginas_epiloog']       = $product->paginas_epiloog;
-		$boek['duur']                  = $product->duur;
-		$boek['bestandsgrootte']       = $product->bestandsgrootte;
-		$boek['leeftijdscategorie']    = $product->leeftijdscategorie;
-		$boek['avi']                   = $product->avi;
-		$boek['beschikbaarheidsdatum'] = $product->beschikbaarheidsdatum;
-		$boek['publicatiedatum']       = $product->publicatiedatum;
-		$boek['prijs']                 = $product->prijs;
-		$boek['status']                = $product->status;
-		$boek['leverbaarheid']         = $product->leverbaarheid;
-		$boek['biografie']             = $product->biografie;
-		$boek['actieprijzen']          = [];
-		$boek['links']                 = [];
-		$boek['literaireprijzen']      = [];
-		$boek['recensiequotes']        = [];
-		$boek['recensielinks']         = [];
+		$boek                           = array();
+		$boek['nstc']                   = $product->nstc;
+		$boek['titel']                  = $product->titel;
+		$boek['isbn']                   = $product->isbn;
+		$boek['subtitel']               = $product->subtitel;
+		$boek['deeltitel']              = $product->deeltitel;
+		$boek['sectietitel']            = $product->sectietitel;
+		$boek['origineletitel']         = $product->origineletitel;
+		$boek['serietitel']             = $product->serietitel;
+		$boek['deel']                   = $product->deel;
+		$boek['druk']                   = $product->druk;
+		$boek['verschijningsvorm']      = $product->verschijningsvorm;
+		$boek['verschijningsvorm_code'] = isset( $product->verschijningsvorm_code ) ? $product->verschijningsvorm_code : null;
+		$boek['uitgever']               = $product->uitgever;
+		$boek['imprint']                = $product->imprint;
+		$boek['inhoudsopgave']          = $product->inhoudsopgave;
+		$boek['taal']                   = $product->taal;
+		$boek['illustraties']           = $product->illustraties;
+		$boek['lengte']                 = $product->lengte;
+		$boek['breedte']                = $product->breedte;
+		$boek['dikte']                  = $product->dikte;
+		$boek['gewicht']                = $product->gewicht;
+		$boek['paginas_hoofdwerk']      = $product->paginas_hoofdwerk;
+		$boek['paginas_proloog']        = $product->paginas_proloog;
+		$boek['paginas_epiloog']        = $product->paginas_epiloog;
+		$boek['duur']                   = $product->duur;
+		$boek['bestandsgrootte']        = $product->bestandsgrootte;
+		$boek['leeftijdscategorie']     = $product->leeftijdscategorie;
+		$boek['avi']                    = $product->avi;
+		$boek['beschikbaarheidsdatum']  = $product->beschikbaarheidsdatum;
+		$boek['publicatiedatum']        = $product->publicatiedatum;
+		$boek['prijs']                  = $product->prijs;
+		$boek['status']                 = $product->status;
+		$boek['leverbaarheid']          = $product->leverbaarheid;
+		$boek['biografie']              = $product->biografie;
+		$boek['actieprijzen']           = [];
+		$boek['links']                  = [];
+		$boek['literaireprijzen']       = [];
+		$boek['recensiequotes']         = [];
+		$boek['recensielinks']          = [];
 
 		// overschrijfbare velden
 		$boek['annotatie'] = $product->annotatie;
@@ -840,14 +841,18 @@ class BoekDB_Import {
 		if ( $query->have_posts() ) {
 			$posts = $query->get_posts();
 			foreach ( $posts as $post ) {
-				$status            = get_post_meta( $post->ID, 'boekdb_status', true );
-				$verschijningsvorm = get_post_meta( $post->ID, 'boekdb_verschijningsvorm', true );
-				if ( (int) $status < 30 ) {
+				$status                 = get_post_meta( $post->ID, 'boekdb_status', true );
+				$verschijningsvorm      = get_post_meta( $post->ID, 'boekdb_verschijningsvorm', true );
+				$verschijningsvorm_code = get_post_meta( $post->ID, 'boekdb_verschijningsvorm_code', true );
+				$verschijningsvorm_slug = boekdb_verschijningsvorm_slug( $verschijningsvorm_code );
+
+				if ( (int) $status > 30 ) {
 					$books[ $post->ID ] = 'xxxxx';
 				} else {
 					$books[ $post->ID ] = substr( $verschijningsvorm, 0, 5 );
 				}
-				$slugs[ $post->ID ] = $slug . '-' . sanitize_title( $verschijningsvorm );
+
+				$slugs[ $post->ID ] = $slug . '-' . $verschijningsvorm_slug;
 			}
 		}
 
