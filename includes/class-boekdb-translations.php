@@ -1,14 +1,20 @@
 <?php
 /**
- * BoekDB Thema
+ * BoekDB Translations
  *
- * Translation array for Thema
+ * Translation arrays
  *
  * @package BoekDB
  */
 
-final class BoekDB_Thema {
-	public static $codes = array(
+final class BoekDB_Translations {
+	public static $verschijningsvorm = array(
+		'Luisterboek : MP3 download' => 'Luisterboek',
+		'Luisterboek Download'       => 'Luisterboek',
+		'Luisterboek CD'             => 'Luisterboek',
+	);
+
+	public static $thema = array(
 		'A'              => 'Kunst',
 		'AB'             => 'Kunst: algemene onderwerpen',
 		'ABA'            => 'Kunsttheorie',
