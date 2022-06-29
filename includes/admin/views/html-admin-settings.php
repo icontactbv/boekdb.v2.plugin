@@ -20,7 +20,8 @@ if ( ! defined( 'ABSPATH' ) ) {
             <tbody>
             <tr>
                 <th scope="col">Naam</th>
-                <th scope="col">Boeken</th>
+                <th scope="col">Geïmporteerd</th>
+                <th scope="col">BoekDB aantal</th>
                 <th scope="col">API Key</th>
                 <th scope="col">Laatste import</th>
                 <th scope="col">Actie</th>
@@ -34,6 +35,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 						echo $etalage->name ?></td>
                     <td><?php
 						echo $etalage->boeken ?></td>
+                    <td><?php
+		                echo $etalage->isbns ?></td>
                     <td><?php
 						echo $etalage->api_key ?></td>
                     <td><?php

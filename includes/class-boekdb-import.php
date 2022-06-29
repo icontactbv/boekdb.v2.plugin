@@ -121,6 +121,15 @@ class BoekDB_Import {
 		$isbns = self::fetch_isbns( $etalage->api_key );
 		self::trash_removed( $etalage->id, $isbns['isbns'] );
 
+		$wpdb->update(
+			$wpdb->prefix . 'boekdb_etalages',
+			array(
+				'isbns' => count($isbns['isbns']),
+			),
+			array( 'id' => $etalage->id )
+		);
+
+
 		if ( $isbns['filters'] !== $etalage->filter_hash ) {
 			$wpdb->update(
 				$wpdb->prefix . 'boekdb_etalages',
