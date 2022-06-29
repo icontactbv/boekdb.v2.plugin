@@ -3,7 +3,7 @@
  * Plugin Name: BoekDB.v2
  * Plugin URI: https://www.boekdbv2.nl/
  * Description: Wordpress plugin for BoekDBv2 data.
- * Version: 1.0.5
+ * Version: 1.0.6
  * Author: Icontact B.V.
  * Author URI: http://www.icontact.nl
  * Requires at least: 5.5

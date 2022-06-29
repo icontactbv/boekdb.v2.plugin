@@ -46,6 +46,7 @@ class BoekDB_Import {
 		foreach ( $etalages as $etalage ) {
 			boekdb_set_import_running();
 			boekdb_set_import_etalage( $etalage->id );
+
 			$reset = self::check_available_isbns( $etalage );
 
 			$offset      = 0;
@@ -69,6 +70,9 @@ class BoekDB_Import {
 				boekdb_set_import_etalage( $etalage->id );
 				foreach ( $products as $product ) {
 					list( $boek_post_id, $isbn, $nstc, $slug ) = self::handle_boek( $product );
+
+					boekdb_debug('Processing '.$isbn);
+
 					self::handle_betrokkenen( $product, $boek_post_id );
 
 					$thema = array();

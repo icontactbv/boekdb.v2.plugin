@@ -86,6 +86,8 @@ class BoekDB_Install {
 			 `id` INTEGER NOT NULL AUTO_INCREMENT,
 			 `name` varchar(192) NOT NULL,
 			 `api_key` varchar(192) NOT NULL,
+			 `importing` tinyint(1) NOT NULL DEFAULT 0,
+			 `offset` MEDIUMINT NOT NULL DEFAULT 0,
 			 `last_import` DATETIME DEFAULT NULL,
 			 `filter_hash` varchar(192) DEFAULT NULL,
 			 PRIMARY KEY (`id`)
