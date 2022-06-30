@@ -58,7 +58,8 @@ class BoekDB_Import {
 			$last_import = new DateTime( $last_import, wp_timezone() );
 			$last_import = $last_import->format( 'Y-m-d\TH:i:sP' );
 
-			while ( $products = self::fetch_products( $etalage->api_key, $last_import, $offset ) ) {
+			$products = self::fetch_products( $etalage->api_key, $last_import, $offset );
+			if(count($products) > 0) {
 				boekdb_debug( 'Fetched ' . $etalage->name . ' with offset ' . $offset );
 				boekdb_debug( 'Contains ' . count( $products ) . ' books' );
 
@@ -99,20 +100,39 @@ class BoekDB_Import {
 					self::check_primary_title( $boek_post_id, $nstc, $slug );
 				}
 				$offset = $offset + self::LIMIT;
+
+				// update the offset in etalage
+				self::update_offset($offset, $etalage);
+
+				// fire a new import job for the next batch of products
+				wp_schedule_single_event( time() + 5, BoekDB_Import::IMPORT_HOOK );
+				exit;
+			} else {
+				boekdb_debug( 'Finished import on ' . $etalage->name );
+				self::set_last_import( $etalage->id );
 			}
-			boekdb_debug( 'Finished import on ' . $etalage->name );
-			self::set_last_import( $etalage->id );
 		}
 
 		// All done, release transients
 		boekdb_reset_import_running();
 	}
 
+	private static function update_offset($offset, $etalage) {
+		global $wpdb;
+
+		$wpdb->update(
+			$wpdb->prefix . 'boekdb_etalages',
+			array(
+				'offset' => $offset,
+			),
+			array( 'id' => $etalage->id )
+		);
+	}
+
 	private static function fetch_etalages() {
 		global $wpdb;
 
-		return $wpdb->get_results( "SELECT id, name, api_key, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages",
-			OBJECT );
+		return $wpdb->get_results( "SELECT id, name, api_key, importing, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages", OBJECT );
 	}
 
 	private static function check_available_isbns( $etalage ) {
@@ -128,7 +148,6 @@ class BoekDB_Import {
 			),
 			array( 'id' => $etalage->id )
 		);
-
 
 		if ( $isbns['filters'] !== $etalage->filter_hash ) {
 			$wpdb->update(
