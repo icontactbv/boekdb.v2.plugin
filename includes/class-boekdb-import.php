@@ -11,12 +11,13 @@ defined( 'ABSPATH' ) || exit;
  * BoekDB_Import Class.
  */
 class BoekDB_Import {
-	const IMPORT_HOOK  = 'boekdb_import';
-	const CLEANUP_HOOK = 'boekdb_cleanup';
+	const START_IMPORT_HOOK = 'boekdb_start_import';
+	const IMPORT_HOOK       = 'boekdb_import';
+	const CLEANUP_HOOK      = 'boekdb_cleanup';
 
 	const BOEKDB_DOMAIN       = 'https://boekdbv2.nl/';
 	const BASE_URL            = self::BOEKDB_DOMAIN . 'api/json/v1/';
-	const LIMIT               = 250;
+	const LIMIT               = 100;
 	const DEFAULT_LAST_IMPORT = "2015-01-01T01:00:00+01:00";
 
 	protected static $options = [
@@ -27,14 +28,94 @@ class BoekDB_Import {
 	 * Hook in tabs.
 	 */
 	public static function init() {
-		if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
-			wp_schedule_event( time(), 'hourly', self::IMPORT_HOOK );
+		if ( ! wp_next_scheduled( self::START_IMPORT_HOOK ) ) {
+			wp_schedule_event( time(), 'hourly', self::START_IMPORT_HOOK );
 		}
+		if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
+			// fire one of these every 60 seconds
+			wp_schedule_single_event( time() + 60, BoekDB_Import::IMPORT_HOOK );
+		}
+		add_action( self::START_IMPORT_HOOK, array( self::class, 'start_import' ) );
 		add_action( self::IMPORT_HOOK, array( self::class, 'import' ) );
 		add_action( self::CLEANUP_HOOK, array( self::class, 'clean_up' ) );
 	}
 
 	public static function import() {
+		// fetch running imports
+		$etalages = self::fetch_etalages( true );
+		if(count($etalages) === 0) {
+			// reset and don't schedule a new job
+			boekdb_reset_import_running();
+			return;
+		}
+
+		// do one etalage at a time
+		$etalage = reset($etalages);
+
+		boekdb_set_import_etalage( $etalage->id );
+		$reset = self::check_available_isbns( $etalage );
+
+		$offset      = $etalage->offset;
+		$last_import = new DateTime( $etalage->last_import, wp_timezone() );
+		$last_import = $last_import->format( 'Y-m-d\TH:i:sP' );
+
+		$products = self::fetch_products( $etalage->api_key, $last_import, $offset );
+		if ( count( $products ) > 0 ) {
+			boekdb_debug( 'Fetched ' . $etalage->name . ' with offset ' . $offset );
+			boekdb_debug( 'Contains ' . count( $products ) . ' books' );
+
+			if ( self::$options['overwrite_images'] === '1' ) {
+				boekdb_debug( 'overwriting images' );
+			}
+
+			// keep updating transient
+			boekdb_set_import_etalage( $etalage->id );
+			foreach ( $products as $product ) {
+				list( $boek_post_id, $isbn, $nstc, $slug ) = self::handle_boek( $product );
+
+				boekdb_debug( 'Processing ' . $isbn );
+
+				self::handle_betrokkenen( $product, $boek_post_id );
+
+				$thema = array();
+				$nur   = array();
+				$bisac = array();
+
+				foreach ( $product->onderwerpen as $onderwerp ) {
+					if ( $onderwerp->type === 'NUR' ) {
+						$nur[] = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ),
+							'nur', $onderwerp->waarde );
+					} elseif ( $onderwerp->type === 'BISAC' ) {
+						$bisac[] = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ),
+							'bisac', $onderwerp->waarde );
+					} elseif ( substr( $onderwerp->type, 0, 5 ) === 'Thema' ) {
+						$thema[] = self::get_taxonomy_term_id( sanitize_title( boekdb_thema_omschrijving( $onderwerp->code ) ),
+							'thema', boekdb_thema_omschrijving( $onderwerp->code ) );
+					}
+				}
+				wp_set_object_terms( $boek_post_id, $nur, 'boekdb_nur_tax' );
+				wp_set_object_terms( $boek_post_id, $bisac, 'boekdb_bisac_tax' );
+				wp_set_object_terms( $boek_post_id, $thema, 'boekdb_thema_tax' );
+
+				self::link_product( $boek_post_id, $isbn, $etalage->id );
+				self::check_primary_title( $boek_post_id, $nstc, $slug );
+			}
+			$offset = $offset + self::LIMIT;
+
+			// update the offset in etalage
+			self::update_offset( $offset, $etalage );
+
+		} else {
+			boekdb_debug( 'Finished import on ' . $etalage->name );
+			self::set_last_import( $etalage->id );
+			self::update_running(0, $etalage);
+		}
+
+		// fire a new import job for the next batch of products
+		wp_schedule_single_event( time() + 5, BoekDB_Import::IMPORT_HOOK );
+	}
+
+	public static function start_import() {
 		set_time_limit( 0 );
 
 		require_once( ABSPATH . 'wp-admin/includes/image.php' );
@@ -42,97 +123,48 @@ class BoekDB_Import {
 		// handle options
 		self::$options['overwrite_images'] = get_transient( 'boekdb_import_options_overwrite_images' );
 
+		if ( boekdb_is_import_running() === 1 ) {
+			return;
+		}
+
 		$etalages = self::fetch_etalages();
 		foreach ( $etalages as $etalage ) {
-			boekdb_set_import_running();
-			boekdb_set_import_etalage( $etalage->id );
+			self::update_running( 1, $etalage );
 
+			boekdb_set_import_etalage( $etalage->id );
 			$reset = self::check_available_isbns( $etalage );
 
-			$offset      = 0;
 			$last_import = $etalage->last_import;
 			if ( $reset || is_null( $last_import ) ) {
 				$last_import = self::DEFAULT_LAST_IMPORT;
+				self::set_last_import( $etalage->id, $last_import );
 			}
 
-			$last_import = new DateTime( $last_import, wp_timezone() );
-			$last_import = $last_import->format( 'Y-m-d\TH:i:sP' );
-
-			$products = self::fetch_products( $etalage->api_key, $last_import, $offset );
-			if(count($products) > 0) {
-				boekdb_debug( 'Fetched ' . $etalage->name . ' with offset ' . $offset );
-				boekdb_debug( 'Contains ' . count( $products ) . ' books' );
-
-				if ( self::$options['overwrite_images'] === '1' ) {
-					boekdb_debug( 'overwriting images' );
-				}
-
-				// keep updating transient
-				boekdb_set_import_etalage( $etalage->id );
-				foreach ( $products as $product ) {
-					list( $boek_post_id, $isbn, $nstc, $slug ) = self::handle_boek( $product );
-
-					boekdb_debug('Processing '.$isbn);
-
-					self::handle_betrokkenen( $product, $boek_post_id );
-
-					$thema = array();
-					$nur   = array();
-					$bisac = array();
-
-					foreach ( $product->onderwerpen as $onderwerp ) {
-						if ( $onderwerp->type === 'NUR' ) {
-							$nur[] = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ),
-								'nur', $onderwerp->waarde );
-						} elseif ( $onderwerp->type === 'BISAC' ) {
-							$bisac[] = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ),
-								'bisac', $onderwerp->waarde );
-						} elseif ( substr( $onderwerp->type, 0, 5 ) === 'Thema' ) {
-							$thema[] = self::get_taxonomy_term_id( sanitize_title( boekdb_thema_omschrijving( $onderwerp->code ) ),
-								'thema', boekdb_thema_omschrijving( $onderwerp->code ) );
-						}
-					}
-					wp_set_object_terms( $boek_post_id, $nur, 'boekdb_nur_tax' );
-					wp_set_object_terms( $boek_post_id, $bisac, 'boekdb_bisac_tax' );
-					wp_set_object_terms( $boek_post_id, $thema, 'boekdb_thema_tax' );
-
-					self::link_product( $boek_post_id, $isbn, $etalage->id );
-					self::check_primary_title( $boek_post_id, $nstc, $slug );
-				}
-				$offset = $offset + self::LIMIT;
-
-				// update the offset in etalage
-				self::update_offset($offset, $etalage);
-
-				// fire a new import job for the next batch of products
-				wp_schedule_single_event( time() + 5, BoekDB_Import::IMPORT_HOOK );
-				exit;
-			} else {
-				boekdb_debug( 'Finished import on ' . $etalage->name );
-				self::set_last_import( $etalage->id );
-			}
+			// fire first import event
+			wp_schedule_single_event( time() + 5, BoekDB_Import::IMPORT_HOOK );
 		}
-
-		// All done, release transients
-		boekdb_reset_import_running();
 	}
 
-	private static function update_offset($offset, $etalage) {
+	private static function fetch_etalages($running=false) {
+		global $wpdb;
+		if($running) {
+			return $wpdb->get_results( "SELECT id, name, api_key, importing, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages WHERE running = 1",
+				OBJECT );
+		}
+		return $wpdb->get_results( "SELECT id, name, api_key, importing, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages",
+			OBJECT );
+	}
+
+	private static function update_running( $running, $etalage ) {
 		global $wpdb;
 
 		$wpdb->update(
 			$wpdb->prefix . 'boekdb_etalages',
 			array(
-				'offset' => $offset,
+				'running' => $running,
 			),
 			array( 'id' => $etalage->id )
 		);
-	}
-
-	private static function fetch_etalages() {
-		global $wpdb;
-
-		return $wpdb->get_results( "SELECT id, name, api_key, importing, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages", OBJECT );
 	}
 
 	private static function check_available_isbns( $etalage ) {
@@ -144,7 +176,7 @@ class BoekDB_Import {
 		$wpdb->update(
 			$wpdb->prefix . 'boekdb_etalages',
 			array(
-				'isbns' => count($isbns['isbns']),
+				'isbns' => count( $isbns['isbns'] ),
 			),
 			array( 'id' => $etalage->id )
 		);
@@ -877,7 +909,7 @@ class BoekDB_Import {
 				$verschijningsvorm      = get_post_meta( $post->ID, 'boekdb_verschijningsvorm', true );
 				$verschijningsvorm_slug = boekdb_verschijningsvorm_slug( $verschijningsvorm );
 
-				if($status !== '10' && $status !== '21' && $status !== '23') {
+				if ( $status !== '10' && $status !== '21' && $status !== '23' ) {
 					$books[ $post->ID ] = 'xxxxx';
 				} else {
 					$books[ $post->ID ] = substr( $verschijningsvorm, 0, 5 );
@@ -911,9 +943,23 @@ class BoekDB_Import {
 		}
 	}
 
-	private static function set_last_import( $id ) {
+	private static function update_offset( $offset, $etalage ) {
 		global $wpdb;
-		$value = current_time( 'mysql', 1 );
+
+		$wpdb->update(
+			$wpdb->prefix . 'boekdb_etalages',
+			array(
+				'offset' => $offset,
+			),
+			array( 'id' => $etalage->id )
+		);
+	}
+
+	private static function set_last_import( $id, $value=null ) {
+		global $wpdb;
+		if(is_null($value)) {
+			$value = current_time( 'mysql', 1 );
+		}
 
 		return $wpdb->update( $wpdb->prefix . 'boekdb_etalages', array( 'last_import' => $value ),
 			array( 'id' => $id ) );

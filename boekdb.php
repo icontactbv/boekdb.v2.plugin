@@ -78,19 +78,19 @@ function boekdb_set_import_running() {
 }
 
 function boekdb_is_import_running() {
-	$running = (int) get_transient( 'boekdb_import_running' ) === 1;
-	if ( $running ) {
-		boekdb_debug( 'Import is running' );
-	} else {
-		boekdb_debug( 'Import is not running' );
-	}
+	global $wpdb;
 
-	return $running;
+	$count = (int)$wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}boekdb_etalages WHERE running = 1" );
+	if($count > 0) {
+		boekdb_debug( 'Import is running' );
+		return true;
+	}
+	boekdb_debug( 'Import is not running' );
+	return false;
 }
 
 function boekdb_reset_import_running() {
 	boekdb_debug( 'Resetting import running and etalage transients' );
-	delete_transient( 'boekdb_import_running' );
 	delete_transient( 'boekdb_import_etalage' );
 	boekdb_unset_import_options();
 }

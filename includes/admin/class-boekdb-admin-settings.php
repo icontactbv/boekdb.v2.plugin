@@ -79,7 +79,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 						boekdb_set_import_option( 'overwrite_images', true );
 					}
 					if(WP_DEBUG) {
-						BoekDB_Import::import();
+						BoekDB_Import::start_import();
 					} else {
 						wp_schedule_single_event( time() + 5, BoekDB_Import::IMPORT_HOOK );
 						boekdb_set_import_running();
