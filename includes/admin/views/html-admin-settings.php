@@ -22,14 +22,16 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <th scope="col">Naam</th>
                 <th scope="col">Geïmporteerd</th>
                 <th scope="col">BoekDB aantal</th>
+                <th scope="col">Offset</th>
+                <th scope="col">Actief</th>
                 <th scope="col">API Key</th>
-                <th scope="col">Laatste import</th>
+                <th scope="col">Laatste afgeronde import</th>
                 <th scope="col">Actie</th>
             </tr>
 			<?php
             $disabled = '';
             foreach ( $etalages as $etalage ) :
-				$disabled = $import_running ? 'disabled="disabled" aria-disabled="true"' : ''; ?>
+				$disabled = $etalage->running == 1 ? 'disabled="disabled" aria-disabled="true"' : ''; ?>
                 <tr>
                     <td><?php
 						echo $etalage->name ?></td>
@@ -38,10 +40,20 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <td><?php
 		                echo $etalage->isbns ?></td>
                     <td><?php
+		                echo $etalage->offset ?></td>
+                    <td><?php
+		                echo $etalage->running ?></td>
+                    <td><?php
 						echo $etalage->api_key ?></td>
                     <td><?php
 						echo $etalage->last_import ?></td>
                     <td>
+                        <?php if ($etalage->running == 1): ?>
+                        <button name="stop" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>">Stop</button>
+                        <?php endif; ?>
+	                    <?php if ($etalage->running == 0 && $etalage->offset > 0): ?>
+                            <button name="start" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>">Start</button>
+	                    <?php endif; ?>
                         <button name="reset" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>" <?php echo $disabled ?>>Reset</button>
                         <button name="delete" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>" <?php echo $disabled ?>>Verwijder</button>
                     </td>

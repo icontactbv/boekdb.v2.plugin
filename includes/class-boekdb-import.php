@@ -12,7 +12,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class BoekDB_Import {
 	const START_IMPORT_HOOK = 'boekdb_start_import';
-	const IMPORT_HOOK       = 'boekdb_import';
+	const IMPORT_HOOK       = 'boekdb_run_import';
 	const CLEANUP_HOOK      = 'boekdb_cleanup';
 
 	const BOEKDB_DOMAIN       = 'https://boekdbv2.nl/';
@@ -28,19 +28,25 @@ class BoekDB_Import {
 	 * Hook in tabs.
 	 */
 	public static function init() {
+		add_action( self::START_IMPORT_HOOK, array( self::class, 'start_import' ) );
+		add_action( self::IMPORT_HOOK, array( self::class, 'import' ) );
+		add_action( self::CLEANUP_HOOK, array( self::class, 'clean_up' ) );
+
 		if ( ! wp_next_scheduled( self::START_IMPORT_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::START_IMPORT_HOOK );
 		}
 		if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
-			// fire one of these every 60 seconds
-			wp_schedule_single_event( time() + 60, BoekDB_Import::IMPORT_HOOK );
+			wp_schedule_event( time(), 'minutely', self::IMPORT_HOOK );
 		}
+
 		add_action( self::START_IMPORT_HOOK, array( self::class, 'start_import' ) );
 		add_action( self::IMPORT_HOOK, array( self::class, 'import' ) );
 		add_action( self::CLEANUP_HOOK, array( self::class, 'clean_up' ) );
 	}
 
 	public static function import() {
+		boekdb_debug('Importing products...');
+
 		// fetch running imports
 		$etalages = self::fetch_etalages( true );
 		if(count($etalages) === 0) {
@@ -102,17 +108,23 @@ class BoekDB_Import {
 			}
 			$offset = $offset + self::LIMIT;
 
-			// update the offset in etalage
+			// update the offset in etalage and set running to 1 (processing)
 			self::update_offset( $offset, $etalage );
+			self::update_running(1, $etalage);
 
+			boekdb_debug('Done with this batch...');
+
+			if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
+				wp_single_event( time(), self::IMPORT_HOOK );
+			}
 		} else {
 			boekdb_debug( 'Finished import on ' . $etalage->name );
 			self::set_last_import( $etalage->id );
+
+			// reset offset and set running to 0 (finished)
+			self::update_offset( 0, $etalage );
 			self::update_running(0, $etalage);
 		}
-
-		// fire a new import job for the next batch of products
-		wp_schedule_single_event( time() + 5, BoekDB_Import::IMPORT_HOOK );
 	}
 
 	public static function start_import() {
@@ -141,17 +153,17 @@ class BoekDB_Import {
 			}
 
 			// fire first import event
-			wp_schedule_single_event( time() + 5, BoekDB_Import::IMPORT_HOOK );
+			wp_schedule_single_event( time(), BoekDB_Import::IMPORT_HOOK );
 		}
 	}
 
 	private static function fetch_etalages($running=false) {
 		global $wpdb;
 		if($running) {
-			return $wpdb->get_results( "SELECT id, name, api_key, importing, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages WHERE running = 1",
+			return $wpdb->get_results( "SELECT id, name, api_key, running, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages WHERE running > 0",
 				OBJECT );
 		}
-		return $wpdb->get_results( "SELECT id, name, api_key, importing, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages",
+		return $wpdb->get_results( "SELECT id, name, api_key, running, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages",
 			OBJECT );
 	}
 
@@ -795,6 +807,10 @@ class BoekDB_Import {
 	 * @param $term_id
 	 */
 	protected static function handle_betrokkene_files( $betrokkene, $term_id ) {
+		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+			include( ABSPATH . 'wp-admin/includes/image.php' );
+		}
+
 		foreach ( $betrokkene['bestanden'] as $bestand ) {
 			if ( $bestand->soort !== 'Auteursfoto' ) {
 				return;
@@ -946,9 +962,11 @@ class BoekDB_Import {
 	private static function update_offset( $offset, $etalage ) {
 		global $wpdb;
 
+		// also set running to 1 so next batch can be done
 		$wpdb->update(
 			$wpdb->prefix . 'boekdb_etalages',
 			array(
+				'running' => 1,
 				'offset' => $offset,
 			),
 			array( 'id' => $etalage->id )

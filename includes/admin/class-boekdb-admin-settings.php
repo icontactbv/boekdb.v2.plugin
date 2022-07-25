@@ -57,6 +57,22 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		public static function save() {
 			global $wpdb;
 
+			if ( isset( $_POST['stop'] ) ) {
+				$id = (int) $_POST['stop'];
+				if ( $id > 0 ) {
+					$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->prefix}boekdb_etalages SET running=0 WHERE id = %d",
+						$id ) );
+					self::add_message( 'Import is gestopt.' );
+				}
+			}
+			if ( isset( $_POST['start'] ) ) {
+				$id = (int) $_POST['start'];
+				if ( $id > 0 ) {
+					$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->prefix}boekdb_etalages SET running=1 WHERE id = %d",
+						$id ) );
+					self::add_message( 'Import is gestart.' );
+				}
+			}
 			if ( isset( $_POST['save'] ) && 'save' === $_POST['save'] ) {
 				$api_key = $_POST['etalage_api_key'];
 				$name    = $_POST['etalage_name'];
@@ -81,7 +97,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 					if(WP_DEBUG) {
 						BoekDB_Import::start_import();
 					} else {
-						wp_schedule_single_event( time() + 5, BoekDB_Import::IMPORT_HOOK );
+						wp_schedule_single_event( time() + 5, BoekDB_Import::START_IMPORT_HOOK );
 						boekdb_set_import_running();
 					}
 				} else {
@@ -187,7 +203,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		public static function get_etalages() {
 			global $wpdb;
 
-			$etalage_result = $wpdb->get_results( "SELECT e.id, e.name, e.api_key, DATE_FORMAT(e.last_import, '%Y-%m-%d %H:%i:%s') as last_import, e.isbns, e.importing, e.offset, COUNT(eb.boek_id) as boeken FROM {$wpdb->prefix}boekdb_etalages e LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON e.id = eb.etalage_id GROUP BY e.id", OBJECT );
+			$etalage_result = $wpdb->get_results( "SELECT e.id, e.name, e.api_key, DATE_FORMAT(e.last_import, '%Y-%m-%d %H:%i:%s') as last_import, e.isbns, e.running, e.offset, COUNT(eb.boek_id) as boeken FROM {$wpdb->prefix}boekdb_etalages e LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON e.id = eb.etalage_id GROUP BY e.id", OBJECT );
 			$etalages       = array();
 			foreach ( $etalage_result as $etalage ) {
 				$etalages[ $etalage->id ] = $etalage;

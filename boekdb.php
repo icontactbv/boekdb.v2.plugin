@@ -91,6 +91,9 @@ function boekdb_is_import_running() {
 
 function boekdb_reset_import_running() {
 	boekdb_debug( 'Resetting import running and etalage transients' );
+
+
+
 	delete_transient( 'boekdb_import_etalage' );
 	boekdb_unset_import_options();
 }
@@ -211,5 +214,13 @@ function boekdb_etalage_join( $join, $query) {
 }
 add_filter('posts_join', 'boekdb_etalage_join', 10, 2);
 
-
+function boekdb_add_minutely( $schedules ) {
+	// add a 'minutely' schedule to the existing set
+	$schedules['minutely'] = array(
+		'interval' => 60,
+		'display' => __('Every minute')
+	);
+	return $schedules;
+}
+add_filter( 'cron_schedules', 'boekdb_add_minutely' );
 

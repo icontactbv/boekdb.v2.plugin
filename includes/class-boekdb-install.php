@@ -91,7 +91,6 @@ class BoekDB_Install {
 			 `isbns` MEDIUMINT NOT NULL DEFAULT 0,
 			 `last_import` DATETIME DEFAULT NULL,
 			 `filter_hash` varchar(192) DEFAULT NULL,
-			 `offset` smallint(5) UNSIGNED NOT NULL DEFAULT 0,
 			 `running` tinyint(1) NOT NULL DEFAULT 0,
 			 PRIMARY KEY (`id`)
 			 ) $charset_collate;";
