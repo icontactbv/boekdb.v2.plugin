@@ -101,6 +101,8 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 						self::add_error( 'Er is iets mis, response: ' . $code );
 					}
 				}
+			} elseif ( isset ( $_POST['stop'] ) && 'stop' === $_POST['stop'] ) {
+				$wpdb->query("UPDATE {$wpdb->prefix}boekdb_etalages SET offset=0, running=0");
 			} elseif ( isset($_POST['cleanup']) && 'cleanup' === $_POST['cleanup']) {
 				if(WP_DEBUG) {
 					BoekDB_Import::clean_up();

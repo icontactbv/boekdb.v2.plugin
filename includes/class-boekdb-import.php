@@ -51,7 +51,7 @@ class BoekDB_Import {
 		// fetch running imports
 		$etalages = self::fetch_etalages( true );
 		if ( count( $etalages ) === 0 ) {
-			boekdb_debug( 'No running imports found.' );
+			boekdb_debug( 'No imports ready to run found.' );
 
 			return;
 		}
@@ -75,6 +75,8 @@ class BoekDB_Import {
 			// set update running to 1 (processing)
 			self::update_running( 1, $etalage );
 			foreach ( $products as $product ) {
+				self::check_stopped( $etalage );
+
 				list( $boek_post_id, $isbn, $nstc, $slug ) = self::handle_boek( $product );
 
 				boekdb_debug( 'Processing ' . $isbn );
@@ -111,6 +113,11 @@ class BoekDB_Import {
 			self::update_running( 2, $etalage );
 
 			boekdb_debug( 'Done with this batch...' );
+
+			// there might be more etalages to import, so schedule a new import
+			if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
+				wp_schedule_single_event( time(), self::IMPORT_HOOK );
+			}
 		} else {
 			boekdb_debug( 'Finished import on ' . $etalage->name );
 			self::set_last_import( $etalage->id );
@@ -118,18 +125,33 @@ class BoekDB_Import {
 			// reset offset and set running to 0 (finished)
 			self::update_offset( 0, $etalage );
 			self::update_running( 0, $etalage );
-		}
 
-		// there might be more etalages to import, so schedule a new import
-		if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
-			wp_schedule_single_event( time(), self::IMPORT_HOOK );
+			// there might be more etalages to import, so schedule a new import
+			if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
+				wp_schedule_single_event( time(), self::IMPORT_HOOK );
+			}
 		}
 	}
 
-	private static function fetch_etalages( $running = false ) {
+	private static function check_stopped( $etalage ) {
+		$running = self::fetch_etalage_running( $etalage->id );
+		if ( $running === 0 ) {
+			boekdb_debug( 'Import stopped on ' . $etalage->name );
+			exit;
+		}
+	}
+
+	private static function fetch_etalage_running( $id ) {
 		global $wpdb;
-		if ( $running ) {
-			return $wpdb->get_results( "SELECT id, name, api_key, running, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages WHERE running > 0",
+		$sql        = $wpdb->prepare( "SELECT running FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id );
+		$running    = $wpdb->get_var( $sql );
+		return (int)$running;
+	}
+
+	private static function fetch_etalages( $readytorun = false ) {
+		global $wpdb;
+		if ( $readytorun ) {
+			return $wpdb->get_results( "SELECT id, name, api_key, running, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages WHERE running = 2",
 				OBJECT );
 		}
 

@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	do_action( 'boekdb_before_settings' ); ?>
     <form method="post" id="mainform" action="" enctype="multipart/form-data">
         <h1>BoekDB Instellingen</h1>
-		<?php self::show_messages(); ?>
+		<?php  self::show_messages(); ?>
         <table class="form-table">
             <tbody>
             <tr>
@@ -29,8 +29,8 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <th scope="col">Actie</th>
             </tr>
 			<?php
-            $disabled = '';
-            foreach ( $etalages as $etalage ) :
+			$disabled = '';
+			foreach ( $etalages as $etalage ) :
 				$disabled = $etalage->running > 0 ? 'disabled="disabled" aria-disabled="true"' : ''; ?>
                 <tr>
                     <td><?php
@@ -38,28 +38,34 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <td><?php
 						echo $etalage->boeken ?></td>
                     <td><?php
-		                echo $etalage->isbns ?></td>
+						echo $etalage->isbns ?></td>
                     <td><?php
-		                echo $etalage->offset ?></td>
+						echo $etalage->offset ?></td>
                     <td><?php
-		                switch($etalage->running) {
-                            case 0:
-                                echo 'Nee';
-                                break;
-                            case 1:
-                                echo 'Bezig';
-                                break;
-                            case 2:
-                                echo 'In planning';
-                                break;
-                        } ?></td>
+						switch ( $etalage->running ) {
+							case 0:
+								echo 'Nee';
+								break;
+							case 1:
+								echo 'Bezig';
+								break;
+							case 2:
+								echo 'In planning';
+								break;
+						} ?></td>
                     <td><small><?php
-						echo $etalage->api_key ?></small></td>
+							echo $etalage->api_key ?></small></td>
                     <td><?php
 						echo $etalage->last_import ?></td>
                     <td>
-                        <button name="reset" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>" <?php echo $disabled ?>>Reset</button>
-                        <button name="delete" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>" <?php echo $disabled ?>>Verwijder</button>
+                        <button name="reset" class="button-primary boekdb-save-button" type="submit" value="<?php
+						echo $etalage->id; ?>" <?php
+						echo $disabled ?>>Reset
+                        </button>
+                        <button name="delete" class="button-primary boekdb-save-button" type="submit" value="<?php
+						echo $etalage->id; ?>" <?php
+						echo $disabled ?>>Verwijder
+                        </button>
                     </td>
                 </tr>
 			<?php
@@ -89,14 +95,22 @@ if ( ! defined( 'ABSPATH' ) ) {
             <label for="overwrite_images">Overschrijf afbeeldingen bij import</label>
         </p>
         <p class="submit">
-            <button name="run" class="button-primary boekdb-save-button" type="submit" value="run" <?php echo $disabled ?>>Draai import</button>
-            <button name="cleanup" class="button-primary boekdb-save-button" type="submit" value="cleanup" <?php echo $disabled ?>>Oude data opruimen</button>
-            <button name="test" class="button-primary boekdb-save-button" type="submit" value="test">Test verbinding met BoekDB</button>
+            <button name="run" class="button-primary boekdb-save-button" type="submit" value="run" <?php
+			echo $disabled ?>>Draai import
+            </button>
+            <button name="cleanup" class="button-primary boekdb-save-button" type="submit" value="cleanup" <?php
+			echo $disabled ?>>Oude data opruimen
+            </button>
+            <button name="test" class="button-primary boekdb-save-button" type="submit" value="test">Test verbinding met
+                BoekDB
+            </button>
+            <button name="stop" class="button-primary boekdb-save-button" type="submit" value="stop">Stop imports</button>
+
 			<?php
 			wp_nonce_field( 'boekdb-settings' ); ?>
         </p>
         <p class="settings">
-            
+
         </p>
     </form>
 
