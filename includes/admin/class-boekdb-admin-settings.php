@@ -79,10 +79,9 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 						boekdb_set_import_option( 'overwrite_images', true );
 					}
 					if(WP_DEBUG) {
-						BoekDB_Import::import();
+						BoekDB_Import::start_import();
 					} else {
-						wp_schedule_single_event( time() + 5, BoekDB_Import::IMPORT_HOOK );
-						boekdb_set_import_running();
+						wp_schedule_single_event( time() + 5, BoekDB_Import::START_IMPORT_HOOK );
 					}
 				} else {
 					self::add_error( 'Import draait al!' );
@@ -102,6 +101,8 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 						self::add_error( 'Er is iets mis, response: ' . $code );
 					}
 				}
+			} elseif ( isset ( $_POST['stop'] ) && 'stop' === $_POST['stop'] ) {
+				$wpdb->query("UPDATE {$wpdb->prefix}boekdb_etalages SET offset=0, running=0");
 			} elseif ( isset($_POST['cleanup']) && 'cleanup' === $_POST['cleanup']) {
 				if(WP_DEBUG) {
 					BoekDB_Import::clean_up();
@@ -171,14 +172,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			$etalages       = self::get_etalages();
 			$import_running = boekdb_is_import_running();
 			if ( $import_running ) {
-				$currently_running = boekdb_get_import_etalage();
-				if ( $currently_running ) {
-					if ( isset( $etalages[ $currently_running ] ) ) {
-						self::add_message( 'Er draait op dit moment een import (' . $etalages[ $currently_running ]->name . ')' );
-					}
-				} else {
-					self::add_message( 'Import gestart...' );
-				}
+				self::add_message( 'Er draait op dit moment een import' );
 			}
 
 			include __DIR__ . '/views/html-admin-settings.php';
@@ -187,8 +181,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		public static function get_etalages() {
 			global $wpdb;
 
-			$etalage_result = $wpdb->get_results( "SELECT e.id, e.name, e.api_key, DATE_FORMAT(e.last_import, '%Y-%m-%d %H:%i:%s') as last_import, COUNT(eb.boek_id) as boeken FROM {$wpdb->prefix}boekdb_etalages e LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON e.id = eb.etalage_id GROUP BY e.id",
-				OBJECT );
+			$etalage_result = $wpdb->get_results( "SELECT e.id, e.name, e.api_key, DATE_FORMAT(e.last_import, '%Y-%m-%d %H:%i:%s') as last_import, e.isbns, e.running, e.offset, COUNT(eb.boek_id) as boeken FROM {$wpdb->prefix}boekdb_etalages e LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON e.id = eb.etalage_id GROUP BY e.id", OBJECT );
 			$etalages       = array();
 			foreach ( $etalage_result as $etalage ) {
 				$etalages[ $etalage->id ] = $etalage;

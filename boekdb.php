@@ -3,7 +3,7 @@
  * Plugin Name: BoekDB.v2
  * Plugin URI: https://www.boekdbv2.nl/
  * Description: Wordpress plugin for BoekDBv2 data.
- * Version: 1.0.5
+ * Version: 1.0.6
  * Author: Icontact B.V.
  * Author URI: http://www.icontact.nl
  * Requires at least: 5.5
@@ -72,38 +72,23 @@ function boekdb_unset_import_options() {
 	}
 }
 
-function boekdb_set_import_running() {
-	boekdb_debug( 'set import running transient' );
-	set_transient( 'boekdb_import_running', 1, MINUTE_IN_SECONDS * 10 );
-}
-
 function boekdb_is_import_running() {
-	$running = (int) get_transient( 'boekdb_import_running' ) === 1;
-	if ( $running ) {
-		boekdb_debug( 'Import is running' );
-	} else {
-		boekdb_debug( 'Import is not running' );
-	}
+	global $wpdb;
 
-	return $running;
+	$count = (int)$wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}boekdb_etalages WHERE running > 0" );
+	if($count > 0) {
+		boekdb_debug( 'Import is running' );
+		return true;
+	}
+	boekdb_debug( 'Import is not running' );
+	return false;
 }
 
 function boekdb_reset_import_running() {
 	boekdb_debug( 'Resetting import running and etalage transients' );
-	delete_transient( 'boekdb_import_running' );
+
 	delete_transient( 'boekdb_import_etalage' );
 	boekdb_unset_import_options();
-}
-
-function boekdb_get_import_etalage() {
-	boekdb_debug( 'Current etalage: ' . var_export( get_transient( 'boekdb_import_etalage' ), true ) );
-
-	return get_transient( 'boekdb_import_etalage' );
-}
-
-function boekdb_set_import_etalage( $etalage_id ) {
-	boekdb_debug( 'set current etalage to ' . $etalage_id );
-	set_transient( 'boekdb_import_etalage', $etalage_id );
 }
 
 function boekdb_boek_data( $id ) {
@@ -211,5 +196,12 @@ function boekdb_etalage_join( $join, $query) {
 }
 add_filter('posts_join', 'boekdb_etalage_join', 10, 2);
 
-
-
+function boekdb_add_minutely( $schedules ) {
+	// add a 'minutely' schedule to the existing set
+	$schedules['minutely'] = array(
+		'interval' => 60,
+		'display' => __('Every minute')
+	);
+	return $schedules;
+}
+add_filter( 'cron_schedules', 'boekdb_add_minutely' );
