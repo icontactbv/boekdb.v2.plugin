@@ -205,4 +205,3 @@ function boekdb_add_minutely( $schedules ) {
 	return $schedules;
 }
 add_filter( 'cron_schedules', 'boekdb_add_minutely' );
-
