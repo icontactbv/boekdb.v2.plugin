@@ -98,7 +98,6 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 						BoekDB_Import::start_import();
 					} else {
 						wp_schedule_single_event( time() + 5, BoekDB_Import::START_IMPORT_HOOK );
-						boekdb_set_import_running();
 					}
 				} else {
 					self::add_error( 'Import draait al!' );
@@ -187,14 +186,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			$etalages       = self::get_etalages();
 			$import_running = boekdb_is_import_running();
 			if ( $import_running ) {
-				$currently_running = boekdb_get_import_etalage();
-				if ( $currently_running ) {
-					if ( isset( $etalages[ $currently_running ] ) ) {
-						self::add_message( 'Er draait op dit moment een import (' . $etalages[ $currently_running ]->name . ')' );
-					}
-				} else {
-					self::add_message( 'Import gestart...' );
-				}
+				self::add_message( 'Er draait op dit moment een import' );
 			}
 
 			include __DIR__ . '/views/html-admin-settings.php';

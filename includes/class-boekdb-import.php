@@ -50,16 +50,12 @@ class BoekDB_Import {
 		// fetch running imports
 		$etalages = self::fetch_etalages( true );
 		if(count($etalages) === 0) {
-			// reset and don't schedule a new job
-			boekdb_reset_import_running();
+			boekdb_debug('No running imports found.');
 			return;
 		}
 
-		// do one etalage at a time
+		// do one etalage at a time!
 		$etalage = reset($etalages);
-
-		boekdb_set_import_etalage( $etalage->id );
-		$reset = self::check_available_isbns( $etalage );
 
 		$offset      = $etalage->offset;
 		$last_import = new DateTime( $etalage->last_import, wp_timezone() );
@@ -74,8 +70,8 @@ class BoekDB_Import {
 				boekdb_debug( 'overwriting images' );
 			}
 
-			// keep updating transient
-			boekdb_set_import_etalage( $etalage->id );
+			// set update running to 1 (processing)
+			self::update_running(1, $etalage);
 			foreach ( $products as $product ) {
 				list( $boek_post_id, $isbn, $nstc, $slug ) = self::handle_boek( $product );
 
@@ -108,14 +104,15 @@ class BoekDB_Import {
 			}
 			$offset = $offset + self::LIMIT;
 
-			// update the offset in etalage and set running to 1 (processing)
+			// update the offset in etalage and set running to 1 (next batch)
 			self::update_offset( $offset, $etalage );
-			self::update_running(1, $etalage);
+			self::update_running(2, $etalage);
 
 			boekdb_debug('Done with this batch...');
 
+			// do it again!
 			if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
-				wp_single_event( time(), self::IMPORT_HOOK );
+				wp_schedule_single_event( time(), self::IMPORT_HOOK );
 			}
 		} else {
 			boekdb_debug( 'Finished import on ' . $etalage->name );
@@ -124,6 +121,11 @@ class BoekDB_Import {
 			// reset offset and set running to 0 (finished)
 			self::update_offset( 0, $etalage );
 			self::update_running(0, $etalage);
+
+			// there might be more etalages to import, so schedule a new import
+			if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
+				wp_schedule_single_event( time(), self::IMPORT_HOOK );
+			}
 		}
 	}
 
@@ -135,16 +137,24 @@ class BoekDB_Import {
 		// handle options
 		self::$options['overwrite_images'] = get_transient( 'boekdb_import_options_overwrite_images' );
 
-		if ( boekdb_is_import_running() === 1 ) {
+		if ( boekdb_is_import_running() ) {
+			boekdb_debug( 'Import already running' );
+
+			// check schedule
+			if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
+				wp_schedule_single_event( time(), self::IMPORT_HOOK );
+			}
 			return;
 		}
 
 		$etalages = self::fetch_etalages();
 		foreach ( $etalages as $etalage ) {
-			self::update_running( 1, $etalage );
+			self::update_running( 2, $etalage );
 
-			boekdb_set_import_etalage( $etalage->id );
 			$reset = self::check_available_isbns( $etalage );
+			if ( $reset ) {
+				boekdb_debug('last import has been reset');
+			}
 
 			$last_import = $etalage->last_import;
 			if ( $reset || is_null( $last_import ) ) {
@@ -634,6 +644,10 @@ class BoekDB_Import {
 		if ( ! isset( $product->bestanden ) ) {
 			return;
 		}
+		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+			include( ABSPATH . 'wp-admin/includes/image.php' );
+		}
+
 		foreach ( $product->bestanden as $bestand ) {
 			$hash          = md5( $bestand->url );
 			$attachment_id = self::find_field( 'attachment', 'hash', $hash );

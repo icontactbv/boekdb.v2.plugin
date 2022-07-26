@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <th scope="col">Geïmporteerd</th>
                 <th scope="col">BoekDB aantal</th>
                 <th scope="col">Offset</th>
-                <th scope="col">Actief</th>
+                <th scope="col">Import actief</th>
                 <th scope="col">API Key</th>
                 <th scope="col">Laatste afgeronde import</th>
                 <th scope="col">Actie</th>
@@ -42,9 +42,19 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <td><?php
 		                echo $etalage->offset ?></td>
                     <td><?php
-		                echo $etalage->running ?></td>
-                    <td><?php
-						echo $etalage->api_key ?></td>
+		                switch($etalage->running) {
+                            case 0:
+                                echo 'Nee';
+                                break;
+                            case 1:
+                                echo 'Bezig';
+                                break;
+                            case 2:
+                                echo 'In planning';
+                                break;
+                        } ?></td>
+                    <td><small><?php
+						echo $etalage->api_key ?></small></td>
                     <td><?php
 						echo $etalage->last_import ?></td>
                     <td>
