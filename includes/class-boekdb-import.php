@@ -45,6 +45,7 @@ class BoekDB_Import {
 	}
 
 	public static function import() {
+		set_time_limit( 0 );
 		boekdb_debug('Importing products...');
 
 		// fetch running imports
@@ -109,11 +110,6 @@ class BoekDB_Import {
 			self::update_running(2, $etalage);
 
 			boekdb_debug('Done with this batch...');
-
-			// do it again!
-			if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
-				wp_schedule_single_event( time(), self::IMPORT_HOOK );
-			}
 		} else {
 			boekdb_debug( 'Finished import on ' . $etalage->name );
 			self::set_last_import( $etalage->id );
@@ -121,11 +117,11 @@ class BoekDB_Import {
 			// reset offset and set running to 0 (finished)
 			self::update_offset( 0, $etalage );
 			self::update_running(0, $etalage);
+		}
 
-			// there might be more etalages to import, so schedule a new import
-			if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
-				wp_schedule_single_event( time(), self::IMPORT_HOOK );
-			}
+		// there might be more etalages to import, so schedule a new import
+		if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
+			wp_schedule_single_event( time(), self::IMPORT_HOOK );
 		}
 	}
 
@@ -227,7 +223,8 @@ class BoekDB_Import {
 			array(
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $api_key,
-				)
+				),
+				'timeout' => 30,
 			)
 		);
 		if ( is_wp_error( $result ) ) {
@@ -321,20 +318,24 @@ class BoekDB_Import {
 	 * @return array|boolean
 	 */
 	protected static function fetch_products( $api_key, $last_import, $offset ) {
-		$result = wp_remote_get(
+		$response = wp_remote_get(
 			self::BASE_URL . 'products?updated_at=' . urlencode( $last_import ),
 			array(
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $api_key,
 					'x-limit'       => self::LIMIT,
 					'x-offset'      => $offset,
-				)
+				),
+				'timeout' => 30,
 			)
 		);
 
-		$result   = wp_remote_retrieve_body( $result );
+		$result   = wp_remote_retrieve_body( $response );
 		$products = json_decode( $result );
 		if ( ! is_array( $products ) ) {
+			boekdb_debug('Error fetching products?');
+			boekdb_debug($response);
+
 			return false;
 		}
 		boekdb_debug( count( $products ) . ' products for offset ' . $offset );

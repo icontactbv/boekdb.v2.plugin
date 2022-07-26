@@ -57,22 +57,6 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		public static function save() {
 			global $wpdb;
 
-			if ( isset( $_POST['stop'] ) ) {
-				$id = (int) $_POST['stop'];
-				if ( $id > 0 ) {
-					$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->prefix}boekdb_etalages SET running=0 WHERE id = %d",
-						$id ) );
-					self::add_message( 'Import is gestopt.' );
-				}
-			}
-			if ( isset( $_POST['start'] ) ) {
-				$id = (int) $_POST['start'];
-				if ( $id > 0 ) {
-					$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->prefix}boekdb_etalages SET running=1 WHERE id = %d",
-						$id ) );
-					self::add_message( 'Import is gestart.' );
-				}
-			}
 			if ( isset( $_POST['save'] ) && 'save' === $_POST['save'] ) {
 				$api_key = $_POST['etalage_api_key'];
 				$name    = $_POST['etalage_name'];

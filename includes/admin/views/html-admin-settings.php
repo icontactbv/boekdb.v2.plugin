@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php
             $disabled = '';
             foreach ( $etalages as $etalage ) :
-				$disabled = $etalage->running == 1 ? 'disabled="disabled" aria-disabled="true"' : ''; ?>
+				$disabled = $etalage->running > 0 ? 'disabled="disabled" aria-disabled="true"' : ''; ?>
                 <tr>
                     <td><?php
 						echo $etalage->name ?></td>
@@ -58,12 +58,6 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <td><?php
 						echo $etalage->last_import ?></td>
                     <td>
-                        <?php if ($etalage->running == 1): ?>
-                        <button name="stop" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>">Stop</button>
-                        <?php endif; ?>
-	                    <?php if ($etalage->running == 0 && $etalage->offset > 0): ?>
-                            <button name="start" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>">Start</button>
-	                    <?php endif; ?>
                         <button name="reset" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>" <?php echo $disabled ?>>Reset</button>
                         <button name="delete" class="button-primary boekdb-save-button" type="submit" value="<?php echo $etalage->id; ?>" <?php echo $disabled ?>>Verwijder</button>
                     </td>
