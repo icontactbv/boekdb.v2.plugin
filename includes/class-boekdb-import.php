@@ -520,7 +520,13 @@ class BoekDB_Import {
 			wp_update_attachment_metadata( $attachment_id, $attachment_data );
 
 			update_post_meta( $attachment_id, 'hash', $hash );
-			update_term_meta( $term_id, 'boekdb_seriebeeld_id', $attachment_id );
+			update_term_meta( $term_id, 'seriebeeld_id', $attachment_id );
+		} else {
+			// check if seriebeeld is set
+			$seriebeeld_id = get_term_meta( $term_id, 'seriebeeld_id', true );
+			if ( is_null( $seriebeeld_id ) ) {
+				update_term_meta( $term_id, 'seriebeeld_id', $attachment_id );
+			}
 		}
 	}
 
@@ -750,6 +756,12 @@ class BoekDB_Import {
 				update_term_meta( $term_id, 'auteursfoto_id', $attachment_id );
 				if ( ! is_null( $bestand->copyright ) ) {
 					update_term_meta( $term_id, 'auteursfoto_copyright', $bestand->copyright );
+				}
+			} else {
+				// check if attachment is already linked to this contributor
+				$existing_auteursfoto_id = get_term_meta( $term_id, 'auteursfoto_id', true );
+				if ( $existing_auteursfoto_id !== $attachment_id ) {
+					update_term_meta( $term_id, 'auteursfoto_id', $attachment_id );
 				}
 			}
 		}
@@ -1105,6 +1117,38 @@ class BoekDB_Import {
 			);
 			$query = new WP_Query( $args );
 			if ( $query->post_count === 0 ) {
+				// for contributors we need to delete the attached image (auteursfoto_id, auteursfoto_copyright)
+				if ( $taxonomy === 'boekdb_auteur_tax' ) {
+					// get all term_meta
+					$term_meta = get_term_meta( $term_id );
+					boekdb_debug( 'term_meta for term ' . $term_id . ': ' . print_r( $term_meta, true ) );
+
+					// fetch auteursfoto_id
+					$auteursfoto_id = get_term_meta( $term_id, 'auteursfoto_id', true );
+					if ( $auteursfoto_id ) {
+						// delete auteursfoto_id
+						delete_term_meta( $term_id, 'auteursfoto_id' );
+						// delete auteursfoto_copyright
+						delete_term_meta( $term_id, 'auteursfoto_copyright' );
+						// delete attachment
+						wp_delete_attachment( $auteursfoto_id, true );
+						boekdb_debug( 'deleted auteursfoto_id and auteursfoto_copyright for term ' . $term_id);
+					}
+				}
+
+				// same for series: we need to delete the attached image (seriebeeld_id)
+				if ( $taxonomy === 'boekdb_serie_tax' ) {
+					// fetch boekdb_seriebeeld_id
+					$boekdb_seriebeeld_id = get_term_meta( $term_id, 'seriebeeld_id', true );
+					if ( $boekdb_seriebeeld_id ) {
+						// delete boekdb_seriebeeld_id
+						delete_term_meta( $term_id, 'seriebeeld_id' );
+						// delete attachment
+						wp_delete_attachment( seriebeeld_id, true );
+						boekdb_debug( 'deleted seriebeeld_id for term ' . $term_id);
+					}
+				}
+
 				wp_delete_term( $term_id, $taxonomy );
 				boekdb_debug( 'deleted term ' . $term_id . ' from ' . $taxonomy );
 			}
