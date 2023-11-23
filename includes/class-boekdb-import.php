@@ -731,52 +731,68 @@ class BoekDB_Import {
 	 * @param $betrokkene
 	 * @param $term_id
 	 */
-	protected static function handle_betrokkene_files( $betrokkene, $term_id ) {
-		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-			include( ABSPATH . 'wp-admin/includes/image.php' );
+	protected static function handle_betrokkene_files($betrokkene, $term_id) {
+		if (!function_exists('wp_generate_attachment_metadata')) {
+			require_once(ABSPATH . 'wp-admin/includes/image.php');
 		}
 
-		foreach ( $betrokkene['bestanden'] as $bestand ) {
-			if ( $bestand->soort !== 'Auteursfoto' ) {
-				return;
+		foreach ($betrokkene['bestanden'] as $bestand) {
+			if ($bestand->soort !== 'Auteursfoto') {
+				continue;
 			}
 
-			$hash          = md5( $bestand->url );
-			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
-			if ( self::$options['overwrite_images'] === '1' && ! is_null( $attachment_id ) ) {
-				wp_delete_attachment( $attachment_id );
+			$hash = md5($bestand->url);
+			$attachment_id = self::find_field('attachment', 'hash', $hash);
+
+			if (self::$options['overwrite_images'] === '1' && !is_null($attachment_id)) {
+				wp_delete_attachment($attachment_id, true);
 				$attachment_id = null;
 			}
 
-			if ( is_null( $attachment_id ) ) {
-				$get          = wp_safe_remote_get( $bestand->url );
-				$type         = $bestand->type;
-				$bestandsnaam = sanitize_file_name( $bestand->bestandsnaam );
-				$image        = wp_upload_bits( $bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+			if (is_null($attachment_id)) {
+				$response = wp_safe_remote_get($bestand->url);
+				if (is_wp_error($response)) {
+					error_log('Error fetching image: ' . $bestand->url);
+					continue;
+				}
 
-				$attachment = array(
-					'post_title'     => 'Auteursfoto',
+				$type = $bestand->type;
+				$bestandsnaam = sanitize_file_name($bestand->bestandsnaam);
+				$image = wp_upload_bits($bestandsnaam, null, wp_remote_retrieve_body($response));
+
+				if ($image['error']) {
+					error_log('Error saving image to disk: ' . $image['error']);
+					continue;
+				}
+
+				$attachment = [
+					'post_title' => 'Auteursfoto',
 					'post_mime_type' => $type
-				);
+				];
 
-				$attachment_id   = wp_insert_attachment( $attachment, $image['file'] );
-				$wp_upload_dir   = wp_upload_dir();
-				$attachment_data = wp_generate_attachment_metadata(
-					$attachment_id,
-					$wp_upload_dir['path'] . '/' . $bestandsnaam );
+				$attachment_id = wp_insert_attachment($attachment, $image['file']);
+				if (!is_wp_error($attachment_id)) {
+					$wp_upload_dir = wp_upload_dir();
+					$attachment_data = wp_generate_attachment_metadata(
+						$attachment_id,
+						$wp_upload_dir['path'] . '/' . basename($image['file'])
+					);
+					wp_update_attachment_metadata($attachment_id, $attachment_data);
+				} else {
+					error_log('Error inserting attachment: ' . $attachment_id->get_error_message());
+					continue;
+				}
 
-				wp_update_attachment_metadata( $attachment_id, $attachment_data );
-
-				update_post_meta( $attachment_id, 'hash', $hash );
-				update_term_meta( $term_id, 'auteursfoto_id', $attachment_id );
-				if ( ! is_null( $bestand->copyright ) ) {
-					update_term_meta( $term_id, 'auteursfoto_copyright', $bestand->copyright );
+				update_post_meta($attachment_id, 'hash', $hash);
+				update_term_meta($term_id, 'auteursfoto_id', $attachment_id);
+				if (isset($bestand->copyright)) {
+					update_term_meta($term_id, 'auteursfoto_copyright', $bestand->copyright);
 				}
 			} else {
-				// check if attachment is already linked to this contributor
-				$existing_auteursfoto_id = get_term_meta( $term_id, 'auteursfoto_id', true );
-				if ( $existing_auteursfoto_id !== $attachment_id ) {
-					update_term_meta( $term_id, 'auteursfoto_id', $attachment_id );
+				// checks if attachment is already linked to this contributor
+				$existing_auteursfoto_id = get_term_meta($term_id, 'auteursfoto_id', true);
+				if ($existing_auteursfoto_id !== $attachment_id) {
+					update_term_meta($term_id, 'auteursfoto_id', $attachment_id);
 				}
 			}
 		}
