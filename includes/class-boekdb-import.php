@@ -536,44 +536,53 @@ class BoekDB_Import {
 	 * @param $product
 	 * @param $boek_post_id
 	 */
-	protected static function handle_boek_files( $product, $boek_post_id ) {
-		if ( ! isset( $product->bestanden ) ) {
+	protected static function handle_boek_files($product, $boek_post_id) {
+		if (!isset($product->bestanden)) {
 			return;
 		}
-		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-			include( ABSPATH . 'wp-admin/includes/image.php' );
+		// needed for wordpress image related functions
+		if (!function_exists('wp_generate_attachment_metadata')) {
+			require_once(ABSPATH . 'wp-admin/includes/image.php');
 		}
 
-		foreach ( $product->bestanden as $bestand ) {
-			$hash          = md5( $bestand->url );
-			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
-			if ( self::$options['overwrite_images'] === '1' && ! is_null( $attachment_id ) ) {
-				wp_delete_attachment( $attachment_id );
+		foreach ($product->bestanden as $bestand) {
+			$hash = md5($bestand->url);
+			$attachment_id = self::find_field('attachment', 'hash', $hash);
+
+			if (self::$options['overwrite_images'] === '1' && !is_null($attachment_id)) {
+				wp_delete_attachment($attachment_id, true);
 				$attachment_id = null;
 			}
 
-			if ( is_null( $attachment_id ) ) {
-				$get          = wp_safe_remote_get( $bestand->url );
-				$type         = $bestand->type;
-				$bestandsnaam = sanitize_file_name( $bestand->bestandsnaam );
-				$image = wp_upload_bits($bestandsnaam, null, wp_remote_retrieve_body($get_response));
+			if (is_null($attachment_id)) {
+				$response = wp_safe_remote_get($bestand->url);
+				if (is_wp_error($response)) {
+					error_log('Error fetching image: ' . $bestand->url);
+					continue;
+				}
+
+				$type = $bestand->type;
+				$bestandsnaam = sanitize_file_name($bestand->bestandsnaam);
+				$image = wp_upload_bits($bestandsnaam, null, wp_remote_retrieve_body($response));
 
 				if ($image['error']) {
 					error_log('Error saving image to disk: ' . $image['error']);
-					continue; // Skip to the next file
+					continue;
 				}
 
-				$attachment = array(
-					'post_title'     => $bestand->soort,
+				$attachment = [
+					'post_title' => $bestand->soort,
 					'post_mime_type' => $type
-				);
+				];
 
-				$attachment_id   = wp_insert_attachment( $attachment, $image['file'], $boek_post_id );
-				$wp_upload_dir   = wp_upload_dir();
-				$attachment_data = wp_generate_attachment_metadata( $attachment_id,
-					$wp_upload_dir['path'] . '/' . $bestandsnaam );
-
-				wp_update_attachment_metadata( $attachment_id, $attachment_data );
+				$attachment_id = wp_insert_attachment($attachment, $image['file'], $boek_post_id);
+				if (!is_wp_error($attachment_id)) {
+					$wp_upload_dir = wp_upload_dir();
+					$attachment_data = wp_generate_attachment_metadata($attachment_id, $wp_upload_dir['path'] . '/' . basename($image['file']));
+					wp_update_attachment_metadata($attachment_id, $attachment_data);
+				} else {
+					error_log('Error inserting attachment: ' . $attachment_id->get_error_message());
+				}
 
 				update_post_meta( $attachment_id, 'hash', $hash );
 				if ( $bestand->soort === 'Cover' ) {
@@ -601,6 +610,7 @@ class BoekDB_Import {
 			}
 		}
 	}
+
 
 	/**
 	 * Parse contributors
