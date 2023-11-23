@@ -1081,6 +1081,7 @@ class BoekDB_Import {
 			$wpdb->query( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id IS NOT NULL" );
 		}
 
+		// cleanup boeken (check if they are not still related to an etalage)
 		$result   = $wpdb->get_results( "SELECT p.ID
 					FROM $wpdb->posts p
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON eb.boek_id = p.ID
