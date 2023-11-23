@@ -556,7 +556,12 @@ class BoekDB_Import {
 				$get          = wp_safe_remote_get( $bestand->url );
 				$type         = $bestand->type;
 				$bestandsnaam = sanitize_file_name( $bestand->bestandsnaam );
-				$image        = wp_upload_bits( $bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+				$image = wp_upload_bits($bestandsnaam, null, wp_remote_retrieve_body($get_response));
+
+				if ($image['error']) {
+					error_log('Error saving image to disk: ' . $image['error']);
+					continue; // Skip to the next file
+				}
 
 				$attachment = array(
 					'post_title'     => $bestand->soort,
