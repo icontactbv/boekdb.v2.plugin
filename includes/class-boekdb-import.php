@@ -557,16 +557,16 @@ class BoekDB_Import {
 			if (is_null($attachment_id)) {
 				$response = wp_safe_remote_get($bestand->url);
 				if (is_wp_error($response)) {
-					error_log('Error fetching image: ' . $bestand->url);
+					error_log('Error fetching file: ' . $bestand->url);
 					continue;
 				}
 
 				$type = $bestand->type;
 				$bestandsnaam = sanitize_file_name($bestand->bestandsnaam);
-				$image = wp_upload_bits($bestandsnaam, null, wp_remote_retrieve_body($response));
+				$file = wp_upload_bits($bestandsnaam, null, wp_remote_retrieve_body($response));
 
-				if ($image['error']) {
-					error_log('Error saving image to disk: ' . $image['error']);
+				if ($file['error']) {
+					error_log('Error saving file to disk: ' . $file['error']);
 					continue;
 				}
 
@@ -575,10 +575,20 @@ class BoekDB_Import {
 					'post_mime_type' => $type
 				];
 
-				$attachment_id = wp_insert_attachment($attachment, $image['file'], $boek_post_id);
+				$attachment_id = wp_insert_attachment($attachment, $file['file'], $boek_post_id);
 				if (!is_wp_error($attachment_id)) {
 					$wp_upload_dir = wp_upload_dir();
-					$attachment_data = wp_generate_attachment_metadata($attachment_id, $wp_upload_dir['path'] . '/' . basename($image['file']));
+					$attachment_data = wp_generate_attachment_metadata(
+						$attachment_id,
+						$wp_upload_dir['path'] . '/' . basename($file['file'])
+					);
+					if($bestand->soort === 'Cover' || $bestand->soort === 'Back cover') {
+						// check if sizes were generated
+						if ( ! isset( $attachment_data['sizes'] ) || ! is_array( $attachment_data['sizes'] ) || empty( $attachment_data['sizes'] ) ) {
+							error_log('Failed to generate image sizes for attachment ID: ' . $attachment_id);
+						}
+					}
+
 					wp_update_attachment_metadata($attachment_id, $attachment_data);
 				} else {
 					error_log('Error inserting attachment: ' . $attachment_id->get_error_message());
@@ -752,7 +762,7 @@ class BoekDB_Import {
 			if (is_null($attachment_id)) {
 				$response = wp_safe_remote_get($bestand->url);
 				if (is_wp_error($response)) {
-					error_log('Error fetching image: ' . $bestand->url);
+					error_log('Error fetching file: ' . $bestand->url);
 					continue;
 				}
 
@@ -761,7 +771,7 @@ class BoekDB_Import {
 				$image = wp_upload_bits($bestandsnaam, null, wp_remote_retrieve_body($response));
 
 				if ($image['error']) {
-					error_log('Error saving image to disk: ' . $image['error']);
+					error_log('Error saving file to disk: ' . $image['error']);
 					continue;
 				}
 
