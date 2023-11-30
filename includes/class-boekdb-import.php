@@ -1147,7 +1147,7 @@ class BoekDB_Import {
 
 		foreach ( $term_ids as $term_id => $taxonomy ) {
 			$args  = array(
-				'posts_per_page' => 1,
+				'posts_per_page' => -1,
 				'post_type'      => 'boekdb_boek',
 				'tax_query'      => array(
 					array(
