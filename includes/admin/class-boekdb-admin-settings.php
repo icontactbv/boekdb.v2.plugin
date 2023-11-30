@@ -105,9 +105,9 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				$wpdb->query("UPDATE {$wpdb->prefix}boekdb_etalages SET offset=0, running=0");
 			} elseif ( isset($_POST['cleanup']) && 'cleanup' === $_POST['cleanup']) {
 				if(WP_DEBUG) {
-					BoekDB_Import::clean_up();
+					BoekDB_Cleanup::cleanup();
 				} else {
-					wp_schedule_single_event( time() + 5, BoekDB_Import::CLEANUP_HOOK );
+					wp_schedule_single_event( time() + 5, BoekDB_Cleanup::CLEANUP_HOOK );
 				}
 				self::add_message('Opruimen gestart');
 			} elseif ( isset ( $_POST['reset'] ) ) {
