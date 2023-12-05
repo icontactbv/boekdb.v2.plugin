@@ -564,6 +564,16 @@ class BoekDB_Import {
 				wp_update_post( $attachment );
 
 				$attachment = get_post( $attachment_id );
+				// check if the file exists
+				if ( ! file_exists( get_attached_file( $attachment_id ) ) ) {
+					// delete the attachment
+					wp_delete_attachment( $attachment_id, true );
+					$attachment_id = null;
+
+					// re-run this function
+					self::handle_boek_files( $product, $boek_post_id );
+				}
+
 				if ( $attachment->post_title === 'Cover' ) {
 					update_post_meta( $boek_post_id, '_thumbnail_id', $attachment_id );
 				} elseif ( $attachment->post_title === 'Back cover' ) {
