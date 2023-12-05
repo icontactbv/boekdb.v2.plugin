@@ -74,7 +74,7 @@ class BoekDB_Install {
 	}
 
 	public static function test_connection() {
-		$result = wp_remote_get( BoekDB_Import::BOEKDB_DOMAIN );
+		$result = wp_remote_get( BoekDB_Import::BASE_URL . 'test' );
 
 		// Check for connection errors
 		if ( is_wp_error( $result ) || 200 !== wp_remote_retrieve_response_code( $result ) ) {
@@ -90,7 +90,6 @@ class BoekDB_Install {
 		error_log('Decoded: ' . var_export($data, true));
 
 		// debug
-		$apiVersion = '1.1.0';
 		error_log( 'API version: ' . $apiVersion );
 		error_log( 'Plugin version: ' . BoekDB()->version );
 		error_log( 'Compare: ' . version_compare( $apiVersion, BoekDB()->version, '>' ));
