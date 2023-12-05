@@ -94,7 +94,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 					self::add_error( "Er is iets mis: $error_message" );
 				} else {
 					$code   = wp_remote_retrieve_response_code( $response );
-					$result = json_decode( wp_remote_retrieve_body( $response ) );
+					$result = json_decode( wp_remote_retrieve_body( $response ), true );
 					if ( $code === 200 && 'hello' === $result[0] ) {
 						self::add_message( 'Connectie met BoekDB is ok.' );
 					} else {

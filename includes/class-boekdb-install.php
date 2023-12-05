@@ -74,7 +74,7 @@ class BoekDB_Install {
 	}
 
 	public static function test_connection() {
-		$result = wp_remote_get( BoekDB_Import::BOEKDB_DOMAIN ); // Assuming this is your API endpoint
+		$result = wp_remote_get( BoekDB_Import::BOEKDB_DOMAIN );
 
 		// Check for connection errors
 		if ( is_wp_error( $result ) || 200 !== wp_remote_retrieve_response_code( $result ) ) {
@@ -85,6 +85,12 @@ class BoekDB_Install {
 		$body = wp_remote_retrieve_body( $result );
 		$data = json_decode( $body, true );
 		$apiVersion = $data['plugin_version'] ?? null;
+
+		// debug
+		$apiVersion = '1.1.0';
+		error_log( 'API version: ' . $apiVersion );
+		error_log( 'Plugin version: ' . BoekDB()->version );
+		error_log( 'Compare: ' . version_compare( $apiVersion, BoekDB()->version, '>' ));
 
 		// Compare with current plugin version and set/update the option if a new version is available
 		if ( $apiVersion && version_compare( $apiVersion, BoekDB()->version, '>' ) ) {
