@@ -16,6 +16,14 @@ class BoekDB_Install {
 	 */
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'check_version' ), 5 );
+		add_action( 'admin_notices', array( __CLASS__, 'display_update_notice' ) );
+
+		// Schedule the version check event
+		if ( ! wp_next_scheduled( 'boekdb_version_check' ) ) {
+			wp_schedule_event( time(), 'daily', 'boekdb_version_check' );
+		}
+
+		add_action( 'boekdb_version_check', array( __CLASS__, 'scheduled_version_check' ) );
 	}
 
 	/**
@@ -27,6 +35,13 @@ class BoekDB_Install {
 		if ( version_compare( get_option( 'boekdb_version' ), BoekDB()->version, '<' ) ) {
 			self::install();
 		}
+	}
+
+	/**
+	 * This is a scheduled event to check the BoekDB version and display a notice if a upgrade is required.
+	 */
+	public static function scheduled_version_check() {
+		self::test_connection();
 	}
 
 	/**
@@ -59,9 +74,23 @@ class BoekDB_Install {
 	}
 
 	public static function test_connection() {
-		$result = wp_remote_get( BoekDB_Import::BOEKDB_DOMAIN );
-		if ( ! is_wp_error( $result ) && 200 !== wp_remote_retrieve_response_code( $result ) ) {
+		$result = wp_remote_get( BoekDB_Import::BOEKDB_DOMAIN ); // Assuming this is your API endpoint
+
+		// Check for connection errors
+		if ( is_wp_error( $result ) || 200 !== wp_remote_retrieve_response_code( $result ) ) {
 			return false;
+		}
+
+		// Fetch the latest version from the API response
+		$body = wp_remote_retrieve_body( $result );
+		$data = json_decode( $body, true );
+		$apiVersion = $data['plugin_version'] ?? null;
+
+		// Compare with current plugin version and set/update the option if a new version is available
+		if ( $apiVersion && version_compare( $apiVersion, BoekDB()->version, '>' ) ) {
+			update_option( 'boekdb_new_version_available', true );
+		} else {
+			delete_option( 'boekdb_new_version_available' );
 		}
 
 		return true;
@@ -120,6 +149,14 @@ class BoekDB_Install {
 		$message = 'Let op: kan geen verbinding maken met BoekDB!';
 
 		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
+	}
+
+	public static function display_update_notice() {
+		if ( get_option( 'boekdb_new_version_available', false ) ) {
+			echo '<div class="notice notice-warning is-dismissible">';
+			echo '<p><strong>BoekDB Plugin:</strong> Er is een nieuwe versie van de plugin beschikbaar. Installeer deze binnenkort.</p>';
+			echo '</div>';
+		}
 	}
 
 }
