@@ -86,14 +86,6 @@ class BoekDB_Install {
 		$data = json_decode( $body, true );
 		$apiVersion = $data['plugin_version'] ?? null;
 
-		error_log('Data: ' . $body);
-		error_log('Decoded: ' . var_export($data, true));
-
-		// debug
-		error_log( 'API version: ' . $apiVersion );
-		error_log( 'Plugin version: ' . BoekDB()->version );
-		error_log( 'Compare: ' . version_compare( $apiVersion, BoekDB()->version, '>' ));
-
 		// Compare with current plugin version and set/update the option if a new version is available
 		if ( $apiVersion && version_compare( $apiVersion, BoekDB()->version, '>' ) ) {
 			update_option( 'boekdb_new_version_available', true );
