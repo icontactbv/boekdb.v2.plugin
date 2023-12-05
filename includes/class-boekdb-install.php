@@ -86,6 +86,9 @@ class BoekDB_Install {
 		$data = json_decode( $body, true );
 		$apiVersion = $data['plugin_version'] ?? null;
 
+		error_log('Data: ' . $body);
+		error_log('Decoded: ' . var_export($data, true));
+
 		// debug
 		$apiVersion = '1.1.0';
 		error_log( 'API version: ' . $apiVersion );
