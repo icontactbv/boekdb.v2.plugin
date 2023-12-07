@@ -41,7 +41,7 @@ class BoekDB_Install {
 	 * This is a scheduled event to check the BoekDB version and display a notice if a upgrade is required.
 	 */
 	public static function scheduled_version_check() {
-		self::test_connection();
+		Boekdb_Api_Service::test_connection();
 	}
 
 	/**
@@ -57,7 +57,7 @@ class BoekDB_Install {
 			return;
 		}
 
-		if ( false === self::test_connection() ) {
+		if ( false === Boekdb_Api_Service::test_connection() ) {
 			add_action( 'admin_notices', array( __CLASS__, 'boekdb_connection_error' ) );
 		}
 
@@ -71,29 +71,6 @@ class BoekDB_Install {
 		flush_rewrite_rules();
 
 		delete_transient( 'boekdb_installing' );
-	}
-
-	public static function test_connection() {
-		$result = wp_remote_get( BoekDB_Import::BASE_URL . 'test' );
-
-		// Check for connection errors
-		if ( is_wp_error( $result ) || 200 !== wp_remote_retrieve_response_code( $result ) ) {
-			return false;
-		}
-
-		// Fetch the latest version from the API response
-		$body = wp_remote_retrieve_body( $result );
-		$data = json_decode( $body, true );
-		$apiVersion = $data['plugin_version'] ?? null;
-
-		// Compare with current plugin version and set/update the option if a new version is available
-		if ( $apiVersion && version_compare( $apiVersion, BoekDB()->version, '>' ) ) {
-			update_option( 'boekdb_new_version_available', true );
-		} else {
-			delete_option( 'boekdb_new_version_available' );
-		}
-
-		return true;
 	}
 
 	/**

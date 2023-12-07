@@ -16,7 +16,6 @@ class BoekDB_Import {
 
 	const BOEKDB_DOMAIN       = 'https://boekdbv2.nl/';
 	const BASE_URL            = self::BOEKDB_DOMAIN . 'api/json/v1/';
-	const LIMIT               = 100;
 	const DEFAULT_LAST_IMPORT = "2015-01-01T01:00:00+01:00";
 
 	protected static $options = [
@@ -101,7 +100,7 @@ class BoekDB_Import {
 				self::link_product( $boek_post_id, $isbn, $etalage->id );
 				self::check_primary_title( $boek_post_id, $nstc, $slug );
 			}
-			$offset = $offset + self::LIMIT;
+			$offset = $offset + Boekdb_Api_Service::LIMIT;
 
 			// update the offset in etalage and set running to 1 (next batch)
 			self::update_offset( $offset, $etalage );
