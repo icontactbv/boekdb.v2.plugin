@@ -50,6 +50,7 @@ final class BoekDB {
 	public function includes() {
 		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-post-types.php';
 		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-install.php';
+		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-api-service.php';
 		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-import.php';
 		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-translations.php';
 

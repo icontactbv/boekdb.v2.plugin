@@ -58,7 +58,7 @@ class BoekDB_Import {
 		$last_import = new DateTime( $etalage->last_import, wp_timezone() );
 		$last_import = $last_import->format( 'Y-m-d\TH:i:sP' );
 
-		$products = self::fetch_products( $etalage->api_key, $last_import, $offset );
+		$products = Boekdb_Api_Service::fetch_products( $etalage->api_key, $last_import, $offset );
 		if ( count( $products ) > 0 ) {
 			boekdb_debug( 'Fetched ' . $etalage->name . ' with offset ' . $offset );
 			boekdb_debug( 'Contains ' . count( $products ) . ' books' );
@@ -141,37 +141,6 @@ class BoekDB_Import {
 		$sql        = $wpdb->prepare( "SELECT running FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id );
 		$running    = $wpdb->get_var( $sql );
 		return (int)$running;
-	}
-
-	/**
-	 * Fetch from BoekDB
-	 *
-	 * @return array|boolean
-	 */
-	protected static function fetch_products( $api_key, $last_import, $offset ) {
-		$response = wp_remote_get(
-			self::BASE_URL . 'products?updated_at=' . urlencode( $last_import ),
-			array(
-				'headers' => array(
-					'Authorization' => 'Bearer ' . $api_key,
-					'x-limit'       => self::LIMIT,
-					'x-offset'      => $offset,
-				),
-				'timeout' => 30,
-			)
-		);
-
-		$result   = wp_remote_retrieve_body( $response );
-		$products = json_decode( $result );
-		if ( ! is_array( $products ) ) {
-			boekdb_debug( 'Error fetching products?' );
-			boekdb_debug( $response );
-
-			return false;
-		}
-		boekdb_debug( count( $products ) . ' products for offset ' . $offset );
-
-		return $products;
 	}
 
 	private static function update_running( $running, $etalage ) {
@@ -944,7 +913,7 @@ class BoekDB_Import {
 	private static function check_available_isbns( $etalage ) {
 		global $wpdb;
 
-		$isbns = self::fetch_isbns( $etalage->api_key );
+		$isbns = Boekdb_Api_Service::fetch_isbns( $etalage->api_key );
 		self::trash_removed( $etalage->id, $isbns['isbns'] );
 
 		$wpdb->update(
@@ -971,28 +940,6 @@ class BoekDB_Import {
 
 		// no reset
 		return false;
-	}
-
-	private static function fetch_isbns( $api_key ) {
-		$result = wp_remote_get(
-			self::BASE_URL . 'isbns',
-			array(
-				'headers' => array(
-					'Authorization' => 'Bearer ' . $api_key,
-				),
-				'timeout' => 30,
-			)
-		);
-		if ( is_wp_error( $result ) ) {
-			die( $result->get_error_message() );
-		}
-		$result = wp_remote_retrieve_body( $result );
-		$result = json_decode( $result, true );
-		if ( ! is_array( $result ) || ! isset( $result['isbns'] ) ) {
-			return false;
-		}
-
-		return $result;
 	}
 
 	/**
