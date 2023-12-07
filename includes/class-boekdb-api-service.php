@@ -127,9 +127,6 @@ class Boekdb_Api_Service {
 			'timeout' => 30,
 		) );
 
-		// dump the response
-		boekdb_debug( $response );
-
 		if ( is_wp_error( $response ) ) {
 			$error_message = $response->get_error_message();
 

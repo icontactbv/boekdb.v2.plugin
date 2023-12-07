@@ -269,10 +269,33 @@ function touch_product_action() {
 	    && wp_verify_nonce($_GET['nonce'], 'touch_product_'.$_GET['post'])
 	) {
 		$post_id = $_GET['post'];
-		BoekDB_Api_Service::touch_product($post_id);
+		if ( BoekDB_Api_Service::touch_product($post_id) ) {
+			// add a transient to store the admin message
+			set_transient( 'boekdb_admin_notice', "Product touch succesvol!", 5 );
+		} else {
+			// add a transient to store the error message
+			set_transient( 'boekdb_admin_notice', "Kon product touch niet uitvoeren!", 5 );
+		}
 
 		// redirect to prevent refreshing the page from causing a double touch
-		wp_redirect(remove_query_arg(['action', 'post', 'nonce'], $_SERVER['REQUEST_URI']));
+		wp_redirect(admin_url('edit.php?post_type=boekdb_boek'));
 		exit;
 	}
+}
+
+add_action('admin_notices', 'boekdb_admin_notice');
+
+function boekdb_admin_notice() {
+	// If our transient isn't available, return early
+	if (false === ($message = get_transient('boekdb_admin_notice'))) {
+		return;
+	}
+
+	// delete the message transient
+	delete_transient('boekdb_admin_notice');
+
+	// display the message
+	echo '<div class="notice notice-info is-dismissible">';
+	echo "<p>$message</p>";
+	echo '</div>';
 }
