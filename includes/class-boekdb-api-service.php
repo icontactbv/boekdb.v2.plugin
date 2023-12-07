@@ -102,4 +102,37 @@ class Boekdb_Api_Service {
 
 		return $result;
 	}
+
+	public static function touch_product( $post_id ) {
+		global $wpdb;
+
+		// Fetch the isbn using the post_id
+		$isbn = $wpdb->get_var($wpdb->prepare("SELECT isbn FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d", $post_id));
+
+		if (!$isbn) {
+			return false;
+		}
+
+		// Fetch the first api_key from the database
+		$api_key = $wpdb->get_var("SELECT api_key FROM {$wpdb->prefix}boekdb_etalages LIMIT 1");
+
+		$url = self::BASE_URL . 'products/' . $isbn;
+
+		$response = wp_remote_request($url, [
+			'method' => 'PUT',
+			'headers' => [
+				'Content-Type' => 'application/json; charset=utf-8',
+				'Authorization' => 'Bearer ' . $api_key, // Substitute with your actual API Key
+			],
+			'httpversion' => '1.0',
+			'sslverify' => false,
+		]);
+
+		if (is_wp_error($response)) {
+			$error_message = $response->get_error_message();
+			return "Something went wrong: $error_message";
+		}
+
+		return true;
+	}
 }

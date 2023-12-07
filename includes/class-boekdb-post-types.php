@@ -269,7 +269,8 @@ function touch_product_action() {
 	    && wp_verify_nonce($_GET['nonce'], 'touch_product_'.$_GET['post'])
 	) {
 		$post_id = $_GET['post'];
-		touch_product($post_id); // replace with your touch function
+		BoekDB_Api_Service::touch_product($post_id);
+
 		// redirect to prevent refreshing the page from causing a double touch
 		wp_redirect(remove_query_arg(['action', 'post', 'nonce'], $_SERVER['REQUEST_URI']));
 		exit;
