@@ -63,6 +63,8 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 
 				if ( strlen( $api_key ) === 0 || strlen( $name ) === 0 ) {
 					self::add_error( 'Er is iets fout gegaan' );
+				} elseif(! Boekdb_Api_Service::validate_api_key( $api_key )) {
+					self::add_error( 'API key is niet geldig' );
 				} else {
 					$wpdb->query(
 						$wpdb->prepare(
@@ -113,16 +115,8 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			} elseif ( isset ( $_POST['delete'] ) ) {
 				$id = (int) $_POST['delete'];
 				if ( $id > 0 ) {
-					$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d",
-						$id ) );
-					$result   = $wpdb->get_results( $wpdb->prepare( "SELECT eb.boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken eb WHERE eb.etalage_id = %d",
-						$id ) );
-					$post_ids = array();
-					foreach ( $result as $boek ) {
-						$post_ids[] = (int) $boek->boek_id;
-					}
-					BoekDB_Import::delete_etalage_posts( $post_ids, $id );
-					self::add_message( 'Etalage is verwijderd.' );
+					self::delete_etalage($id);
+					set_transient( 'boekdb_admin_notice', 'Etalage is verwijderd omdat de API-sleutel ongeldig was.', 60 );
 				}
 			}
 		}
@@ -143,6 +137,17 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 */
 		public static function add_error( $text ) {
 			self::$errors[] = $text;
+		}
+
+		public static function delete_etalage($id) {
+			global $wpdb;
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id ) );
+			$result   = $wpdb->get_results( $wpdb->prepare( "SELECT eb.boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken eb WHERE eb.etalage_id = %d", $id ) );
+			$post_ids = array();
+			foreach ( $result as $boek ) {
+				$post_ids[] = (int) $boek->boek_id;
+			}
+			BoekDB_Import::delete_etalage_posts( $post_ids, $id );
 		}
 
 		/**

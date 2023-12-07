@@ -283,19 +283,4 @@ function touch_product_action() {
 	}
 }
 
-add_action('admin_notices', 'boekdb_admin_notice');
 
-function boekdb_admin_notice() {
-	// If our transient isn't available, return early
-	if (false === ($message = get_transient('boekdb_admin_notice'))) {
-		return;
-	}
-
-	// delete the message transient
-	delete_transient('boekdb_admin_notice');
-
-	// display the message
-	echo '<div class="notice notice-info is-dismissible">';
-	echo "<p>$message</p>";
-	echo '</div>';
-}

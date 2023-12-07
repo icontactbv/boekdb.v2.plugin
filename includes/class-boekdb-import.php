@@ -889,6 +889,13 @@ class BoekDB_Import {
 
 		$etalages = BoekDB::fetch_etalages();
 		foreach ( $etalages as $etalage ) {
+			// validate api key
+			if ( ! Boekdb_Api_Service::validate_api_key( $etalage->api_key ) ) {
+				// delete etalage
+				BoekDB::delete_etalage( $etalage->id );
+				set_transient( 'boekdb_admin_notice', 'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.', 3600 );
+			}
+
 			self::update_running( 2, $etalage );
 
 			$reset = self::check_available_isbns( $etalage );

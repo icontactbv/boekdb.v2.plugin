@@ -17,6 +17,7 @@ class BoekDB_Install {
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'check_version' ), 5 );
 		add_action( 'admin_notices', array( __CLASS__, 'display_update_notice' ) );
+		add_action( 'admin_notices', 'boekdb_admin_notice');
 
 		// Schedule the version check event
 		if ( ! wp_next_scheduled( 'boekdb_version_check' ) ) {
@@ -122,8 +123,8 @@ class BoekDB_Install {
 	}
 
 	public static function boekdb_connection_error() {
-		$class   = 'notice notice-warning';
-		$message = 'Let op: kan geen verbinding maken met BoekDB!';
+		$class   = 'notice notice-warning is-dismissible';
+		$message = '<strong>BoekDB Plugin:</strong> Let op: kan geen verbinding maken met BoekDB!';
 
 		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
 	}
@@ -134,6 +135,21 @@ class BoekDB_Install {
 			echo '<p><strong>BoekDB Plugin:</strong> Er is een nieuwe versie van de plugin beschikbaar. Installeer deze binnenkort.</p>';
 			echo '</div>';
 		}
+	}
+
+	public static function boekdb_admin_notice() {
+		// If our transient isn't available, return early
+		if (false === ($message = get_transient('boekdb_admin_notice'))) {
+			return;
+		}
+
+		// delete the message transient
+		delete_transient('boekdb_admin_notice');
+
+		// display the message
+		echo '<div class="notice notice-info is-dismissible">';
+		echo "<p>$message</p>";
+		echo '</div>';
 	}
 
 }
