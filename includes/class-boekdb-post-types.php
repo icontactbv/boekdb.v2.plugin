@@ -234,3 +234,44 @@ class Boekdb_Post_Types {
 }
 
 Boekdb_Post_Types::init();
+
+/*
+ * Add Touch Product button to Boek post type
+ */
+add_filter('manage_boekdb_boek_posts_columns', 'add_touch_product_column');
+
+function add_touch_product_column($columns) {
+	$columns['touch_product'] = 'Touch Product';
+	return $columns;
+}
+
+add_action('manage_boekdb_boek_posts_custom_column', 'render_touch_product_column', 10, 2);
+
+function render_touch_product_column($column, $post_id) {
+	if ('touch_product' === $column) {
+		$url = add_query_arg(
+			[
+				'action' => 'touch_product',
+				'post' => $post_id,
+				'nonce' => wp_create_nonce('touch_product_'.$post_id),
+			],
+			admin_url('edit.php')
+		);
+		echo '<a href="'.$url.'" class="button">Touch Product</a>';
+	}
+}
+
+add_action('admin_init', 'touch_product_action');
+
+function touch_product_action() {
+	if (isset($_GET['action'], $_GET['post'], $_GET['nonce'])
+	    && $_GET['action'] === 'touch_product'
+	    && wp_verify_nonce($_GET['nonce'], 'touch_product_'.$_GET['post'])
+	) {
+		$post_id = $_GET['post'];
+		touch_product($post_id); // replace with your touch function
+		// redirect to prevent refreshing the page from causing a double touch
+		wp_redirect(remove_query_arg(['action', 'post', 'nonce'], $_SERVER['REQUEST_URI']));
+		exit;
+	}
+}
