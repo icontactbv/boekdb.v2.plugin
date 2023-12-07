@@ -2,23 +2,23 @@
 
 class Boekdb_Api_Service {
 
-	const BOEKDB_DOMAIN       = 'https://boekdbv2.nl/';
-	const BASE_URL            = self::BOEKDB_DOMAIN . 'api/json/v1/';
-	const LIMIT               = 100;
+	const BOEKDB_DOMAIN = 'https://boekdbv2.nl/';
+	const BASE_URL      = self::BOEKDB_DOMAIN . 'api/json/v1/';
+	const LIMIT         = 100;
 
 	public static function test_api_connection() {
-		$response = wp_remote_get(self::BASE_URL . 'test');
-		if(is_wp_error($response)) {
+		$response = wp_remote_get( self::BASE_URL . 'test' );
+		if ( is_wp_error( $response ) ) {
 			$error_message = $response->get_error_message();
+
 			return array(
 				'success' => false,
 				'message' => "Er is iets mis: $error_message"
 			);
-		}
-		else {
-			$code = wp_remote_retrieve_response_code($response);
-			$result = json_decode(wp_remote_retrieve_body($response), true);
-			if ($code === 200 && 'hello' === $result[0] ) {
+		} else {
+			$code   = wp_remote_retrieve_response_code( $response );
+			$result = json_decode( wp_remote_retrieve_body( $response ), true );
+			if ( $code === 200 && 'hello' === $result[0] ) {
 				return array(
 					'success' => true,
 					'message' => 'Connectie met BoekDB is ok.'
@@ -41,8 +41,8 @@ class Boekdb_Api_Service {
 		}
 
 		// Fetch the latest version from the API response
-		$body = wp_remote_retrieve_body( $result );
-		$data = json_decode( $body, true );
+		$body       = wp_remote_retrieve_body( $result );
+		$data       = json_decode( $body, true );
 		$apiVersion = $data['plugin_version'] ?? null;
 
 		// Compare with current plugin version and set/update the option if a new version is available
@@ -107,29 +107,32 @@ class Boekdb_Api_Service {
 		global $wpdb;
 
 		// Fetch the isbn using the post_id
-		$isbn = $wpdb->get_var($wpdb->prepare("SELECT isbn FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d", $post_id));
+		$isbn = $wpdb->get_var( $wpdb->prepare( "SELECT isbn FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d",
+			$post_id ) );
 
-		if (!$isbn) {
+		if ( ! $isbn ) {
 			return false;
 		}
 
 		// Fetch the first api_key from the database
-		$api_key = $wpdb->get_var("SELECT api_key FROM {$wpdb->prefix}boekdb_etalages LIMIT 1");
+		$api_key = $wpdb->get_var( "SELECT api_key FROM {$wpdb->prefix}boekdb_etalages LIMIT 1" );
 
 		$url = self::BASE_URL . 'products/' . $isbn;
 
-		$response = wp_remote_request($url, [
-			'method' => 'PUT',
-			'headers' => [
-				'Content-Type' => 'application/json; charset=utf-8',
-				'Authorization' => 'Bearer ' . $api_key, // Substitute with your actual API Key
-			],
-			'httpversion' => '1.0',
-			'sslverify' => false,
-		]);
+		$response = wp_remote_request( $url, array(
+			'method'  => 'PUT',
+			'headers' => array(
+				'Authorization' => 'Bearer ' . $api_key,
+			),
+			'timeout' => 30,
+		) );
 
-		if (is_wp_error($response)) {
+		// dump the response
+		boekdb_debug( $response );
+
+		if ( is_wp_error( $response ) ) {
 			$error_message = $response->get_error_message();
+
 			return "Something went wrong: $error_message";
 		}
 
