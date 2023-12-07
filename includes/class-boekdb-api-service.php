@@ -6,7 +6,33 @@ class Boekdb_Api_Service {
 	const BASE_URL            = self::BOEKDB_DOMAIN . 'api/json/v1/';
 	const LIMIT               = 100;
 
-	public static function test_connection() {
+	public static function test_api_connection() {
+		$response = wp_remote_get(self::BASE_URL . 'test');
+		if(is_wp_error($response)) {
+			$error_message = $response->get_error_message();
+			return array(
+				'success' => false,
+				'message' => "Er is iets mis: $error_message"
+			);
+		}
+		else {
+			$code = wp_remote_retrieve_response_code($response);
+			$result = json_decode(wp_remote_retrieve_body($response), true);
+			if ($code === 200 && 'hello' === $result[0] ) {
+				return array(
+					'success' => true,
+					'message' => 'Connectie met BoekDB is ok.'
+				);
+			} else {
+				return array(
+					'success' => false,
+					'message' => 'Er is iets mis, response: ' . $code
+				);
+			}
+		}
+	}
+
+	public static function check_connection_and_version() {
 		$result = wp_remote_get( self::BASE_URL . 'test' );
 
 		// Check for connection errors

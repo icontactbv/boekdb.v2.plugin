@@ -41,7 +41,7 @@ class BoekDB_Install {
 	 * This is a scheduled event to check the BoekDB version and display a notice if a upgrade is required.
 	 */
 	public static function scheduled_version_check() {
-		Boekdb_Api_Service::test_connection();
+		Boekdb_Api_Service::check_connection_and_version();
 	}
 
 	/**
@@ -57,7 +57,7 @@ class BoekDB_Install {
 			return;
 		}
 
-		if ( false === Boekdb_Api_Service::test_connection() ) {
+		if ( false === Boekdb_Api_Service::check_connection_and_version() ) {
 			add_action( 'admin_notices', array( __CLASS__, 'boekdb_connection_error' ) );
 		}
 

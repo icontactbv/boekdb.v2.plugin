@@ -87,19 +87,11 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 					self::add_error( 'Import draait al!' );
 				}
 			} elseif ( isset ( $_POST['test'] ) && 'test' === $_POST['test'] ) {
-				// do a quick test of wp_remote_get
-				$response = wp_remote_get( BoekDB_Import::BASE_URL . 'test' );
-				if ( is_wp_error( $response ) ) {
-					$error_message = $response->get_error_message();
-					self::add_error( "Er is iets mis: $error_message" );
+				$testResponse = Boekdb_Api_Service::test_api_connection();
+				if(!$testResponse['success']) {
+					self::add_error($testResponse['message']);
 				} else {
-					$code   = wp_remote_retrieve_response_code( $response );
-					$result = json_decode( wp_remote_retrieve_body( $response ), true );
-					if ( $code === 200 && 'hello' === $result[0] ) {
-						self::add_message( 'Connectie met BoekDB is ok.' );
-					} else {
-						self::add_error( 'Er is iets mis, response: ' . $code );
-					}
+					self::add_message($testResponse['message']);
 				}
 			} elseif ( isset ( $_POST['stop'] ) && 'stop' === $_POST['stop'] ) {
 				$wpdb->query("UPDATE {$wpdb->prefix}boekdb_etalages SET offset=0, running=0");

@@ -14,8 +14,6 @@ class BoekDB_Import {
 	const START_IMPORT_HOOK = 'boekdb_start_import';
 	const IMPORT_HOOK       = 'boekdb_run_import';
 
-	const BOEKDB_DOMAIN       = 'https://boekdbv2.nl/';
-	const BASE_URL            = self::BOEKDB_DOMAIN . 'api/json/v1/';
 	const DEFAULT_LAST_IMPORT = "2015-01-01T01:00:00+01:00";
 
 	protected static $options = [
