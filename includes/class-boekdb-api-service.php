@@ -1,4 +1,12 @@
 <?php
+/**
+ * BoekDB API Services
+ *
+ * @package BoekDB
+ * @since   1.1.0
+*/
+
+defined( 'ABSPATH' ) || exit;
 
 class Boekdb_Api_Service {
 
@@ -6,6 +14,11 @@ class Boekdb_Api_Service {
 	const BASE_URL      = self::BOEKDB_DOMAIN . 'api/json/v1/';
 	const LIMIT         = 100;
 
+	/**
+	 * Test API connection
+	 *
+	 * @return array Connection status and error/success message
+	 */
 	public static function test_api_connection() {
 		$response = wp_remote_get( self::BASE_URL . 'test' );
 		if ( is_wp_error( $response ) ) {
@@ -32,6 +45,11 @@ class Boekdb_Api_Service {
 		}
 	}
 
+	/**
+	 * Check API connection and version
+	 *
+	 * @return bool The state of the connection
+	 */
 	public static function check_connection_and_version() {
 		$result = wp_remote_get( self::BASE_URL . 'test' );
 
@@ -55,6 +73,15 @@ class Boekdb_Api_Service {
 		return true;
 	}
 
+	/**
+	 * Fetch products
+	 *
+	 * @param string $api_key API Key
+	 * @param string $last_import Last import date
+	 * @param int $offset Offset value
+	 *
+	 * @return array|bool List of products or false if failed
+	 */
 	public static function fetch_products( $api_key, $last_import, $offset ) {
 		$response = wp_remote_get(
 			self::BASE_URL . 'products?updated_at=' . urlencode( $last_import ),
@@ -81,6 +108,13 @@ class Boekdb_Api_Service {
 		return $products;
 	}
 
+	/**
+	 * Fetch ISBNs
+	 *
+	 * @param string $api_key API Key
+	 *
+	 * @return array|bool List of ISBNs or false if failed
+	 */
 	public static function fetch_isbns( $api_key ) {
 		$result = wp_remote_get(
 			self::BASE_URL . 'isbns',
@@ -103,6 +137,13 @@ class Boekdb_Api_Service {
 		return $result;
 	}
 
+	/**
+	 * Touch product
+	 *
+	 * @param int $post_id Post ID
+	 *
+	 * @return bool|string 'true' if successful or error message string if failed
+	 */
 	public static function touch_product( $post_id ) {
 		global $wpdb;
 
@@ -136,6 +177,13 @@ class Boekdb_Api_Service {
 		return true;
 	}
 
+	/**
+	 * Validate API Key
+	 *
+	 * @param string $api_key API Key
+	 *
+	 * @return bool 'true' if valid 'false' if invalid
+	 */
 	public static function validate_api_key($api_key) {
 		// Make a request to any read-only endpoint
 		$response = wp_remote_get(self::BASE_URL, [

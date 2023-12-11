@@ -42,12 +42,19 @@ function BoekDB() { // phpcs:ignore WordPress.NamingConventions.ValidFunctionNam
 	return BoekDB::instance();
 }
 
+/**
+ * Debug function
+ *
+ * @param $message
+ */
 function boekdb_debug( $message ) {
 	if ( WP_DEBUG && WP_DEBUG_LOG ) {
 		if ( ! is_string( $message ) ) {
 			$message = var_export( $message, true );
 		}
 		/**
+		 * Don't inspect this line, it's a debug function
+		 *
 		 * @noinspection ForgottenDebugOutputInspection
 		 */
 		error_log( $message );
@@ -56,6 +63,11 @@ function boekdb_debug( $message ) {
 
 BoekDB();
 
+/**
+ * Set import option
+ *
+ * @param $message
+ */
 function boekdb_set_import_option( $name, $value ) {
 	global $boekdb_import_options;
 	boekdb_debug( 'set import option ' . $name . ': ' . $value );
@@ -64,6 +76,9 @@ function boekdb_set_import_option( $name, $value ) {
 	}
 }
 
+/**
+ * Unset import option
+ */
 function boekdb_unset_import_options() {
 	global $boekdb_import_options;
 	boekdb_debug( 'Unsetting import options' );

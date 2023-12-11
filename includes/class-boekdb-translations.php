@@ -7,6 +7,8 @@
  * @package BoekDB
  */
 
+defined( 'ABSPATH' ) || exit;
+
 final class BoekDB_Translations {
 	public static $verschijningsvorm = array(
 		'Luisterboek : MP3 download' => 'Luisterboek',

@@ -71,6 +71,7 @@ final class BoekDB {
 	 * Ensures only one instance of BoekDB is loaded or can be loaded.
 	 *
 	 * @static
+	 *
 	 * @return BoekDB - Main instance.
 	 * @see    BoekDB()
 	 */
@@ -91,6 +92,13 @@ final class BoekDB {
 		return untrailingslashit( plugins_url( '/', BOEKDB_PLUGIN_FILE ) );
 	}
 
+	/**
+	 * Fetch etalages
+	 *
+	 * @param bool $readytorun A flag to check readiness.
+	 *
+	 * @return array An array of etalages.
+	 */
 	public static function fetch_etalages( $readytorun = false ) {
 		global $wpdb;
 		if ( $readytorun ) {
