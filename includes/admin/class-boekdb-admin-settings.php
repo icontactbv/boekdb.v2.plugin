@@ -115,7 +115,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			} elseif ( isset ( $_POST['delete'] ) ) {
 				$id = (int) $_POST['delete'];
 				if ( $id > 0 ) {
-					self::delete_etalage($id);
+					BoekDB_Cleanup::delete_etalage($id);
 					set_transient( 'boekdb_admin_notice', 'Etalage is verwijderd omdat de API-sleutel ongeldig was.', 60 );
 				}
 			}
@@ -124,7 +124,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		/**
 		 * Add a message.
 		 *
-		 * @param  string  $text  Message.
+		 * @param string  $text  Message.
 		 */
 		public static function add_message( $text ) {
 			self::$messages[] = $text;
@@ -133,21 +133,10 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		/**
 		 * Add an error.
 		 *
-		 * @param  string  $text  Message.
+		 * @param string  $text  Message.
 		 */
 		public static function add_error( $text ) {
 			self::$errors[] = $text;
-		}
-
-		public static function delete_etalage($id) {
-			global $wpdb;
-			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id ) );
-			$result   = $wpdb->get_results( $wpdb->prepare( "SELECT eb.boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken eb WHERE eb.etalage_id = %d", $id ) );
-			$post_ids = array();
-			foreach ( $result as $boek ) {
-				$post_ids[] = (int) $boek->boek_id;
-			}
-			BoekDB_Import::delete_etalage_posts( $post_ids, $id );
 		}
 
 		/**

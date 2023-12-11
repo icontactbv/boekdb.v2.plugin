@@ -65,6 +65,17 @@ class BoekDB_Cleanup {
 		}
 	}
 
+	public static function delete_etalage($id) {
+		global $wpdb;
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id ) );
+		$result   = $wpdb->get_results( $wpdb->prepare( "SELECT eb.boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken eb WHERE eb.etalage_id = %d", $id ) );
+		$post_ids = array();
+		foreach ( $result as $boek ) {
+			$post_ids[] = (int) $boek->boek_id;
+		}
+		self::delete_etalage_posts( $post_ids, $id );
+	}
+
 	public static function delete_etalage_posts( $post_ids, $deleted_etalage ) {
 		global $wpdb;
 

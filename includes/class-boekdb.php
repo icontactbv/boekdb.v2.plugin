@@ -35,8 +35,8 @@ final class BoekDB {
 	/**
 	 * Define constant if not already set.
 	 *
-	 * @param  string  $name  Constant name.
-	 * @param  string|bool  $value  Constant value.
+	 * @param string  $name  Constant name.
+	 * @param string|bool  $value  Constant value.
 	 */
 	private function define( $name, $value ) {
 		if ( ! defined( $name ) ) {

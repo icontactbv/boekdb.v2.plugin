@@ -892,7 +892,7 @@ class BoekDB_Import {
 			// validate api key
 			if ( ! Boekdb_Api_Service::validate_api_key( $etalage->api_key ) ) {
 				// delete etalage
-				BoekDB::delete_etalage( $etalage->id );
+				BoekDB_Cleanup::delete_etalage($etalage->id );
 				set_transient( 'boekdb_admin_notice', 'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.', 3600 );
 			}
 
@@ -986,26 +986,6 @@ class BoekDB_Import {
 					BoekDB_Cleanup::delete_posts( [ $post_id ] );
 				}
 			}
-		}
-	}
-
-	public static function delete_etalage_posts( $post_ids, $deleted_etalage ) {
-		global $wpdb;
-
-		if ( $deleted_etalage > 0 ) {
-			// check if post is still related to etalage
-			foreach ( $post_ids as $key => $post_id ) {
-				$result = $wpdb->get_results( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id != %d AND boek_id = %d LIMIT 1",
-					$deleted_etalage, $post_id ) );
-				if ( count( $result ) > 0 ) {
-					unset( $post_ids[ $key ] );
-				}
-			}
-			boekdb_debug( 'deleting ' . count( $post_ids ) . ' posts' );
-			BoekDB_Cleanup::delete_posts( $post_ids );
-
-			boekdb_debug( 'running cleanup' );
-			BoekDB_Cleanup::cleanup();
 		}
 	}
 

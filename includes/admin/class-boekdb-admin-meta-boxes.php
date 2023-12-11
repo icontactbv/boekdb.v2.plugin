@@ -42,7 +42,7 @@ class BoekDB_Admin_Meta_Boxes {
 	/**
 	 * Add an error message.
 	 *
-	 * @param  string  $text  Error to add.
+	 * @param string  $text  Error to add.
 	 */
 	public static function add_error( $text ) {
 		self::$meta_box_errors[] = $text;
