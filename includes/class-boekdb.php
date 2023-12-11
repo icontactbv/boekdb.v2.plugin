@@ -26,21 +26,11 @@ final class BoekDB {
 	 * BoekDb Constructor.
 	 */
 	public function __construct() {
-		$this->define( 'BOEKDB_VERSION', $this->version );
+		if ( ! defined( 'BOEKDB_VERSION' ) ) {
+			define( 'BOEKDB_VERSION', $this->version );
+		}
 		$this->includes();
 		$this->init_hooks();
-	}
-
-	/**
-	 * Define constant if not already set.
-	 *
-	 * @param string       $name   Constant name.
-	 * @param string|bool  $value  Constant value.
-	 */
-	private function define( $name, $value ) {
-		if ( ! defined( $name ) ) {
-			define( $name, $value );
-		}
 	}
 
 	/**
@@ -91,6 +81,9 @@ final class BoekDB {
 		return untrailingslashit( plugins_url( '/', BOEKDB_PLUGIN_FILE ) );
 	}
 
+	const QUERY_ALL_ETALAGES = "SELECT id, name, api_key, running, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {:prefix}boekdb_etalages WHERE running = 2";
+	const QUERY_READY_ETALAGES = "SELECT id, name, api_key, running, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {:prefix}boekdb_etalages";
+
 	/**
 	 * Fetch etalages
 	 *
@@ -100,13 +93,9 @@ final class BoekDB {
 	 */
 	public static function fetch_etalages( $readytorun = false ) {
 		global $wpdb;
-		if ( $readytorun ) {
-			return $wpdb->get_results( "SELECT id, name, api_key, running, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages WHERE running = 2",
-				OBJECT );
-		}
-
-		return $wpdb->get_results( "SELECT id, name, api_key, running, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {$wpdb->prefix}boekdb_etalages",
-			OBJECT );
+		$query = $readytorun ? self::QUERY_READY_ETALAGES : self::QUERY_ALL_ETALAGES;
+		$query = str_replace('{:prefix}', $wpdb->prefix, $query);
+		return $wpdb->get_results($query, OBJECT);
 	}
 
 }
