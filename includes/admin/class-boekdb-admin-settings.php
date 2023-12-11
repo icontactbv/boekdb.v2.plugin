@@ -5,9 +5,7 @@
  * @package BoekDB
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+defined( 'ABSPATH' ) || exit;
 
 if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 
