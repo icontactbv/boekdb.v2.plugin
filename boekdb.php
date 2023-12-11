@@ -24,7 +24,9 @@ if ( ! defined( 'BOEKDB_PLUGIN_BASENAME' ) ) {
 	define( 'BOEKDB_PLUGIN_BASENAME', plugin_basename( BOEKDB_PLUGIN_FILE ) );
 }
 
-// Include the main BoekDB class.
+/**
+ * Main instance of BoekDB.
+ */
 if ( ! class_exists( 'BoekDB', false ) ) {
 	include_once dirname( BOEKDB_PLUGIN_FILE ) . '/includes/class-boekdb.php';
 }
@@ -66,7 +68,8 @@ BoekDB();
 /**
  * Set import option
  *
- * @param $message
+ * @param $name
+ * @param $value
  */
 function boekdb_set_import_option( $name, $value ) {
 	global $boekdb_import_options;
@@ -90,15 +93,20 @@ function boekdb_unset_import_options() {
 function boekdb_is_import_running() {
 	global $wpdb;
 
-	$count = (int)$wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}boekdb_etalages WHERE running > 0" );
-	if($count > 0) {
+	$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}boekdb_etalages WHERE running > 0" );
+	if ( $count > 0 ) {
 		boekdb_debug( 'Import is running' );
+
 		return true;
 	}
 	boekdb_debug( 'Import is not running' );
+
 	return false;
 }
 
+/**
+ * Resets the import running flag
+ */
 function boekdb_reset_import_running() {
 	boekdb_debug( 'Resetting import running and etalage transients' );
 
@@ -106,6 +114,13 @@ function boekdb_reset_import_running() {
 	boekdb_unset_import_options();
 }
 
+/**
+ * Fetches the data for a single book
+ *
+ * @param $id
+ *
+ * @return array
+ */
 function boekdb_boek_data( $id ) {
 	$data = array();
 	$meta = get_post_meta( $id );
@@ -114,15 +129,15 @@ function boekdb_boek_data( $id ) {
 			$data[ substr( $name, 7 ) ] = $value[0];
 		}
 		if ( $name === 'boekdb_recensiequotes' ) {
-			$quotes = unserialize($value[0]);
+			$quotes = unserialize( $value[0] );
 			$parsed = array();
-			foreach($quotes as $quote) {
-				if($quote['tonen']) {
-					unset($quote['tonen']);
+			foreach ( $quotes as $quote ) {
+				if ( $quote['tonen'] ) {
+					unset( $quote['tonen'] );
 					$parsed[] = $quote;
 				}
 			}
-			$data[ substr( $name, 7 ) ] = serialize($parsed);
+			$data[ substr( $name, 7 ) ] = serialize( $parsed );
 		}
 	}
 
@@ -134,6 +149,13 @@ function boekdb_boek_data( $id ) {
 	return $data;
 }
 
+/**
+ * Fetches the data for all betrokkenen
+ *
+ * @param $id
+ *
+ * @return array
+ */
 function boekdb_betrokkenen_data( $id ) {
 	$data = array();
 	foreach ( wp_get_post_terms( $id, 'boekdb_auteur_tax' ) as $term ) {
@@ -150,6 +172,14 @@ function boekdb_betrokkenen_data( $id ) {
 	return $data;
 }
 
+/**
+ * Fetches the data for a single betrokkene
+ *
+ * @param $id
+ * @param $term
+ *
+ * @return array
+ */
 function boekdb_betrokkene_data( $id, $term = null ) {
 	if ( is_null( $term ) ) {
 		$term = get_term( $id );
@@ -163,6 +193,14 @@ function boekdb_betrokkene_data( $id, $term = null ) {
 	return $data;
 }
 
+/**
+ * Fetches the data for a single serie
+ *
+ * @param int           $id    The ID of the serie.
+ * @param WP_Term|null  $term  Optional. The WP_Term object of the serie. Defaults to null.
+ *
+ * @return array The data of the serie.
+ */
 function boekdb_serie_data( $id, $term = null ) {
 	if ( is_null( $term ) ) {
 		$term = get_term( $id );
@@ -178,18 +216,42 @@ function boekdb_serie_data( $id, $term = null ) {
 	return $data;
 }
 
+/**
+ * Checks if a string starts with a given substring
+ *
+ * @param string  $haystack  The string to search within
+ * @param string  $needle    The substring to search for
+ *
+ * @return bool Returns true if the $haystack starts with $needle, false otherwise
+ */
 function boekdb_startswith( $haystack, $needle ) {
 	return 0 === strpos( $haystack, $needle );
 }
 
+
+/**
+ * Returns the slug for a given verschijningsvorm code
+ *
+ * @param $code The verschijningsvorm code
+ *
+ * @return string The verschijningsvorm slug
+ */
 function boekdb_verschijningsvorm_slug( $code ) {
-	if ( isset ( BoekDB_Translations::$verschijningsvorm[ $code ])) {
-		return sanitize_title(BoekDB_Translations::$verschijningsvorm[ $code]);
+	if ( isset ( BoekDB_Translations::$verschijningsvorm[ $code ] ) ) {
+		return sanitize_title( BoekDB_Translations::$verschijningsvorm[ $code ] );
 	}
 
-	return sanitize_title($code);
+	return sanitize_title( $code );
 }
 
+
+/**
+ * Returns the description of a THEMA code
+ *
+ * @param string  $code  THEMA code
+ *
+ * @return string The description, otherwise the provided code
+ */
 function boekdb_thema_omschrijving( $code ) {
 	$code = strtoupper( $code );
 	if ( isset( BoekDB_Translations::$thema[ $code ] ) ) {
@@ -199,24 +261,43 @@ function boekdb_thema_omschrijving( $code ) {
 	return $code;
 }
 
-function boekdb_etalage_join( $join, $query) {
+/**
+ * Joins the necessary tables to retrieve etalage data for the query
+ *
+ * @param string    $join   The current join clauses of the query
+ * @param WP_Query  $query  The WP_Query object for the current query
+ *
+ * @return string The updated join clauses with etalage tables joined
+ */
+function boekdb_etalage_join( $join, $query ) {
 	global $wpdb;
-	if ( ! is_admin() && ! $query->is_single() && $query->get('post_type') === 'boekdb_boek' && $query->get('etalage', false) && strlen($query->get('etalage', false)) > 0) {
+	if ( ! is_admin() && ! $query->is_single() && $query->get( 'post_type' ) === 'boekdb_boek' && $query->get( 'etalage',
+			false ) && strlen( $query->get( 'etalage', false ) ) > 0 ) {
 		$table1 = $wpdb->prefix . 'boekdb_etalage_boeken';
 		$table2 = $wpdb->prefix . 'boekdb_etalages';
-		$join .= $wpdb->prepare(" LEFT JOIN {$table2} boekdb_e ON boekdb_e.name = %s", $query->get('etalage'));
-		$join .= " INNER JOIN {$table1} boekdb_eb ON boekdb_eb.boek_id = {$wpdb->posts}.ID AND boekdb_eb.etalage_id = boekdb_e.id";
+		$join   .= $wpdb->prepare( " LEFT JOIN {$table2} boekdb_e ON boekdb_e.name = %s", $query->get( 'etalage' ) );
+		$join   .= " INNER JOIN {$table1} boekdb_eb ON boekdb_eb.boek_id = {$wpdb->posts}.ID AND boekdb_eb.etalage_id = boekdb_e.id";
 	}
+
 	return $join;
 }
-add_filter('posts_join', 'boekdb_etalage_join', 10, 2);
 
+add_filter( 'posts_join', 'boekdb_etalage_join', 10, 2 );
+
+/**
+ * Adds a 'minutely' schedule to the existing set of schedules
+ *
+ * @param array  $schedules  The existing set of schedules
+ *
+ * @return array The updated set of schedules
+ */
 function boekdb_add_minutely( $schedules ) {
-	// add a 'minutely' schedule to the existing set
 	$schedules['minutely'] = array(
 		'interval' => 60,
-		'display' => __('Every minute')
+		'display'  => __( 'Every minute' )
 	);
+
 	return $schedules;
 }
+
 add_filter( 'cron_schedules', 'boekdb_add_minutely' );
