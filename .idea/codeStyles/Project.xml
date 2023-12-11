@@ -2,10 +2,11 @@
   <code_scheme name="Project" version="173">
     <PHPCodeStyleSettings>
       <option name="ALIGN_KEY_VALUE_PAIRS" value="true" />
+      <option name="ALIGN_PHPDOC_PARAM_NAMES" value="true" />
+      <option name="ALIGN_PHPDOC_COMMENTS" value="true" />
       <option name="ALIGN_ASSIGNMENTS" value="true" />
       <option name="PHPDOC_BLANK_LINES_AROUND_PARAMETERS" value="true" />
       <option name="BLANK_LINES_BETWEEN_IMPORTS" value="1" />
-      <option name="PHPDOC_PARAM_SPACES_BETWEEN_TAG_AND_TYPE" value="2" />
       <option name="PHPDOC_PARAM_SPACES_BETWEEN_TYPE_AND_NAME" value="2" />
       <option name="PHPDOC_PARAM_SPACES_BETWEEN_NAME_AND_DESCRIPTION" value="2" />
       <option name="LOWER_CASE_BOOLEAN_CONST" value="true" />

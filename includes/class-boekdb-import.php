@@ -33,7 +33,6 @@ class BoekDB_Import {
 		if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
 			wp_schedule_event( time(), 'minutely', self::IMPORT_HOOK );
 		}
-
 	}
 
 	public static function import() {
@@ -135,9 +134,10 @@ class BoekDB_Import {
 
 	private static function fetch_etalage_running( $id ) {
 		global $wpdb;
-		$sql        = $wpdb->prepare( "SELECT running FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id );
-		$running    = $wpdb->get_var( $sql );
-		return (int)$running;
+		$sql     = $wpdb->prepare( "SELECT running FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id );
+		$running = $wpdb->get_var( $sql );
+
+		return (int) $running;
 	}
 
 	private static function update_running( $running, $etalage ) {
@@ -456,62 +456,62 @@ class BoekDB_Import {
 	 * @param $product
 	 * @param $boek_post_id
 	 */
-	protected static function handle_boek_files($product, $boek_post_id) {
-		if (!isset($product->bestanden)) {
+	protected static function handle_boek_files( $product, $boek_post_id ) {
+		if ( ! isset( $product->bestanden ) ) {
 			return;
 		}
 		// needed for wordpress image related functions
-		if (!function_exists('wp_generate_attachment_metadata')) {
-			require_once(ABSPATH . 'wp-admin/includes/image.php');
+		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+			require_once( ABSPATH . 'wp-admin/includes/image.php' );
 		}
 
-		foreach ($product->bestanden as $bestand) {
-			$hash = md5($bestand->url);
-			$attachment_id = self::find_field('attachment', 'hash', $hash);
+		foreach ( $product->bestanden as $bestand ) {
+			$hash          = md5( $bestand->url );
+			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
 
-			if (self::$options['overwrite_images'] === '1' && !is_null($attachment_id)) {
-				wp_delete_attachment($attachment_id, true);
+			if ( self::$options['overwrite_images'] === '1' && ! is_null( $attachment_id ) ) {
+				wp_delete_attachment( $attachment_id, true );
 				$attachment_id = null;
 			}
 
-			if (is_null($attachment_id)) {
-				$response = wp_safe_remote_get($bestand->url);
-				if (is_wp_error($response)) {
-					error_log('Error fetching file: ' . $bestand->url);
+			if ( is_null( $attachment_id ) ) {
+				$response = wp_safe_remote_get( $bestand->url );
+				if ( is_wp_error( $response ) ) {
+					error_log( 'Error fetching file: ' . $bestand->url );
 					continue;
 				}
 
-				$type = $bestand->type;
-				$bestandsnaam = sanitize_file_name($bestand->bestandsnaam);
-				$file = wp_upload_bits($bestandsnaam, null, wp_remote_retrieve_body($response));
+				$type         = $bestand->type;
+				$bestandsnaam = sanitize_file_name( $bestand->bestandsnaam );
+				$file         = wp_upload_bits( $bestandsnaam, null, wp_remote_retrieve_body( $response ) );
 
-				if ($file['error']) {
-					error_log('Error saving file to disk: ' . $file['error']);
+				if ( $file['error'] ) {
+					error_log( 'Error saving file to disk: ' . $file['error'] );
 					continue;
 				}
 
 				$attachment = [
-					'post_title' => $bestand->soort,
+					'post_title'     => $bestand->soort,
 					'post_mime_type' => $type
 				];
 
-				$attachment_id = wp_insert_attachment($attachment, $file['file'], $boek_post_id);
-				if (!is_wp_error($attachment_id)) {
-					$wp_upload_dir = wp_upload_dir();
+				$attachment_id = wp_insert_attachment( $attachment, $file['file'], $boek_post_id );
+				if ( ! is_wp_error( $attachment_id ) ) {
+					$wp_upload_dir   = wp_upload_dir();
 					$attachment_data = wp_generate_attachment_metadata(
 						$attachment_id,
-						$wp_upload_dir['path'] . '/' . basename($file['file'])
+						$wp_upload_dir['path'] . '/' . basename( $file['file'] )
 					);
-					if($bestand->soort === 'Cover' || $bestand->soort === 'Back cover') {
+					if ( $bestand->soort === 'Cover' || $bestand->soort === 'Back cover' ) {
 						// check if sizes were generated
 						if ( ! isset( $attachment_data['sizes'] ) || ! is_array( $attachment_data['sizes'] ) || empty( $attachment_data['sizes'] ) ) {
-							error_log('Failed to generate image sizes for attachment ID: ' . $attachment_id);
+							error_log( 'Failed to generate image sizes for attachment ID: ' . $attachment_id );
 						}
 					}
 
-					wp_update_attachment_metadata($attachment_id, $attachment_data);
+					wp_update_attachment_metadata( $attachment_id, $attachment_data );
 				} else {
-					error_log('Error inserting attachment: ' . $attachment_id->get_error_message());
+					error_log( 'Error inserting attachment: ' . $attachment_id->get_error_message() );
 				}
 
 				update_post_meta( $attachment_id, 'hash', $hash );
@@ -671,68 +671,68 @@ class BoekDB_Import {
 	 * @param $betrokkene
 	 * @param $term_id
 	 */
-	protected static function handle_betrokkene_files($betrokkene, $term_id) {
-		if (!function_exists('wp_generate_attachment_metadata')) {
-			require_once(ABSPATH . 'wp-admin/includes/image.php');
+	protected static function handle_betrokkene_files( $betrokkene, $term_id ) {
+		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+			require_once( ABSPATH . 'wp-admin/includes/image.php' );
 		}
 
-		foreach ($betrokkene['bestanden'] as $bestand) {
-			if ($bestand->soort !== 'Auteursfoto') {
+		foreach ( $betrokkene['bestanden'] as $bestand ) {
+			if ( $bestand->soort !== 'Auteursfoto' ) {
 				continue;
 			}
 
-			$hash = md5($bestand->url);
-			$attachment_id = self::find_field('attachment', 'hash', $hash);
+			$hash          = md5( $bestand->url );
+			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
 
-			if (self::$options['overwrite_images'] === '1' && !is_null($attachment_id)) {
-				wp_delete_attachment($attachment_id, true);
+			if ( self::$options['overwrite_images'] === '1' && ! is_null( $attachment_id ) ) {
+				wp_delete_attachment( $attachment_id, true );
 				$attachment_id = null;
 			}
 
-			if (is_null($attachment_id)) {
-				$response = wp_safe_remote_get($bestand->url);
-				if (is_wp_error($response)) {
-					error_log('Error fetching file: ' . $bestand->url);
+			if ( is_null( $attachment_id ) ) {
+				$response = wp_safe_remote_get( $bestand->url );
+				if ( is_wp_error( $response ) ) {
+					error_log( 'Error fetching file: ' . $bestand->url );
 					continue;
 				}
 
-				$type = $bestand->type;
-				$bestandsnaam = sanitize_file_name($bestand->bestandsnaam);
-				$image = wp_upload_bits($bestandsnaam, null, wp_remote_retrieve_body($response));
+				$type         = $bestand->type;
+				$bestandsnaam = sanitize_file_name( $bestand->bestandsnaam );
+				$image        = wp_upload_bits( $bestandsnaam, null, wp_remote_retrieve_body( $response ) );
 
-				if ($image['error']) {
-					error_log('Error saving file to disk: ' . $image['error']);
+				if ( $image['error'] ) {
+					error_log( 'Error saving file to disk: ' . $image['error'] );
 					continue;
 				}
 
 				$attachment = [
-					'post_title' => 'Auteursfoto',
+					'post_title'     => 'Auteursfoto',
 					'post_mime_type' => $type
 				];
 
-				$attachment_id = wp_insert_attachment($attachment, $image['file']);
-				if (!is_wp_error($attachment_id)) {
-					$wp_upload_dir = wp_upload_dir();
+				$attachment_id = wp_insert_attachment( $attachment, $image['file'] );
+				if ( ! is_wp_error( $attachment_id ) ) {
+					$wp_upload_dir   = wp_upload_dir();
 					$attachment_data = wp_generate_attachment_metadata(
 						$attachment_id,
-						$wp_upload_dir['path'] . '/' . basename($image['file'])
+						$wp_upload_dir['path'] . '/' . basename( $image['file'] )
 					);
-					wp_update_attachment_metadata($attachment_id, $attachment_data);
+					wp_update_attachment_metadata( $attachment_id, $attachment_data );
 				} else {
-					error_log('Error inserting attachment: ' . $attachment_id->get_error_message());
+					error_log( 'Error inserting attachment: ' . $attachment_id->get_error_message() );
 					continue;
 				}
 
-				update_post_meta($attachment_id, 'hash', $hash);
-				update_term_meta($term_id, 'auteursfoto_id', $attachment_id);
-				if (isset($bestand->copyright)) {
-					update_term_meta($term_id, 'auteursfoto_copyright', $bestand->copyright);
+				update_post_meta( $attachment_id, 'hash', $hash );
+				update_term_meta( $term_id, 'auteursfoto_id', $attachment_id );
+				if ( isset( $bestand->copyright ) ) {
+					update_term_meta( $term_id, 'auteursfoto_copyright', $bestand->copyright );
 				}
 			} else {
 				// checks if attachment is already linked to this contributor
-				$existing_auteursfoto_id = get_term_meta($term_id, 'auteursfoto_id', true);
-				if ($existing_auteursfoto_id !== $attachment_id) {
-					update_term_meta($term_id, 'auteursfoto_id', $attachment_id);
+				$existing_auteursfoto_id = get_term_meta( $term_id, 'auteursfoto_id', true );
+				if ( $existing_auteursfoto_id !== $attachment_id ) {
+					update_term_meta( $term_id, 'auteursfoto_id', $attachment_id );
 				}
 			}
 		}
@@ -892,8 +892,9 @@ class BoekDB_Import {
 			// validate api key
 			if ( ! Boekdb_Api_Service::validate_api_key( $etalage->api_key ) ) {
 				// delete etalage
-				BoekDB_Cleanup::delete_etalage($etalage->id );
-				set_transient( 'boekdb_admin_notice', 'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.', 3600 );
+				BoekDB_Cleanup::delete_etalage( $etalage->id );
+				set_transient( 'boekdb_admin_notice',
+					'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.', 3600 );
 			}
 
 			self::update_running( 2, $etalage );

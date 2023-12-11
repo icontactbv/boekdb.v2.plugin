@@ -4,7 +4,7 @@
  *
  * @package BoekDB
  * @since   1.1.0
-*/
+ */
 
 defined( 'ABSPATH' ) || exit;
 
@@ -76,9 +76,9 @@ class Boekdb_Api_Service {
 	/**
 	 * Fetch products
 	 *
-	 * @param string $api_key API Key
-	 * @param string $last_import Last import date
-	 * @param int $offset Offset value
+	 * @param string  $api_key      API Key
+	 * @param string  $last_import  Last import date
+	 * @param int     $offset       Offset value
 	 *
 	 * @return array|bool List of products or false if failed
 	 */
@@ -111,7 +111,7 @@ class Boekdb_Api_Service {
 	/**
 	 * Fetch ISBNs
 	 *
-	 * @param string $api_key API Key
+	 * @param string  $api_key  API Key
 	 *
 	 * @return array|bool List of ISBNs or false if failed
 	 */
@@ -140,7 +140,7 @@ class Boekdb_Api_Service {
 	/**
 	 * Touch product
 	 *
-	 * @param int $post_id Post ID
+	 * @param int  $post_id  Post ID
 	 *
 	 * @return bool|string 'true' if successful or error message string if failed
 	 */
@@ -180,20 +180,20 @@ class Boekdb_Api_Service {
 	/**
 	 * Validate API Key
 	 *
-	 * @param string $api_key API Key
+	 * @param string  $api_key  API Key
 	 *
 	 * @return bool 'true' if valid 'false' if invalid
 	 */
-	public static function validate_api_key($api_key) {
+	public static function validate_api_key( $api_key ) {
 		// Make a request to any read-only endpoint
-		$response = wp_remote_get(self::BASE_URL, [
+		$response = wp_remote_get( self::BASE_URL, [
 			'headers' => [
 				'Authorization' => 'Bearer ' . $api_key,
 			],
-		]);
+		] );
 
 		// Check if the API key is invalid (Unauthorized)
-		if (is_wp_error($response) || wp_remote_retrieve_response_code($response) == 401) {
+		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) == 401 ) {
 			return false;
 		}
 

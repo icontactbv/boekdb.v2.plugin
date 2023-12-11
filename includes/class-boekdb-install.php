@@ -17,7 +17,7 @@ class BoekDB_Install {
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'check_version' ), 5 );
 		add_action( 'admin_notices', array( __CLASS__, 'display_update_notice' ) );
-		add_action( 'admin_notices', 'boekdb_admin_notice');
+		add_action( 'admin_notices', 'boekdb_admin_notice' );
 
 		// Schedule the version check event
 		if ( ! wp_next_scheduled( 'boekdb_version_check' ) ) {
@@ -139,12 +139,12 @@ class BoekDB_Install {
 
 	public static function boekdb_admin_notice() {
 		// If our transient isn't available, return early
-		if (false === ($message = get_transient('boekdb_admin_notice'))) {
+		if ( false === ( $message = get_transient( 'boekdb_admin_notice' ) ) ) {
 			return;
 		}
 
 		// delete the message transient
-		delete_transient('boekdb_admin_notice');
+		delete_transient( 'boekdb_admin_notice' );
 
 		// display the message
 		echo '<div class="notice notice-info is-dismissible">';

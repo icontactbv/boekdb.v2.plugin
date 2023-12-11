@@ -175,7 +175,7 @@ class Boekdb_Post_Types {
 	/**
 	 * Disable Gutenberg
 	 *
-	 * @param bool  $can_edit  Whether the post type can be edited or not.
+	 * @param bool    $can_edit   Whether the post type can be edited or not.
 	 * @param string  $post_type  The post type being checked.
 	 *
 	 * @return bool
@@ -238,38 +238,39 @@ Boekdb_Post_Types::init();
 /*
  * Add Touch Product button to Boek post type
  */
-add_filter('manage_boekdb_boek_posts_columns', 'add_touch_product_column');
+add_filter( 'manage_boekdb_boek_posts_columns', 'add_touch_product_column' );
 
-function add_touch_product_column($columns) {
+function add_touch_product_column( $columns ) {
 	$columns['touch_product'] = 'Touch Product';
+
 	return $columns;
 }
 
-add_action('manage_boekdb_boek_posts_custom_column', 'render_touch_product_column', 10, 2);
+add_action( 'manage_boekdb_boek_posts_custom_column', 'render_touch_product_column', 10, 2 );
 
-function render_touch_product_column($column, $post_id) {
-	if ('touch_product' === $column) {
+function render_touch_product_column( $column, $post_id ) {
+	if ( 'touch_product' === $column ) {
 		$url = add_query_arg(
 			[
 				'action' => 'touch_product',
-				'post' => $post_id,
-				'nonce' => wp_create_nonce('touch_product_'.$post_id),
+				'post'   => $post_id,
+				'nonce'  => wp_create_nonce( 'touch_product_' . $post_id ),
 			],
-			admin_url('edit.php')
+			admin_url( 'edit.php' )
 		);
-		echo '<a href="'.$url.'" class="button">Touch Product</a>';
+		echo '<a href="' . $url . '" class="button">Touch Product</a>';
 	}
 }
 
-add_action('admin_init', 'touch_product_action');
+add_action( 'admin_init', 'touch_product_action' );
 
 function touch_product_action() {
-	if (isset($_GET['action'], $_GET['post'], $_GET['nonce'])
-	    && $_GET['action'] === 'touch_product'
-	    && wp_verify_nonce($_GET['nonce'], 'touch_product_'.$_GET['post'])
+	if ( isset( $_GET['action'], $_GET['post'], $_GET['nonce'] )
+	     && $_GET['action'] === 'touch_product'
+	     && wp_verify_nonce( $_GET['nonce'], 'touch_product_' . $_GET['post'] )
 	) {
 		$post_id = $_GET['post'];
-		if ( BoekDB_Api_Service::touch_product($post_id) ) {
+		if ( BoekDB_Api_Service::touch_product( $post_id ) ) {
 			// add a transient to store the admin message
 			set_transient( 'boekdb_admin_notice', "Product touch succesvol!", 5 );
 		} else {
@@ -278,7 +279,7 @@ function touch_product_action() {
 		}
 
 		// redirect to prevent refreshing the page from causing a double touch
-		wp_redirect(admin_url('edit.php?post_type=boekdb_boek'));
+		wp_redirect( admin_url( 'edit.php?post_type=boekdb_boek' ) );
 		exit;
 	}
 }

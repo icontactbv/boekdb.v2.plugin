@@ -7,7 +7,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-
 final class BoekDB {
 	/**
 	 * The single instance of the class.
@@ -35,7 +34,7 @@ final class BoekDB {
 	/**
 	 * Define constant if not already set.
 	 *
-	 * @param string  $name  Constant name.
+	 * @param string       $name   Constant name.
 	 * @param string|bool  $value  Constant value.
 	 */
 	private function define( $name, $value ) {
@@ -95,7 +94,7 @@ final class BoekDB {
 	/**
 	 * Fetch etalages
 	 *
-	 * @param bool $readytorun A flag to check readiness.
+	 * @param bool  $readytorun  A flag to check readiness.
 	 *
 	 * @return array An array of etalages.
 	 */

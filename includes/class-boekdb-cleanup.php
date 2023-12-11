@@ -11,7 +11,7 @@ defined( 'ABSPATH' ) || exit;
  * BoekDB_Import Class.
  */
 class BoekDB_Cleanup {
-	const CLEANUP_HOOK      = 'boekdb_cleanup';
+	const CLEANUP_HOOK = 'boekdb_cleanup';
 
 	public static function init() {
 		add_action( self::CLEANUP_HOOK, array( self::class, 'cleanup' ) );
@@ -19,7 +19,6 @@ class BoekDB_Cleanup {
 		if ( ! wp_next_scheduled( self::CLEANUP_HOOK ) ) {
 			wp_schedule_event( time(), 'daily', self::CLEANUP_HOOK );
 		}
-
 	}
 
 	/**
@@ -65,10 +64,41 @@ class BoekDB_Cleanup {
 		}
 	}
 
-	public static function delete_etalage($id) {
+	public static function delete_posts( $post_ids ) {
+		global $wpdb;
+
+		add_action( 'before_delete_post', function ( $id ) {
+			$attachments = get_attached_media( '', $id );
+			foreach ( $attachments as $attachment ) {
+				wp_delete_attachment( $attachment->ID, 'true' );
+			}
+			boekdb_debug( 'deleted attachments' );
+		} );
+
+		foreach ( $post_ids as $post_id ) {
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d", $post_id ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d",
+				$post_id ) );
+			wp_delete_post( $post_id, true );
+			wp_delete_object_term_relationships( $post_id, array(
+				'boekdb_serie_tax',
+				'boekdb_auteur_tax',
+				'boekdb_illustrator_tax',
+				'boekdb_spreker_tax',
+				'boekdb_nur_tax',
+				'boekdb_bisac_tax',
+				'boekdb_thema_tax',
+			) );
+
+			boekdb_debug( 'deleted post ' . $post_id );
+		}
+	}
+
+	public static function delete_etalage( $id ) {
 		global $wpdb;
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id ) );
-		$result   = $wpdb->get_results( $wpdb->prepare( "SELECT eb.boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken eb WHERE eb.etalage_id = %d", $id ) );
+		$result   = $wpdb->get_results( $wpdb->prepare( "SELECT eb.boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken eb WHERE eb.etalage_id = %d",
+			$id ) );
 		$post_ids = array();
 		foreach ( $result as $boek ) {
 			$post_ids[] = (int) $boek->boek_id;
@@ -143,11 +173,11 @@ class BoekDB_Cleanup {
 	private static function collect_term_ids_for_cleanup() {
 		global $wpdb;
 		// Identify all the taxonomies attached to 'boekdb_boek' post type
-		$relevant_taxonomies = get_object_taxonomies('boekdb_boek');
-		$term_ids = array();
+		$relevant_taxonomies = get_object_taxonomies( 'boekdb_boek' );
+		$term_ids            = array();
 
 		// For each taxonomy, identify terms which aren't associated with any 'boekdb_boek' post.
-		foreach ($relevant_taxonomies as $taxonomy) {
+		foreach ( $relevant_taxonomies as $taxonomy ) {
 			$query = "
         SELECT term_id, taxonomy
         FROM {$wpdb->prefix}term_taxonomy
@@ -159,11 +189,11 @@ class BoekDB_Cleanup {
             WHERE tr.term_taxonomy_id=term_taxonomy_id AND p.post_type = 'boekdb_boek'
         )";
 
-			$results = $wpdb->get_results($query, ARRAY_A);
+			$results = $wpdb->get_results( $query, ARRAY_A );
 
 			// Generate the $term_ids array where keys are term_id and values are taxonomy
-			foreach ($results as $result) {
-				$term_ids[$result['term_id']] = $result['taxonomy'];
+			foreach ( $results as $result ) {
+				$term_ids[ $result['term_id'] ] = $result['taxonomy'];
 			}
 		}
 
@@ -175,7 +205,7 @@ class BoekDB_Cleanup {
 
 		foreach ( $term_ids as $term_id => $taxonomy ) {
 			$args  = array(
-				'posts_per_page' => -1,
+				'posts_per_page' => - 1,
 				'post_type'      => 'boekdb_boek',
 				'tax_query'      => array(
 					array(
@@ -202,7 +232,7 @@ class BoekDB_Cleanup {
 						delete_term_meta( $term_id, 'auteursfoto_copyright' );
 						// delete attachment
 						wp_delete_attachment( $auteursfoto_id, true );
-						boekdb_debug( 'deleted auteursfoto_id and auteursfoto_copyright for term ' . $term_id);
+						boekdb_debug( 'deleted auteursfoto_id and auteursfoto_copyright for term ' . $term_id );
 					}
 				}
 
@@ -215,7 +245,7 @@ class BoekDB_Cleanup {
 						delete_term_meta( $term_id, 'seriebeeld_id' );
 						// delete attachment
 						wp_delete_attachment( $boekdb_seriebeeld_id, true );
-						boekdb_debug( 'deleted seriebeeld_id for term ' . $term_id);
+						boekdb_debug( 'deleted seriebeeld_id for term ' . $term_id );
 					}
 				}
 
@@ -249,36 +279,6 @@ class BoekDB_Cleanup {
 		}
 
 		return ( $a < $b ) ? - 1 : 1;
-	}
-
-	public static function delete_posts( $post_ids ) {
-		global $wpdb;
-
-		add_action( 'before_delete_post', function ( $id ) {
-			$attachments = get_attached_media( '', $id );
-			foreach ( $attachments as $attachment ) {
-				wp_delete_attachment( $attachment->ID, 'true' );
-			}
-			boekdb_debug( 'deleted attachments' );
-		} );
-
-		foreach ( $post_ids as $post_id ) {
-			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d", $post_id ) );
-			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d",
-				$post_id ) );
-			wp_delete_post( $post_id, true );
-			wp_delete_object_term_relationships( $post_id, array(
-				'boekdb_serie_tax',
-				'boekdb_auteur_tax',
-				'boekdb_illustrator_tax',
-				'boekdb_spreker_tax',
-				'boekdb_nur_tax',
-				'boekdb_bisac_tax',
-				'boekdb_thema_tax',
-			) );
-
-			boekdb_debug( 'deleted post ' . $post_id );
-		}
 	}
 
 }
