@@ -17,7 +17,7 @@ class BoekDB_Install {
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'check_version' ), 5 );
 		add_action( 'admin_notices', array( __CLASS__, 'display_update_notice' ) );
-		add_action( 'admin_notices', 'boekdb_admin_notice' );
+		add_action( 'admin_notices', array( __CLASS__, 'boekdb_admin_notice' ) );
 
 		// Schedule the version check event
 		if ( ! wp_next_scheduled( 'boekdb_version_check' ) ) {
