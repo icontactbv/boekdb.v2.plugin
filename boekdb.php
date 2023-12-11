@@ -15,11 +15,6 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'BOEKDB_PLUGIN_FILE' ) ) {
-	/**
-	 * The file path to the main plugin file.
-	 *
-	 * @var string BOEKDB_PLUGIN_FILE
-	 */
 	define( 'BOEKDB_PLUGIN_FILE', __FILE__ );
 }
 if ( ! defined( 'BOEKDB_ABSPATH' ) ) {
