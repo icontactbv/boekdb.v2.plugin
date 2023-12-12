@@ -188,11 +188,10 @@ class Boekdb_Api_Service {
 		boekdb_debug( 'Validating API key: ' . $api_key );
 
 		// Make a request to any read-only endpoint
-		$response = wp_remote_get( self::BASE_URL, [
+		$response = wp_remote_get( self::BASE_URL . 'validate', [
 			'headers' => [
 				'Authorization' => 'Bearer ' . $api_key,
 			],
-			'redirection' => 0,
 		] );
 
 		boekdb_debug($response);
