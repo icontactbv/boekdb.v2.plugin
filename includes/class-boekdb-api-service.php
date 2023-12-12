@@ -185,6 +185,11 @@ class Boekdb_Api_Service {
 	 * @return bool 'true' if valid 'false' if invalid
 	 */
 	public static function validate_api_key( $api_key ) {
+		// Test the connection first
+		if ( ! self::check_connection_and_version() ) {
+			return false;
+		}
+
 		// Make a request to any read-only endpoint
 		$response = wp_remote_get( self::BASE_URL . 'validate', [
 			'headers' => [
