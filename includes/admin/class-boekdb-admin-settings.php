@@ -69,7 +69,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			}
 		}
 
-		private static function test_api_connection() {
+		private static function test_connection() {
 			$testResponse = Boekdb_Api_Service::test_api_connection();
 			if(!$testResponse['success']) {
 				self::add_error($testResponse['message']);
