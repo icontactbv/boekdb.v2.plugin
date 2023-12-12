@@ -15,7 +15,7 @@
 </table>
 
 <p class="submit">
-	<input type="submit" name="save" class="button-primary boekdb-save-button" value="<?php esc_attr_e('Toevoegen', 'boekdb'); ?>" />
+	<input type="submit" class="button-primary boekdb-save-button" name="save" value="<?php esc_attr_e('Toevoegen', 'boekdb'); ?>" />
 </p>
 
 <hr/>

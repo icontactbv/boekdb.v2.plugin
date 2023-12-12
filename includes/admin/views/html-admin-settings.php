@@ -49,9 +49,14 @@ if ( ! defined( 'ABSPATH' ) ) {
             </tbody>
         </table>
 
-        <?php include 'html-admin-etalage-form.php'; // includes the new etalage form ?>
+        <p class="submit">
+		    <?php submit_button( esc_html__('Test verbinding met BoekDB', 'boekdb'), 'primary', 'test', false); ?>
+		    <?php submit_button( esc_html__('Draai import', 'boekdb'), 'primary', 'run', false, $disabled); ?>
+		    <?php submit_button( esc_html__('Oude data opruimen', 'boekdb'), 'primary', 'cleanup', false, $disabled); ?>
+		    <?php submit_button( esc_html__('Stop imports', 'boekdb'), 'primary', 'stop', false); ?>
+        </p>
 
-        <?php submit_button( esc_html__('Test verbinding met BoekDB', 'boekdb'), 'primary', 'test'); ?>
+	    <?php include 'html-admin-etalage-form.php'; // includes the new etalage form ?>
 
     </form>
 </div>
