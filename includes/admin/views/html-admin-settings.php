@@ -51,9 +51,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
         <p class="submit">
 		    <?php submit_button( esc_html__('Draai import', 'boekdb'), 'primary', 'run', false, $disabled); ?>
+		    <?php submit_button( esc_html__('Stop imports', 'boekdb'), $disabled !== '' ? 'primary' : 'secondary', 'stop', false); ?>
+		    <?php submit_button( esc_html__('Oude data opruimen', 'boekdb'), 'secondary', 'cleanup', false, $disabled); ?>
 		    <?php submit_button( esc_html__('Test verbinding met BoekDB', 'boekdb'), 'secondary', 'test', false); ?>
-		    <?php submit_button( esc_html__('Oude data opruimen', 'boekdb'), 'large', 'cleanup', false, $disabled); ?>
-		    <?php submit_button( esc_html__('Stop imports', 'boekdb'), 'small', 'stop', false); ?>
         </p>
     </form>
 
