@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <th class="manage-column"><?php esc_html_e('Offset', 'boekdb'); ?></th>
                 <th class="manage-column"><?php esc_html_e('Import actief', 'boekdb'); ?></th>
                 <th class="manage-column"><?php esc_html_e('API Key', 'boekdb'); ?></th>
-                <th class="manage-column"><?php esc_html_e('Laatste afgeronde import', 'boekdb'); ?></th>
+                <th class="manage-column"><?php esc_html_e('Laatste import', 'boekdb'); ?></th>
                 <th class="manage-column"><?php esc_html_e('Actie', 'boekdb'); ?></th>
             </tr>
             </thead>
