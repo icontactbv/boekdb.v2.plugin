@@ -16,8 +16,10 @@ class BoekDB_Install {
 	 */
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'check_version' ), 5 );
-		add_action( 'admin_notices', array( __CLASS__, 'display_update_notice' ) );
+		add_action( 'admin_notices', array( __CLASS__, 'boekdb_update_notice' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'boekdb_admin_notice' ) );
+		add_action( 'wp_ajax_dismiss_boekdb_update_notice', array(__CLASS__, 'dismiss_boekdb_update_notice' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_scripts' ) );
 
 		// Schedule the version check event
 		if ( ! wp_next_scheduled( 'boekdb_version_check' ) ) {
@@ -129,12 +131,18 @@ class BoekDB_Install {
 		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
 	}
 
-	public static function display_update_notice() {
+	public static function boekdb_update_notice() {
 		if ( get_option( 'boekdb_new_version_available', false ) ) {
 			echo '<div class="notice notice-warning is-dismissible">';
 			echo '<p><strong>BoekDB Plugin:</strong> Er is een nieuwe versie van de plugin beschikbaar. Installeer deze binnenkort.</p>';
 			echo '</div>';
 		}
+	}
+
+	public static function dismiss_boekdb_update_notice() {
+		check_ajax_referer( 'boekdb_dismiss_update_notice', 'nonce' );
+		update_option( 'boekdb_new_version_available', false );
+		wp_die();
 	}
 
 	public static function boekdb_admin_notice() {
@@ -150,6 +158,14 @@ class BoekDB_Install {
 		echo '<div class="notice notice-info is-dismissible">';
 		echo "<p>$message</p>";
 		echo '</div>';
+	}
+
+	public static function enqueue_scripts() {
+		wp_enqueue_script( 'boekdb-admin-scripts', plugins_url( 'assets/js/admin.js', BOEKDB_PLUGIN_FILE ), array( 'jquery' ), BoekDB()->version, true );
+		wp_localize_script( 'boekdb-admin-scripts', 'boekdb_admin', array(
+			'ajax_url' => admin_url( 'admin-ajax.php' ),
+			'nonce'    => wp_create_nonce( 'boekdb_dismiss_update_notice' ),
+		) );
 	}
 
 }
