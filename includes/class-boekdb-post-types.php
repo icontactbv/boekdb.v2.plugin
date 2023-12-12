@@ -12,7 +12,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Post types Class.
  */
-class Boekdb_Post_Types {
+class BoekDB_Post_Types {
 	/**
 	 * Hook in methods.
 	 */
@@ -255,7 +255,7 @@ class Boekdb_Post_Types {
 	}
 }
 
-Boekdb_Post_Types::init();
+BoekDB_Post_Types::init();
 
 /*
  * Add Touch Product button to Boek post type

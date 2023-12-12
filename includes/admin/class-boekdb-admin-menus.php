@@ -46,6 +46,15 @@ class BoekDB_Admin_Menus {
 		BoekDB_Admin_Settings::output();
 	}
 
+	/**
+	 * Saves the settings if on the settings page.
+	 *
+	 * This method checks if the user is on the settings page, specified by the 'page' query parameter, and
+	 * only saves the settings if the user is on that page. It uses the BoekDB_Admin_Settings class to handle the
+	 * actual saving of the settings.
+	 *
+	 * @return void
+	 */
 	public function save_settings() {
 		// We should only save on the settings page.
 		if ( ! is_admin() || ! isset( $_GET['page'] ) || 'boekdb-settings' !== $_GET['page'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended

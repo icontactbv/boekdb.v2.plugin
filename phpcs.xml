@@ -104,7 +104,7 @@
 		<properties>
 			<property name="text_domain" type="array">
 				<element value="my-textdomain"/>
-				<element value="library-textdomain"/>
+				<element value="boekdb"/>
 			</property>
 		</properties>
 	</rule>
@@ -112,7 +112,7 @@
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
 			<property name="prefixes" type="array">
-				<element value="my_prefix"/>
+				<element value="BoekDB"/>
 			</property>
 		</properties>
 	</rule>
