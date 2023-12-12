@@ -67,7 +67,7 @@ class Boekdb_Api_Service {
 		if ( $apiVersion && version_compare( $apiVersion, BoekDB()->version, '>' ) ) {
 			update_option( 'boekdb_new_version_available', true );
 		} else {
-			delete_option( 'boekdb_new_version_available' );
+			update_option( 'boekdb_new_version_available', false );
 		}
 
 		return true;
