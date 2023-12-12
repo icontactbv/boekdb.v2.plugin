@@ -42,6 +42,7 @@ final class BoekDB {
 		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-api-service.php';
 		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-import.php';
 		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-translations.php';
+		include_once BOEKDB_ABSPATH . 'includes/class-boekdb-cleanup.php';
 
 		include_once BOEKDB_ABSPATH . 'includes/admin/class-boekdb-admin-meta-boxes.php';
 		include_once BOEKDB_ABSPATH . 'includes/admin/class-boekdb-admin.php';
