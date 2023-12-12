@@ -255,32 +255,6 @@ class BoekDB_Cleanup {
 		}
 	}
 
-	private static function sort_books_by_productform( $a, $b ) {
-		$sort = array(
-			'Paper' => 1,
-			'Hardb' => 2,
-			'Luist' => 3,
-			'Ebook' => 4,
-			'xxxxx' => 99,
-		);
-		if ( isset( $sort[ $a ] ) ) {
-			$a = $sort[ $a ];
-		} else {
-			$a = 99;
-		}
-
-		if ( isset( $sort[ $b ] ) ) {
-			$b = $sort[ $b ];
-		} else {
-			$b = 99;
-		}
-		if ( $a == $b ) {
-			return 0;
-		}
-
-		return ( $a < $b ) ? - 1 : 1;
-	}
-
 }
 
 BoekDB_Import::init();
