@@ -21,7 +21,7 @@
     <td><small><?php echo esc_html( $etalage->api_key ); ?></small></td>
     <td><?php echo esc_html( $etalage->last_import ); ?></td>
     <td>
-        <input name="reset" class="button-primary boekdb-save-button" type="submit" value="<?php echo esc_attr($etalage->id); ?>" <?php echo $disabled; ?> />
-        <input name="delete" class="button-primary boekdb-save-button" type="submit" value="<?php echo esc_attr($etalage->id); ?>" <?php echo $disabled; ?> />
+        <button type="submit" name="reset" class="button-primary boekdb-save-button" value="<?php echo esc_attr($etalage->id); ?>" <?php echo $disabled; ?>><?php esc_html_e('Reset', 'boekdb'); ?></button>
+        <button type="submit" name="delete" class="button-primary boekdb-save-button" value="<?php echo esc_attr($etalage->id); ?>" <?php echo $disabled; ?>><?php esc_html_e('Verwijder', 'boekdb'); ?></button>
     </td>
 </tr>
