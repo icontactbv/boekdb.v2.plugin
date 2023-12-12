@@ -185,16 +185,12 @@ class Boekdb_Api_Service {
 	 * @return bool 'true' if valid 'false' if invalid
 	 */
 	public static function validate_api_key( $api_key ) {
-		boekdb_debug( 'Validating API key: ' . $api_key );
-
 		// Make a request to any read-only endpoint
 		$response = wp_remote_get( self::BASE_URL . 'validate', [
 			'headers' => [
 				'Authorization' => 'Bearer ' . $api_key,
 			],
 		] );
-
-		boekdb_debug($response);
 
 		// Check if the API key is invalid (Unauthorized)
 		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) == 401 ) {
