@@ -47,6 +47,9 @@ class BoekDB_Import {
 		$etalage = reset( $etalages );
 
 		$offset      = $etalage->offset;
+		if(is_null($etalage->last_import)) {
+			$etalage->last_import = self::DEFAULT_LAST_IMPORT;
+		}
 		$last_import = new DateTime( $etalage->last_import, wp_timezone() );
 		$last_import = $last_import->format( 'Y-m-d\TH:i:sP' );
 
