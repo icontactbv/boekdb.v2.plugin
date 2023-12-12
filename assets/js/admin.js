@@ -1,3 +1,9 @@
+/**
+ * BoekDB Admin JS
+ *
+ * @package BoekDB
+ */
+
 jQuery(document).ready(function($) {
     $(document).on( 'click', '.notice-dismiss', function() {
         $.ajax({

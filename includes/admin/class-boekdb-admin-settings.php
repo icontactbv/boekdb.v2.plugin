@@ -75,9 +75,6 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				}
 			} elseif ( isset( $_POST['run'] ) && 'run' === $_POST['run'] ) {
 				if ( ! boekdb_is_import_running() ) {
-					if ( isset( $_POST['overwrite_images'] ) && $_POST['overwrite_images'] === '1' ) {
-						boekdb_set_import_option( 'overwrite_images', true );
-					}
 					if(WP_DEBUG) {
 						BoekDB_Import::start_import();
 					} else {

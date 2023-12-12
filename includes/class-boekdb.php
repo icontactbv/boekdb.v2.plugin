@@ -75,6 +75,8 @@ final class BoekDB {
 	/**
 	 * Get the plugin url.
 	 *
+	 * Can be used by WordPress.
+	 *
 	 * @return string
 	 */
 	public function plugin_url() {

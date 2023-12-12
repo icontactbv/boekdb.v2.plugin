@@ -16,10 +16,6 @@ class BoekDB_Import {
 
 	const DEFAULT_LAST_IMPORT = "2015-01-01T01:00:00+01:00";
 
-	protected static $options = [
-		'overwrite_images' => 0,
-	];
-
 	/**
 	 * Hook in tabs.
 	 */
@@ -58,10 +54,6 @@ class BoekDB_Import {
 		if ( count( $products ) > 0 ) {
 			boekdb_debug( 'Fetched ' . $etalage->name . ' with offset ' . $offset );
 			boekdb_debug( 'Contains ' . count( $products ) . ' books' );
-
-			if ( self::$options['overwrite_images'] === '1' ) {
-				boekdb_debug( 'overwriting images' );
-			}
 
 			// set update running to 1 (processing)
 			self::update_running( 1, $etalage );
@@ -415,10 +407,6 @@ class BoekDB_Import {
 		$bestand       = $product->serie->beeld;
 		$hash          = md5( $bestand->url );
 		$attachment_id = self::find_field( 'attachment', 'hash', $hash );
-		if ( self::$options['overwrite_images'] === '1' && ! is_null( $attachment_id ) ) {
-			wp_delete_attachment( $attachment_id );
-			$attachment_id = null;
-		}
 
 		if ( is_null( $attachment_id ) ) {
 			$get          = wp_safe_remote_get( $bestand->url );
@@ -468,11 +456,6 @@ class BoekDB_Import {
 		foreach ( $product->bestanden as $bestand ) {
 			$hash          = md5( $bestand->url );
 			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
-
-			if ( self::$options['overwrite_images'] === '1' && ! is_null( $attachment_id ) ) {
-				wp_delete_attachment( $attachment_id, true );
-				$attachment_id = null;
-			}
 
 			if ( is_null( $attachment_id ) ) {
 				$response = wp_safe_remote_get( $bestand->url );
@@ -684,11 +667,6 @@ class BoekDB_Import {
 			$hash          = md5( $bestand->url );
 			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
 
-			if ( self::$options['overwrite_images'] === '1' && ! is_null( $attachment_id ) ) {
-				wp_delete_attachment( $attachment_id, true );
-				$attachment_id = null;
-			}
-
 			if ( is_null( $attachment_id ) ) {
 				$response = wp_safe_remote_get( $bestand->url );
 				if ( is_wp_error( $response ) ) {
@@ -872,9 +850,6 @@ class BoekDB_Import {
 
 	public static function start_import() {
 		set_time_limit( 0 );
-
-		// handle options
-		self::$options['overwrite_images'] = get_transient( 'boekdb_import_options_overwrite_images' );
 
 		if ( boekdb_is_import_running() ) {
 			boekdb_debug( 'Import already running' );

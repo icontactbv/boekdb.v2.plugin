@@ -65,31 +65,6 @@ function boekdb_debug( $message ) {
 
 BoekDB();
 
-/**
- * Set import option
- *
- * @param $name
- * @param $value
- */
-function boekdb_set_import_option( $name, $value ) {
-	global $boekdb_import_options;
-	boekdb_debug( 'set import option ' . $name . ': ' . $value );
-	if ( in_array( $name, $boekdb_import_options ) ) {
-		set_transient( 'boekdb_import_options_' . $name, $value, MINUTE_IN_SECONDS * 10 );
-	}
-}
-
-/**
- * Unset import option
- */
-function boekdb_unset_import_options() {
-	global $boekdb_import_options;
-	boekdb_debug( 'Unsetting import options' );
-	foreach ( $boekdb_import_options as $option ) {
-		delete_transient( 'boekdb_import_options_' . $option );
-	}
-}
-
 function boekdb_is_import_running() {
 	global $wpdb;
 
@@ -102,16 +77,6 @@ function boekdb_is_import_running() {
 	boekdb_debug( 'Import is not running' );
 
 	return false;
-}
-
-/**
- * Resets the import running flag
- */
-function boekdb_reset_import_running() {
-	boekdb_debug( 'Resetting import running and etalage transients' );
-
-	delete_transient( 'boekdb_import_etalage' );
-	boekdb_unset_import_options();
 }
 
 /**
