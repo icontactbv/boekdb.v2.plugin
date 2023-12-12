@@ -897,6 +897,9 @@ class BoekDB_Import {
 		global $wpdb;
 
 		$isbns = Boekdb_Api_Service::fetch_isbns( $etalage->api_key );
+		if($isbns === false) {
+			return false;
+		}
 		BoekDB_Cleanup::trash_removed( $etalage->id, $isbns['isbns'] );
 
 		$wpdb->update(
