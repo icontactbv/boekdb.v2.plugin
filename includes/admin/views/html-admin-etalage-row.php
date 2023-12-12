@@ -1,3 +1,15 @@
+<?php
+/**
+ * Admin View: Etalage Row
+ *
+ * @package BoekDB
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+?>
 <tr>
     <td><?php echo esc_html( $etalage->name ); ?></td>
     <td><?php echo esc_html( $etalage->boeken ); ?></td>

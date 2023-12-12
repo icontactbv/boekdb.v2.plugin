@@ -55,8 +55,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		    <?php submit_button( esc_html__('Oude data opruimen', 'boekdb'), 'primary', 'cleanup', false, $disabled); ?>
 		    <?php submit_button( esc_html__('Stop imports', 'boekdb'), 'primary', 'stop', false); ?>
         </p>
-
-	    <?php include 'html-admin-etalage-form.php'; // includes the new etalage form ?>
-
     </form>
+
+    <?php include 'html-admin-etalage-form.php'; // includes the new etalage form ?>
+
+
 </div>
