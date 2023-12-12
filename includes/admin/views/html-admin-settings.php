@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         <?php wp_nonce_field( 'boekdb-settings', '_wpnonce', true ); ?>
 
         <!-- Main settings table -->
-        <table class="form-table wp-list-table widefat striped">
+        <table class="wp-list-table widefat fixed striped table-view-list">
             <thead>
             <tr>
                 <th class="manage-column"><?php esc_html_e('Naam', 'boekdb'); ?></th>
