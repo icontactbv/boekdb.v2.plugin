@@ -194,6 +194,8 @@ class Boekdb_Api_Service {
 			],
 		] );
 
+		var_dump($response);die();
+
 		// Check if the API key is invalid (Unauthorized)
 		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) == 401 ) {
 			boekdb_debug( 'Invalid API key: ' . $api_key );
