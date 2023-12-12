@@ -43,13 +43,13 @@ if ( ! defined( 'ABSPATH' ) ) {
                     $disabled = '';
                 }
 
-                include 'views/html-admin-etalage-row.php'; // includes the etalage row template
+                include 'html-admin-etalage-row.php'; // includes the etalage row template
 
             endforeach; ?>
             </tbody>
         </table>
 
-        <?php include 'views/html-admin-etalage-form.php'; // includes the new etalage form ?>
+        <?php include 'html-admin-etalage-form.php'; // includes the new etalage form ?>
 
         <?php submit_button( esc_html__('Test verbinding met BoekDB', 'boekdb'), 'primary', 'test'); ?>
 
