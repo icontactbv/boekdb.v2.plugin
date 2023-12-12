@@ -18,7 +18,7 @@ class BoekDB_Install {
 		add_action( 'init', array( __CLASS__, 'check_version' ), 5 );
 		add_action( 'admin_notices', array( __CLASS__, 'boekdb_update_notice' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'boekdb_admin_notice' ) );
-		add_action( 'wp_ajax_dismiss_boekdb_update_notice', array(__CLASS__, 'dismiss_boekdb_update_notice' ) );
+		add_action( 'wp_ajax_dismiss_boekdb_update_notice', array( __CLASS__, 'dismiss_boekdb_update_notice' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_scripts' ) );
 
 		// Schedule the version check event
@@ -66,7 +66,7 @@ class BoekDB_Install {
 
 		// If we made it till here nothing is running yet, lets set the transient now.
 		set_transient( 'boekdb_installing', 'yes', MINUTE_IN_SECONDS * 10 );
-		define( "BOEKDB_INSTALLING", true );
+		define( 'BOEKDB_INSTALLING', true );
 
 		self::update_boekdb_version();
 		self::register_tables();
@@ -87,9 +87,9 @@ class BoekDB_Install {
 		global $wpdb;
 
 		$charset_collate = $wpdb->get_charset_collate();
-		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-		//* Create the etalage table
+		// * Create the etalage table
 		$table_name = $wpdb->prefix . 'boekdb_etalages';
 		$sql        = "CREATE TABLE `$table_name` (
 			 `id` INTEGER NOT NULL AUTO_INCREMENT,
@@ -105,7 +105,7 @@ class BoekDB_Install {
 			 ) $charset_collate;";
 		dbDelta( $sql );
 
-		//* Create the etalage table
+		// * Create the etalage table
 		$table_name = $wpdb->prefix . 'boekdb_etalage_boeken';
 		$sql        = "CREATE TABLE `$table_name` (
 			 `etalage_id` INTEGER NOT NULL,
@@ -114,7 +114,7 @@ class BoekDB_Install {
 			 ) $charset_collate;";
 		dbDelta( $sql );
 
-		//* Create the isbn table
+		// * Create the isbn table
 		$table_name = $wpdb->prefix . 'boekdb_isbns';
 		$sql        = "CREATE TABLE `$table_name` (
 			 `boek_id` INTEGER NOT NULL,
@@ -162,12 +162,15 @@ class BoekDB_Install {
 
 	public static function enqueue_scripts() {
 		wp_enqueue_script( 'boekdb-admin-scripts', plugins_url( 'assets/js/admin.js', BOEKDB_PLUGIN_FILE ), array( 'jquery' ), BoekDB()->version, true );
-		wp_localize_script( 'boekdb-admin-scripts', 'boekdb_admin', array(
-			'ajax_url' => admin_url( 'admin-ajax.php' ),
-			'nonce'    => wp_create_nonce( 'boekdb_dismiss_update_notice' ),
-		) );
+		wp_localize_script(
+			'boekdb-admin-scripts',
+			'boekdb_admin',
+			array(
+				'ajax_url' => admin_url( 'admin-ajax.php' ),
+				'nonce'    => wp_create_nonce( 'boekdb_dismiss_update_notice' ),
+			)
+		);
 	}
-
 }
 
 BoekDB_Install::init();

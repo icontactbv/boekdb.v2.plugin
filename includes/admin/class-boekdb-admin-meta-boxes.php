@@ -42,7 +42,7 @@ class BoekDB_Admin_Meta_Boxes {
 	/**
 	 * Add an error message.
 	 *
-	 * @param string  $text  Error to add.
+	 * @param string $text  Error to add.
 	 */
 	public static function add_error( $text ) {
 		self::$meta_box_errors[] = $text;
@@ -60,11 +60,9 @@ class BoekDB_Admin_Meta_Boxes {
 			if ( strlen( trim( $boekdb_annotatie ) ) === 0 && $annotatie_overwritten === '1' ) {
 				update_post_meta( $post_id, 'boekdb_annotatie', $meta['boekdb_annotatie_org'][0] );
 				update_post_meta( $post_id, 'boekdb_annotatie_overwritten', '0' );
-			} else {
-				if ( $annotatie_overwritten === '1' || $meta['boekdb_annotatie'][0] !== $boekdb_annotatie ) {
+			} elseif ( $annotatie_overwritten === '1' || $meta['boekdb_annotatie'][0] !== $boekdb_annotatie ) {
 					update_post_meta( $post_id, 'boekdb_annotatie', $boekdb_annotatie );
 					update_post_meta( $post_id, 'boekdb_annotatie_overwritten', '1' );
-				}
 			}
 		}
 		if ( isset( $_POST['boekdb_flaptekst'] ) ) {
@@ -73,15 +71,13 @@ class BoekDB_Admin_Meta_Boxes {
 			if ( strlen( trim( $boekdb_flaptekst ) ) === 0 && $flaptekst_overwritten === '1' ) {
 				update_post_meta( $post_id, 'boekdb_flaptekst', trim( $meta['boekdb_flaptekst_org'][0] ) );
 				update_post_meta( $post_id, 'boekdb_flaptekst_overwritten', '0' );
-			} else {
-				if ( $flaptekst_overwritten === '1' || trim( $meta['boekdb_flaptekst'][0] ) !== $boekdb_flaptekst ) {
+			} elseif ( $flaptekst_overwritten === '1' || trim( $meta['boekdb_flaptekst'][0] ) !== $boekdb_flaptekst ) {
 					update_post_meta( $post_id, 'boekdb_flaptekst', $boekdb_flaptekst );
 					update_post_meta( $post_id, 'boekdb_flaptekst_overwritten', '1' );
-				}
 			}
 		}
 
-		if ( isset ( $_POST['quote'] ) && is_array( $_POST['quote'] ) ) {
+		if ( isset( $_POST['quote'] ) && is_array( $_POST['quote'] ) ) {
 			$quotes = get_post_meta( $post_id, 'boekdb_recensiequotes' )[0];
 			foreach ( $_POST['quote'] as $hash => $value ) {
 				if ( isset( $quotes[ $hash ] ) ) {
@@ -135,8 +131,12 @@ class BoekDB_Admin_Meta_Boxes {
 	 * Add Meta boxes.
 	 */
 	public function add_meta_boxes() {
-		add_meta_box( 'boek_fields', 'BoekDB velden',
-			array( __CLASS__, 'meta_boek_fields_html' ), 'boekdb_boek' );
+		add_meta_box(
+			'boek_fields',
+			'BoekDB velden',
+			array( __CLASS__, 'meta_boek_fields_html' ),
+			'boekdb_boek'
+		);
 	}
 
 	/**

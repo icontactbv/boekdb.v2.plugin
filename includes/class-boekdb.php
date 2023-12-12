@@ -90,17 +90,16 @@ final class BoekDB {
 	/**
 	 * Fetch etalages
 	 *
-	 * @param bool  $readytorun  A flag to check readiness.
+	 * @param bool $readytorun  A flag to check readiness.
 	 *
 	 * @return array An array of etalages.
 	 */
 	public static function fetch_etalages( $readytorun = false ) {
 		global $wpdb;
 		$query = $readytorun ? self::QUERY_READY_ETALAGES : self::QUERY_ALL_ETALAGES;
-		$query = str_replace('{:prefix}', $wpdb->prefix, $query);
+		$query = str_replace( '{:prefix}', $wpdb->prefix, $query );
 		boekdb_debug( $readytorun ? 'fetching ready to run etalages' : 'fetching all etalages' );
-		boekdb_debug( $query);
-		return $wpdb->get_results($query, OBJECT);
+		boekdb_debug( $query );
+		return $wpdb->get_results( $query, OBJECT );
 	}
-
 }

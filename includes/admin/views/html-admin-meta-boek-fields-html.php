@@ -57,7 +57,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 <?php endif; ?>
 
 <h4>Overige velden:</h4>
-<?php $skip = array(
+<?php
+$skip = array(
 	'flaptekst',
 	'annotatie',
 	'flaptekst_org',
@@ -66,12 +67,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 	'recensiequotes_org',
 	'file_voorbeeld_id',
 	'0',
-	'primair'
-); ?>
+	'primair',
+);
+?>
 <table class="widefat fixed">
 <?php foreach ( $meta as $name => $value ) : ?>
 	<?php if ( boekdb_startswith( $name, 'boekdb_' ) ) : ?>
-		<?php $name = substr( $name, 7 ); if ( in_array( $name, $skip ) ) continue; ?>
+		<?php
+		$name = substr( $name, 7 );
+		if ( in_array( $name, $skip ) ) {
+			continue;}
+		?>
 		<tr>
 			<th style="vertical-align: top; text-align: left;"><?php echo $name; ?></th>
 			<td><?php echo $value[0]; ?></td>

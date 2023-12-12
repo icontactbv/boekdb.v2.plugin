@@ -11,11 +11,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 ?>
 <tr>
-    <td><?php echo esc_html( $etalage->name ); ?></td>
-    <td><?php echo esc_html( $etalage->boeken ); ?></td>
-    <td><?php echo esc_html( $etalage->isbns ); ?></td>
-    <td><?php echo esc_html( $etalage->offset ); ?></td>
-    <td>
+	<td><?php echo esc_html( $etalage->name ); ?></td>
+	<td><?php echo esc_html( $etalage->boeken ); ?></td>
+	<td><?php echo esc_html( $etalage->isbns ); ?></td>
+	<td><?php echo esc_html( $etalage->offset ); ?></td>
+	<td>
 		<?php
 		switch ( $etalage->running ) {
 			case 0:
@@ -29,11 +29,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 				break;
 		}
 		?>
-    </td>
-    <td><small><?php echo esc_html( $etalage->api_key ); ?></small></td>
-    <td><?php echo esc_html( $etalage->last_import ); ?></td>
-    <td>
-        <button type="submit" name="reset" class="button-primary boekdb-save-button" value="<?php echo esc_attr($etalage->id); ?>" <?php echo $disabled; ?>><?php esc_html_e('Reset', 'boekdb'); ?></button>
-        <button type="submit" name="delete" class="button-primary boekdb-save-button" value="<?php echo esc_attr($etalage->id); ?>" <?php echo $disabled; ?>><?php esc_html_e('Verwijder', 'boekdb'); ?></button>
-    </td>
+	</td>
+	<td><small><?php echo esc_html( $etalage->api_key ); ?></small></td>
+	<td><?php echo esc_html( $etalage->last_import ); ?></td>
+	<td>
+		<button type="submit" name="reset" class="button-primary boekdb-save-button" value="<?php echo esc_attr( $etalage->id ); ?>" <?php echo $disabled; ?>><?php esc_html_e( 'Reset', 'boekdb' ); ?></button>
+		<button type="submit" name="delete" class="button-primary boekdb-save-button" value="<?php echo esc_attr( $etalage->id ); ?>" <?php echo $disabled; ?>><?php esc_html_e( 'Verwijder', 'boekdb' ); ?></button>
+	</td>
 </tr>

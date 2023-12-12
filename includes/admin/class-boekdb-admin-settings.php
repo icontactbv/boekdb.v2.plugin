@@ -40,59 +40,59 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 */
 		public static function save() {
 			// Using isset() checks for each button here
-			if (isset($_POST['save'])) {
+			if ( isset( $_POST['save'] ) ) {
 				self::save_etalage();
-			} elseif (isset($_POST['run'])) {
+			} elseif ( isset( $_POST['run'] ) ) {
 				self::run_import();
-			} elseif (isset($_POST['test'])) {
+			} elseif ( isset( $_POST['test'] ) ) {
 				self::test_connection();
-			} elseif (isset($_POST['stop'])) {
+			} elseif ( isset( $_POST['stop'] ) ) {
 				self::stop_import();
-			} elseif (isset($_POST['cleanup'])) {
+			} elseif ( isset( $_POST['cleanup'] ) ) {
 				self::start_cleanup();
-			} elseif (isset($_POST['reset'])) {
+			} elseif ( isset( $_POST['reset'] ) ) {
 				self::reset_etalage();
-			} elseif (isset($_POST['delete'])) {
+			} elseif ( isset( $_POST['delete'] ) ) {
 				self::delete_etalage();
 			}
 		}
 
 		private static function run_import() {
-			if (! boekdb_is_import_running()) {
-				if(WP_DEBUG) {
+			if ( ! boekdb_is_import_running() ) {
+				if ( WP_DEBUG ) {
 					BoekDB_Import::start_import();
 				} else {
-					wp_schedule_single_event(time() + 5, BoekDB_Import::START_IMPORT_HOOK);
+					wp_schedule_single_event( time() + 5, BoekDB_Import::START_IMPORT_HOOK );
 				}
 			} else {
-				self::add_error('Import draait al!');
+				self::add_error( 'Import draait al!' );
 			}
 		}
 
 		private static function test_connection() {
 			$testResponse = Boekdb_Api_Service::test_api_connection();
-			if(!$testResponse['success']) {
-				self::add_error($testResponse['message']);
+			if ( ! $testResponse['success'] ) {
+				self::add_error( $testResponse['message'] );
 			} else {
-				self::add_message($testResponse['message']);
+				self::add_message( $testResponse['message'] );
 			}
 		}
 
 		private static function stop_import() {
 			global $wpdb;
 
-			$wpdb->query("UPDATE {$wpdb->prefix}boekdb_etalages SET offset=0, running=0");
+			$wpdb->query( "UPDATE {$wpdb->prefix}boekdb_etalages SET offset=0, running=0" );
 		}
 
 		private static function save_etalage() {
 			global $wpdb;
 
-			$api_key = sanitize_text_field($_POST['etalage_api_key']);
-			$name    = sanitize_text_field($_POST['etalage_name']);
+			$api_key = sanitize_text_field( $_POST['etalage_api_key'] );
+			$name    = sanitize_text_field( $_POST['etalage_name'] );
 
 			if ( strlen( $api_key ) === 0 || strlen( $name ) === 0 ) {
 				self::add_error( 'Er is iets fout gegaan' );
-			} elseif(! Boekdb_Api_Service::validate_api_key( $api_key )) {
+			} elseif ( ! Boekdb_Api_Service::validate_api_key( $api_key ) ) {
 				self::add_error( 'API key is niet geldig' );
 			} else {
 				$wpdb->query(
@@ -107,20 +107,24 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		}
 
 		private static function start_cleanup() {
-			if(WP_DEBUG) {
+			if ( WP_DEBUG ) {
 				BoekDB_Cleanup::cleanup();
 			} else {
-				wp_schedule_single_event(time() + 5, BoekDB_Cleanup::CLEANUP_HOOK);
+				wp_schedule_single_event( time() + 5, BoekDB_Cleanup::CLEANUP_HOOK );
 			}
-			self::add_message('Opruimen gestart');
+			self::add_message( 'Opruimen gestart' );
 		}
 
 		private static function reset_etalage() {
 			global $wpdb;
 			$id = (int) $_POST['reset'];
 			if ( $id > 0 ) {
-				$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->prefix}boekdb_etalages SET last_import=null WHERE id = %d",
-					$id ) );
+				$wpdb->query(
+					$wpdb->prepare(
+						"UPDATE {$wpdb->prefix}boekdb_etalages SET last_import=null WHERE id = %d",
+						$id
+					)
+				);
 
 				self::add_message( 'Reset succesvol.' );
 			}
@@ -129,7 +133,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		private static function delete_etalage() {
 			$id = (int) $_POST['delete'];
 			if ( $id > 0 ) {
-				BoekDB_Cleanup::delete_etalage($id);
+				BoekDB_Cleanup::delete_etalage( $id );
 				set_transient( 'boekdb_admin_notice', 'Etalage is verwijderd.', 60 );
 			}
 		}
@@ -137,7 +141,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		/**
 		 * Add a message.
 		 *
-		 * @param string  $text  Message.
+		 * @param string $text  Message.
 		 */
 		public static function add_message( $text ) {
 			self::$messages[] = $text;
@@ -146,7 +150,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		/**
 		 * Add an error.
 		 *
-		 * @param string  $text  Message.
+		 * @param string $text  Message.
 		 */
 		public static function add_error( $text ) {
 			self::$errors[] = $text;
@@ -188,7 +192,6 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 
 			return $etalages;
 		}
-
 	}
 
 endif;

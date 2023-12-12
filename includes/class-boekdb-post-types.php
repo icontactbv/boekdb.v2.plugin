@@ -56,7 +56,10 @@ class Boekdb_Post_Types {
 			'singular_name' => 'Auteur',
 		);
 		$args['labels']  = $labels;
-		$args['rewrite'] = array( 'slug' => 'auteur', 'with_front' => true );
+		$args['rewrite'] = array(
+			'slug'       => 'auteur',
+			'with_front' => true,
+		);
 		register_taxonomy( 'boekdb_auteur_tax', array( 'boekdb_boek' ), $args );
 
 		$labels          = array(
@@ -64,7 +67,10 @@ class Boekdb_Post_Types {
 			'singular_name' => 'Illustrator',
 		);
 		$args['labels']  = $labels;
-		$args['rewrite'] = array( 'slug' => 'illustrator', 'with_front' => true );
+		$args['rewrite'] = array(
+			'slug'       => 'illustrator',
+			'with_front' => true,
+		);
 		register_taxonomy( 'boekdb_illustrator_tax', array( 'boekdb_boek' ), $args );
 
 		$labels          = array(
@@ -72,7 +78,10 @@ class Boekdb_Post_Types {
 			'singular_name' => 'Spreker',
 		);
 		$args['labels']  = $labels;
-		$args['rewrite'] = array( 'slug' => 'spreker', 'with_front' => true );
+		$args['rewrite'] = array(
+			'slug'       => 'spreker',
+			'with_front' => true,
+		);
 		register_taxonomy( 'boekdb_spreker_tax', array( 'boekdb_boek' ), $args );
 	}
 
@@ -92,7 +101,10 @@ class Boekdb_Post_Types {
 			'singular_name' => 'NUR',
 		);
 		$args['labels']  = $labels;
-		$args['rewrite'] = array( 'slug' => 'nur', 'with_front' => true );
+		$args['rewrite'] = array(
+			'slug'       => 'nur',
+			'with_front' => true,
+		);
 		register_taxonomy( 'boekdb_nur_tax', 'boekdb_boek', $args );
 
 		$labels          = array(
@@ -100,7 +112,10 @@ class Boekdb_Post_Types {
 			'singular_name' => 'BISAC',
 		);
 		$args['labels']  = $labels;
-		$args['rewrite'] = array( 'slug' => 'bisac', 'with_front' => true );
+		$args['rewrite'] = array(
+			'slug'       => 'bisac',
+			'with_front' => true,
+		);
 		register_taxonomy( 'boekdb_bisac_tax', 'boekdb_boek', $args );
 
 		$labels          = array(
@@ -108,7 +123,10 @@ class Boekdb_Post_Types {
 			'singular_name' => 'THEMA',
 		);
 		$args['labels']  = $labels;
-		$args['rewrite'] = array( 'slug' => 'thema', 'with_front' => true );
+		$args['rewrite'] = array(
+			'slug'       => 'thema',
+			'with_front' => true,
+		);
 		register_taxonomy( 'boekdb_thema_tax', 'boekdb_boek', $args );
 	}
 
@@ -116,7 +134,10 @@ class Boekdb_Post_Types {
 		$args = array(
 			'hierarchical'      => false,
 			'public'            => true,
-			'rewrite'           => array( 'slug' => 'series', 'with_front' => true ),
+			'rewrite'           => array(
+				'slug'       => 'series',
+				'with_front' => true,
+			),
 			'query_var'         => false,
 			'show_ui'           => false,
 			'show_admin_column' => true,
@@ -125,7 +146,7 @@ class Boekdb_Post_Types {
 			'labels'            => array(
 				'name'          => 'Series',
 				'singular_name' => 'Serie',
-			)
+			),
 		);
 
 		register_taxonomy( 'boekdb_serie_tax', 'boekdb_boek', $args );
@@ -153,7 +174,8 @@ class Boekdb_Post_Types {
 		);
 
 		register_post_type(
-			'boekdb_boek', array(
+			'boekdb_boek',
+			array(
 				'labels'       => $labels,
 				'has_archive'  => true,
 				'public'       => true,
@@ -167,7 +189,7 @@ class Boekdb_Post_Types {
 				),
 				'map_meta_cap' => true,
 				'rewrite'      => array( 'slug' => 'boek' ),
-				'show_in_rest' => true
+				'show_in_rest' => true,
 			)
 		);
 	}
@@ -175,8 +197,8 @@ class Boekdb_Post_Types {
 	/**
 	 * Disable Gutenberg
 	 *
-	 * @param bool    $can_edit   Whether the post type can be edited or not.
-	 * @param string  $post_type  The post type being checked.
+	 * @param bool   $can_edit   Whether the post type can be edited or not.
+	 * @param string $post_type  The post type being checked.
 	 *
 	 * @return bool
 	 */
@@ -209,9 +231,10 @@ class Boekdb_Post_Types {
 
 		if ( is_search() ) {
 			$where = preg_replace(
-				"/\(\s*" . $wpdb->posts . ".post_title\s+LIKE\s*(\'[^\']+\')\s*\)/",
-				"(" . $wpdb->posts . ".post_title LIKE $1) OR (boekdb_metadata.meta_value LIKE $1 AND boekdb_metadata.meta_key LIKE 'boekdb_%')",
-				$where );
+				'/\(\s*' . $wpdb->posts . ".post_title\s+LIKE\s*(\'[^\']+\')\s*\)/",
+				'(' . $wpdb->posts . ".post_title LIKE $1) OR (boekdb_metadata.meta_value LIKE $1 AND boekdb_metadata.meta_key LIKE 'boekdb_%')",
+				$where
+			);
 		}
 
 		return $where;
@@ -225,12 +248,11 @@ class Boekdb_Post_Types {
 		global $wpdb;
 
 		if ( is_search() ) {
-			return "DISTINCT";
+			return 'DISTINCT';
 		}
 
 		return $where;
 	}
-
 }
 
 Boekdb_Post_Types::init();
@@ -251,11 +273,11 @@ add_action( 'manage_boekdb_boek_posts_custom_column', 'render_touch_product_colu
 function render_touch_product_column( $column, $post_id ) {
 	if ( 'touch_product' === $column ) {
 		$url = add_query_arg(
-			[
+			array(
 				'action' => 'touch_product',
 				'post'   => $post_id,
 				'nonce'  => wp_create_nonce( 'touch_product_' . $post_id ),
-			],
+			),
 			admin_url( 'edit.php' )
 		);
 		echo '<a href="' . $url . '" class="button">Touch Product</a>';
@@ -266,16 +288,16 @@ add_action( 'admin_init', 'touch_product_action' );
 
 function touch_product_action() {
 	if ( isset( $_GET['action'], $_GET['post'], $_GET['nonce'] )
-	     && $_GET['action'] === 'touch_product'
-	     && wp_verify_nonce( $_GET['nonce'], 'touch_product_' . $_GET['post'] )
+		&& $_GET['action'] === 'touch_product'
+		&& wp_verify_nonce( $_GET['nonce'], 'touch_product_' . $_GET['post'] )
 	) {
 		$post_id = $_GET['post'];
 		if ( BoekDB_Api_Service::touch_product( $post_id ) ) {
 			// add a transient to store the admin message
-			set_transient( 'boekdb_admin_notice', "Product touch succesvol!", 5 );
+			set_transient( 'boekdb_admin_notice', 'Product touch succesvol!', 5 );
 		} else {
 			// add a transient to store the error message
-			set_transient( 'boekdb_admin_notice', "Kon product touch niet uitvoeren!", 5 );
+			set_transient( 'boekdb_admin_notice', 'Kon product touch niet uitvoeren!', 5 );
 		}
 
 		// redirect to prevent refreshing the page from causing a double touch
@@ -283,5 +305,3 @@ function touch_product_action() {
 		exit;
 	}
 }
-
-

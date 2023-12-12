@@ -30,18 +30,19 @@ class BoekDB_Cleanup {
 	public static function trash_removed( $etalage_id, $isbns ) {
 		global $wpdb;
 
-		$prepared_query = $wpdb->prepare(
+		$prepared_query  = $wpdb->prepare(
 			"SELECT i.boek_id 
 					FROM {$wpdb->prefix}boekdb_isbns i
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON eb.boek_id = i.boek_id
 					    INNER JOIN {$wpdb->posts} p ON p.ID = i.boek_id
 					WHERE eb.etalage_id = %d",
-			$etalage_id );
-		$prepared_query .= " AND i.isbn NOT IN (";
+			$etalage_id
+		);
+		$prepared_query .= ' AND i.isbn NOT IN (';
 		foreach ( $isbns as $isbn ) {
 			$prepared_query .= $wpdb->prepare( '%s,', $isbn );
 		}
-		$prepared_query = substr( $prepared_query, 0, - 1 ) . ")";
+		$prepared_query = substr( $prepared_query, 0, - 1 ) . ')';
 		$result         = $wpdb->get_results( $prepared_query );
 
 		$post_ids = array();
@@ -51,14 +52,20 @@ class BoekDB_Cleanup {
 		// delete from link table
 		if ( count( $post_ids ) > 0 ) {
 			$wpdb->query(
-				$wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id = %d",
-					$etalage_id ) . " AND boek_id IN (" . implode( ',', $post_ids ) . ")"
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id = %d",
+					$etalage_id
+				) . ' AND boek_id IN (' . implode( ',', $post_ids ) . ')'
 			);
 			foreach ( $post_ids as $post_id ) {
-				$result = $wpdb->get_results( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d",
-					$post_id ) );
+				$result = $wpdb->get_results(
+					$wpdb->prepare(
+						"SELECT boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d",
+						$post_id
+					)
+				);
 				if ( ! is_wp_error( $result ) && count( $result ) === 0 ) {
-					self::delete_posts( [ $post_id ] );
+					self::delete_posts( array( $post_id ) );
 				}
 			}
 		}
@@ -67,28 +74,38 @@ class BoekDB_Cleanup {
 	public static function delete_posts( $post_ids ) {
 		global $wpdb;
 
-		add_action( 'before_delete_post', function ( $id ) {
-			$attachments = get_attached_media( '', $id );
-			foreach ( $attachments as $attachment ) {
-				wp_delete_attachment( $attachment->ID, 'true' );
+		add_action(
+			'before_delete_post',
+			function ( $id ) {
+				$attachments = get_attached_media( '', $id );
+				foreach ( $attachments as $attachment ) {
+					wp_delete_attachment( $attachment->ID, 'true' );
+				}
+				boekdb_debug( 'deleted attachments' );
 			}
-			boekdb_debug( 'deleted attachments' );
-		} );
+		);
 
 		foreach ( $post_ids as $post_id ) {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d", $post_id ) );
-			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d",
-				$post_id ) );
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d",
+					$post_id
+				)
+			);
 			wp_delete_post( $post_id, true );
-			wp_delete_object_term_relationships( $post_id, array(
-				'boekdb_serie_tax',
-				'boekdb_auteur_tax',
-				'boekdb_illustrator_tax',
-				'boekdb_spreker_tax',
-				'boekdb_nur_tax',
-				'boekdb_bisac_tax',
-				'boekdb_thema_tax',
-			) );
+			wp_delete_object_term_relationships(
+				$post_id,
+				array(
+					'boekdb_serie_tax',
+					'boekdb_auteur_tax',
+					'boekdb_illustrator_tax',
+					'boekdb_spreker_tax',
+					'boekdb_nur_tax',
+					'boekdb_bisac_tax',
+					'boekdb_thema_tax',
+				)
+			);
 
 			boekdb_debug( 'deleted post ' . $post_id );
 		}
@@ -97,8 +114,12 @@ class BoekDB_Cleanup {
 	public static function delete_etalage( $id ) {
 		global $wpdb;
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id ) );
-		$result   = $wpdb->get_results( $wpdb->prepare( "SELECT eb.boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken eb WHERE eb.etalage_id = %d",
-			$id ) );
+		$result   = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT eb.boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken eb WHERE eb.etalage_id = %d",
+				$id
+			)
+		);
 		$post_ids = array();
 		foreach ( $result as $boek ) {
 			$post_ids[] = (int) $boek->boek_id;
@@ -112,8 +133,13 @@ class BoekDB_Cleanup {
 		if ( $deleted_etalage > 0 ) {
 			// check if post is still related to etalage
 			foreach ( $post_ids as $key => $post_id ) {
-				$result = $wpdb->get_results( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id != %d AND boek_id = %d LIMIT 1",
-					$deleted_etalage, $post_id ) );
+				$result = $wpdb->get_results(
+					$wpdb->prepare(
+						"SELECT boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id != %d AND boek_id = %d LIMIT 1",
+						$deleted_etalage,
+						$post_id
+					)
+				);
 				if ( count( $result ) > 0 ) {
 					unset( $post_ids[ $key ] );
 				}
@@ -137,29 +163,45 @@ class BoekDB_Cleanup {
 		}
 		if ( count( $etalage_ids ) > 0 ) {
 			$placeholders = implode( ', ', array_fill( 0, count( $etalage_ids ), '%d' ) );
-			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id NOT IN ( $placeholders )",
-				$etalage_ids ) );
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id NOT IN ( $placeholders )",
+					$etalage_ids
+				)
+			);
 		} else {
 			$wpdb->query( "DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id IS NOT NULL" );
 		}
 
 		// cleanup boekdb_isbns
-		$post_ids = array_reduce( $wpdb->get_results( "SELECT ID FROM $wpdb->posts WHERE post_type = 'boekdb_boek'",
-			ARRAY_N ), 'array_merge', array() );
+		$post_ids = array_reduce(
+			$wpdb->get_results(
+				"SELECT ID FROM $wpdb->posts WHERE post_type = 'boekdb_boek'",
+				ARRAY_N
+			),
+			'array_merge',
+			array()
+		);
 		if ( count( $post_ids ) > 0 ) {
 			$placeholders = implode( ', ', array_fill( 0, count( $post_ids ), '%d' ) );
-			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id NOT IN ( $placeholders )",
-				$post_ids ) );
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id NOT IN ( $placeholders )",
+					$post_ids
+				)
+			);
 		} else {
 			$wpdb->query( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id IS NOT NULL" );
 		}
 
 		// cleanup boeken (check if they are not still related to an etalage)
-		$result   = $wpdb->get_results( "SELECT p.ID
+		$result   = $wpdb->get_results(
+			"SELECT p.ID
 					FROM $wpdb->posts p
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON eb.boek_id = p.ID
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalages et ON et.id = eb.etalage_id
-					WHERE p.post_type = 'boekdb_boek' GROUP BY p.ID HAVING COUNT(et.id) = 0" );
+					WHERE p.post_type = 'boekdb_boek' GROUP BY p.ID HAVING COUNT(et.id) = 0"
+		);
 		$post_ids = array();
 		foreach ( $result as $boek ) {
 			$post_ids[] = (int) $boek->ID;
@@ -211,9 +253,9 @@ class BoekDB_Cleanup {
 					array(
 						'taxonomy' => $taxonomy,
 						'field'    => 'term_id',
-						'terms'    => $term_id
-					)
-				)
+						'terms'    => $term_id,
+					),
+				),
 			);
 			$query = new WP_Query( $args );
 			if ( $query->post_count === 0 ) {
@@ -254,8 +296,6 @@ class BoekDB_Cleanup {
 			}
 		}
 	}
-
 }
 
 BoekDB_Import::init();
-

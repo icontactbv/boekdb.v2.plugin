@@ -14,7 +14,7 @@ class BoekDB_Import {
 	const START_IMPORT_HOOK = 'boekdb_start_import';
 	const IMPORT_HOOK       = 'boekdb_run_import';
 
-	const DEFAULT_LAST_IMPORT = "2015-01-01T01:00:00+01:00";
+	const DEFAULT_LAST_IMPORT = '2015-01-01T01:00:00+01:00';
 
 	/**
 	 * Hook in tabs.
@@ -46,8 +46,8 @@ class BoekDB_Import {
 		// do one etalage at a time!
 		$etalage = reset( $etalages );
 
-		$offset      = $etalage->offset;
-		if(is_null($etalage->last_import)) {
+		$offset = $etalage->offset;
+		if ( is_null( $etalage->last_import ) ) {
 			$etalage->last_import = self::DEFAULT_LAST_IMPORT;
 		}
 		$last_import = new DateTime( $etalage->last_import, wp_timezone() );
@@ -75,14 +75,23 @@ class BoekDB_Import {
 
 				foreach ( $product->onderwerpen as $onderwerp ) {
 					if ( $onderwerp->type === 'NUR' ) {
-						$nur[] = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ),
-							'nur', $onderwerp->waarde );
+						$nur[] = self::get_taxonomy_term_id(
+							sanitize_title( $onderwerp->code ),
+							'nur',
+							$onderwerp->waarde
+						);
 					} elseif ( $onderwerp->type === 'BISAC' ) {
-						$bisac[] = self::get_taxonomy_term_id( sanitize_title( $onderwerp->code ),
-							'bisac', $onderwerp->waarde );
+						$bisac[] = self::get_taxonomy_term_id(
+							sanitize_title( $onderwerp->code ),
+							'bisac',
+							$onderwerp->waarde
+						);
 					} elseif ( substr( $onderwerp->type, 0, 5 ) === 'Thema' ) {
-						$thema[] = self::get_taxonomy_term_id( sanitize_title( boekdb_thema_omschrijving( $onderwerp->code ) ),
-							'thema', boekdb_thema_omschrijving( $onderwerp->code ) );
+						$thema[] = self::get_taxonomy_term_id(
+							sanitize_title( boekdb_thema_omschrijving( $onderwerp->code ) ),
+							'thema',
+							boekdb_thema_omschrijving( $onderwerp->code )
+						);
 					}
 				}
 				wp_set_object_terms( $boek_post_id, $nur, 'boekdb_nur_tax' );
@@ -158,8 +167,12 @@ class BoekDB_Import {
 		global $wpdb;
 
 		$boek         = self::create_boek_array( $product );
-		$boek_post_id = $wpdb->get_col( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_isbns WHERE isbn = %s",
-			$boek['isbn'] ) );
+		$boek_post_id = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT boek_id FROM {$wpdb->prefix}boekdb_isbns WHERE isbn = %s",
+				$boek['isbn']
+			)
+		);
 
 		if ( count( $boek_post_id ) > 0 ) {
 			$array        = $boek_post_id;
@@ -278,67 +291,67 @@ class BoekDB_Import {
 		$boek['status']                 = $product->status;
 		$boek['leverbaarheid']          = $product->leverbaarheid;
 		$boek['biografie']              = $product->biografie;
-		$boek['actieprijzen']           = [];
-		$boek['links']                  = [];
-		$boek['literaireprijzen']       = [];
-		$boek['recensiequotes']         = [];
-		$boek['recensielinks']          = [];
+		$boek['actieprijzen']           = array();
+		$boek['links']                  = array();
+		$boek['literaireprijzen']       = array();
+		$boek['recensiequotes']         = array();
+		$boek['recensielinks']          = array();
 
 		// overschrijfbare velden
 		$boek['annotatie'] = $product->annotatie;
 		$boek['flaptekst'] = $product->flaptekst;
 
-		if ( isset ( $product->actieprijzen ) && ! is_null( $product->actieprijzen ) ) {
+		if ( isset( $product->actieprijzen ) && ! is_null( $product->actieprijzen ) ) {
 			foreach ( $product->actieprijzen as $actieprijs ) {
-				$boek['actieprijzen'][] = [
+				$boek['actieprijzen'][] = array(
 					'actieprijs'         => $actieprijs->actieprijs,
 					'actieperiode_start' => $actieprijs->actieperiode_start,
 					'actieperiode_einde' => $actieprijs->actieperiode_einde,
-				];
+				);
 			}
 		}
 
-		if ( isset ( $product->links ) && ! is_null( $product->links ) ) {
+		if ( isset( $product->links ) && ! is_null( $product->links ) ) {
 			foreach ( $product->links as $link ) {
-				$boek['links'][] = [
+				$boek['links'][] = array(
 					'soort' => strtolower( $link->soort ),
 					'url'   => $link->url,
-				];
+				);
 			}
 		}
 
-		if ( isset ( $product->literaireprijzen ) && ! is_null( $product->literaireprijzen ) ) {
+		if ( isset( $product->literaireprijzen ) && ! is_null( $product->literaireprijzen ) ) {
 			foreach ( $product->literaireprijzen as $prijs ) {
-				$boek['literaireprijzen'][] = [
+				$boek['literaireprijzen'][] = array(
 					'prestatie'    => $prijs->prestatie,
 					'naam'         => $prijs->naam,
 					'jaar'         => $prijs->jaar,
 					'land'         => $prijs->land,
 					'omschrijving' => $prijs->omschrijving,
-				];
+				);
 			}
 		}
 
 		if ( isset( $product->recensiequotes ) && ! is_null( $product->recensiequotes ) ) {
 			foreach ( $product->recensiequotes as $quote ) {
-				$boek['recensiequotes'][ md5( $quote->tekst ) ] = [
+				$boek['recensiequotes'][ md5( $quote->tekst ) ] = array(
 					'tekst'  => $quote->tekst,
 					'auteur' => $quote->auteur,
 					'bron'   => $quote->bron,
 					'datum'  => $quote->datum,
 					'tonen'  => true,
-				];
+				);
 			}
 		}
 
 		if ( isset( $product->recensielinks ) && ! is_null( $product->recensielinks ) ) {
 			foreach ( $product->recensielinks as $link ) {
-				$boek['recensielinks'][] = [
+				$boek['recensielinks'][] = array(
 					'soort' => strtolower( $link->type ),
 					'url'   => $link->url,
 					'bron'  => $link->bron,
 					'datum' => $link->datum,
-				];
+				);
 			}
 		}
 
@@ -352,9 +365,9 @@ class BoekDB_Import {
 			'meta_query'  => array(
 				array(
 					'key'   => $key,
-					'value' => $value
-				)
-			)
+					'value' => $value,
+				),
+			),
 		);
 		$query   = new \WP_Query( $args );
 		$post_id = null;
@@ -388,9 +401,13 @@ class BoekDB_Import {
 			$term   = $result[0];
 
 			add_term_meta( $term->term_id, 'boekdb_id', $product->serie->id, true );
-			wp_update_term( $term->term_id, 'boekdb_serie_tax', array(
-				'description' => $product->serie->omschrijving
-			) );
+			wp_update_term(
+				$term->term_id,
+				'boekdb_serie_tax',
+				array(
+					'description' => $product->serie->omschrijving,
+				)
+			);
 
 			self::handle_serie_files( $product, $term->term_id );
 		}
@@ -419,14 +436,15 @@ class BoekDB_Import {
 
 			$attachment = array(
 				'post_title'     => $bestand->soort,
-				'post_mime_type' => $type
+				'post_mime_type' => $type,
 			);
 
 			$attachment_id   = wp_insert_attachment( $attachment, $image['file'] );
 			$wp_upload_dir   = wp_upload_dir();
 			$attachment_data = wp_generate_attachment_metadata(
 				$attachment_id,
-				$wp_upload_dir['path'] . '/' . $bestandsnaam );
+				$wp_upload_dir['path'] . '/' . $bestandsnaam
+			);
 
 			wp_update_attachment_metadata( $attachment_id, $attachment_data );
 
@@ -451,9 +469,9 @@ class BoekDB_Import {
 		if ( ! isset( $product->bestanden ) ) {
 			return;
 		}
-		// needed for wordpress image related functions
+		// needed for WordPress image related functions
 		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-			require_once( ABSPATH . 'wp-admin/includes/image.php' );
+			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
 
 		foreach ( $product->bestanden as $bestand ) {
@@ -476,10 +494,10 @@ class BoekDB_Import {
 					continue;
 				}
 
-				$attachment = [
+				$attachment = array(
 					'post_title'     => $bestand->soort,
-					'post_mime_type' => $type
-				];
+					'post_mime_type' => $type,
+				);
 
 				$attachment_id = wp_insert_attachment( $attachment, $file['file'], $boek_post_id );
 				if ( ! is_wp_error( $attachment_id ) ) {
@@ -511,7 +529,7 @@ class BoekDB_Import {
 			} else {
 				$attachment = array(
 					'ID'          => $attachment_id,
-					'post_parent' => $boek_post_id
+					'post_parent' => $boek_post_id,
 				);
 				wp_update_post( $attachment );
 
@@ -610,8 +628,11 @@ class BoekDB_Import {
 	 * @return int|mixed
 	 */
 	protected static function handle_betrokkene( $betrokkene, $taxonomy ) {
-		$term = get_term_by( 'slug', sanitize_title( $betrokkene['naam'], $betrokkene['id'] ),
-			'boekdb_' . $taxonomy . '_tax' );
+		$term = get_term_by(
+			'slug',
+			sanitize_title( $betrokkene['naam'], $betrokkene['id'] ),
+			'boekdb_' . $taxonomy . '_tax'
+		);
 		if ( $term ) {
 			$term_id = $term->term_id;
 			wp_update_term(
@@ -620,7 +641,8 @@ class BoekDB_Import {
 				array(
 					'name' => $betrokkene['naam'],
 					'slug' => sanitize_title( $betrokkene['naam'], $betrokkene['id'] ),
-				) );
+				)
+			);
 		} else {
 			$result  = wp_insert_term(
 				$betrokkene['naam'],
@@ -628,7 +650,8 @@ class BoekDB_Import {
 				array(
 					'name' => $betrokkene['naam'],
 					'slug' => sanitize_title( $betrokkene['naam'], $betrokkene['id'] ),
-				) );
+				)
+			);
 			$term_id = $result['term_id'];
 		}
 
@@ -659,7 +682,7 @@ class BoekDB_Import {
 	 */
 	protected static function handle_betrokkene_files( $betrokkene, $term_id ) {
 		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
-			require_once( ABSPATH . 'wp-admin/includes/image.php' );
+			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
 
 		foreach ( $betrokkene['bestanden'] as $bestand ) {
@@ -686,10 +709,10 @@ class BoekDB_Import {
 					continue;
 				}
 
-				$attachment = [
+				$attachment = array(
 					'post_title'     => 'Auteursfoto',
-					'post_mime_type' => $type
-				];
+					'post_mime_type' => $type,
+				);
 
 				$attachment_id = wp_insert_attachment( $attachment, $image['file'] );
 				if ( ! is_wp_error( $attachment_id ) ) {
@@ -739,7 +762,8 @@ class BoekDB_Import {
 				array(
 					'name' => $value,
 					'slug' => $slug,
-				) );
+				)
+			);
 			$term_id = $result['term_id'];
 		}
 
@@ -749,14 +773,20 @@ class BoekDB_Import {
 	private static function link_product( $boek_id, $isbn, $etalage_id ) {
 		global $wpdb;
 
-		$wpdb->replace( $wpdb->prefix . 'boekdb_etalage_boeken', array(
-			'etalage_id' => $etalage_id,
-			'boek_id'    => $boek_id,
-		) );
-		$wpdb->replace( $wpdb->prefix . 'boekdb_isbns', array(
-			'isbn'    => $isbn,
-			'boek_id' => $boek_id,
-		) );
+		$wpdb->replace(
+			$wpdb->prefix . 'boekdb_etalage_boeken',
+			array(
+				'etalage_id' => $etalage_id,
+				'boek_id'    => $boek_id,
+			)
+		);
+		$wpdb->replace(
+			$wpdb->prefix . 'boekdb_isbns',
+			array(
+				'isbn'    => $isbn,
+				'boek_id' => $boek_id,
+			)
+		);
 	}
 
 	private static function check_primary_title( $post_id, $nstc, $slug ) {
@@ -770,17 +800,19 @@ class BoekDB_Import {
 		}
 
 		// get list of books by nstc
-		$query = new WP_Query( array(
-			'posts_per_page' => - 1,
-			'post_type'      => 'boekdb_boek',
-			'post_status'    => 'publish',
-			'meta_query'     => array(
-				array(
-					'key'   => 'boekdb_nstc',
-					'value' => $nstc,
-				)
+		$query = new WP_Query(
+			array(
+				'posts_per_page' => - 1,
+				'post_type'      => 'boekdb_boek',
+				'post_status'    => 'publish',
+				'meta_query'     => array(
+					array(
+						'key'   => 'boekdb_nstc',
+						'value' => $nstc,
+					),
+				),
 			)
-		) );
+		);
 
 		// get productform and secondary slug for each book
 		$books = array();
@@ -812,18 +844,22 @@ class BoekDB_Import {
 		$first_id = array_shift( $post_ids );
 		unset( $books[ $first_id ] );
 		update_post_meta( $first_id, 'boekdb_primair', 1 );
-		wp_update_post( array(
-			'post_name' => $slug,
-			'ID'        => $first_id,
-		) );
+		wp_update_post(
+			array(
+				'post_name' => $slug,
+				'ID'        => $first_id,
+			)
+		);
 
 		// disable primary bit on all other books and set slug to secondary
 		foreach ( $books as $book_id => $val ) {
 			update_post_meta( $book_id, 'boekdb_primair', 0 );
-			wp_update_post( array(
-				'post_name' => $slugs[ $book_id ],
-				'ID'        => $book_id,
-			) );
+			wp_update_post(
+				array(
+					'post_name' => $slugs[ $book_id ],
+					'ID'        => $book_id,
+				)
+			);
 		}
 	}
 
@@ -847,8 +883,11 @@ class BoekDB_Import {
 			$value = current_time( 'mysql', 1 );
 		}
 
-		return $wpdb->update( $wpdb->prefix . 'boekdb_etalages', array( 'last_import' => $value ),
-			array( 'id' => $id ) );
+		return $wpdb->update(
+			$wpdb->prefix . 'boekdb_etalages',
+			array( 'last_import' => $value ),
+			array( 'id' => $id )
+		);
 	}
 
 	public static function start_import() {
@@ -871,8 +910,11 @@ class BoekDB_Import {
 			if ( ! Boekdb_Api_Service::validate_api_key( $etalage->api_key ) ) {
 				// delete etalage
 				BoekDB_Cleanup::delete_etalage( $etalage->id );
-				set_transient( 'boekdb_admin_notice',
-					'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.', 3600 );
+				set_transient(
+					'boekdb_admin_notice',
+					'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.',
+					3600
+				);
 			}
 
 			self::update_running( 2, $etalage );
@@ -889,7 +931,7 @@ class BoekDB_Import {
 			}
 
 			// fire first import event
-			wp_schedule_single_event( time(), BoekDB_Import::IMPORT_HOOK );
+			wp_schedule_single_event( time(), self::IMPORT_HOOK );
 		}
 	}
 
@@ -897,7 +939,7 @@ class BoekDB_Import {
 		global $wpdb;
 
 		$isbns = Boekdb_Api_Service::fetch_isbns( $etalage->api_key );
-		if($isbns === false) {
+		if ( $isbns === false ) {
 			return false;
 		}
 		BoekDB_Cleanup::trash_removed( $etalage->id, $isbns['isbns'] );
@@ -956,4 +998,3 @@ class BoekDB_Import {
 }
 
 BoekDB_Import::init();
-
