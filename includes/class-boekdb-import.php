@@ -894,7 +894,7 @@ class BoekDB_Import {
 		global $wpdb;
 
 		$isbns = Boekdb_Api_Service::fetch_isbns( $etalage->api_key );
-		self::trash_removed( $etalage->id, $isbns['isbns'] );
+		BoekDB_Cleanup::trash_removed( $etalage->id, $isbns['isbns'] );
 
 		$wpdb->update(
 			$wpdb->prefix . 'boekdb_etalages',
@@ -920,49 +920,6 @@ class BoekDB_Import {
 
 		// no reset
 		return false;
-	}
-
-	/**
-	 * Delete posts and delete from custom table
-	 *
-	 * @param $etalage_id
-	 * @param $isbns
-	 */
-	public static function trash_removed( $etalage_id, $isbns ) {
-		global $wpdb;
-
-		$prepared_query = $wpdb->prepare(
-			"SELECT i.boek_id 
-					FROM {$wpdb->prefix}boekdb_isbns i
-					    LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON eb.boek_id = i.boek_id
-					    INNER JOIN {$wpdb->posts} p ON p.ID = i.boek_id
-					WHERE eb.etalage_id = %d",
-			$etalage_id );
-		$prepared_query .= " AND i.isbn NOT IN (";
-		foreach ( $isbns as $isbn ) {
-			$prepared_query .= $wpdb->prepare( '%s,', $isbn );
-		}
-		$prepared_query = substr( $prepared_query, 0, - 1 ) . ")";
-		$result         = $wpdb->get_results( $prepared_query );
-
-		$post_ids = array();
-		foreach ( $result as $boek ) {
-			$post_ids[] = (int) $boek->boek_id;
-		}
-		// delete from link table
-		if ( count( $post_ids ) > 0 ) {
-			$wpdb->query(
-				$wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id = %d",
-					$etalage_id ) . " AND boek_id IN (" . implode( ',', $post_ids ) . ")"
-			);
-			foreach ( $post_ids as $post_id ) {
-				$result = $wpdb->get_results( $wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d",
-					$post_id ) );
-				if ( ! is_wp_error( $result ) && count( $result ) === 0 ) {
-					BoekDB_Cleanup::delete_posts( [ $post_id ] );
-				}
-			}
-		}
 	}
 
 	private static function sort_books_by_productform( $a, $b ) {
