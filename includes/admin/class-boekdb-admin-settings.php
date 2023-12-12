@@ -36,83 +36,101 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		private static $messages = array();
 
 		/**
-		 * Include the settings page classes.
-		 */
-		public static function get_settings_pages() {
-			if ( empty( self::$settings ) ) {
-				$settings = array();
-
-				include_once dirname( __DIR__ ) . '/settings/class-boekdb-settings-page.php';
-				self::$settings = apply_filters( 'boekdb_get_settings_pages', $settings );
-			}
-
-			return self::$settings;
-		}
-
-		/**
 		 * Save the settings.
 		 */
 		public static function save() {
+			// Using isset() checks for each button here
+			if (isset($_POST['save'])) {
+				self::save_etalage();
+			} elseif (isset($_POST['run'])) {
+				self::run_import();
+			} elseif (isset($_POST['test'])) {
+				self::test_connection();
+			} elseif (isset($_POST['stop'])) {
+				self::stop_import();
+			} elseif (isset($_POST['cleanup'])) {
+				self::start_cleanup();
+			} elseif (isset($_POST['reset'])) {
+				self::reset_etalage();
+			} elseif (isset($_POST['delete'])) {
+				self::delete_etalage();
+			}
+		}
+
+		private static function run_import() {
+			if (! boekdb_is_import_running()) {
+				if(WP_DEBUG) {
+					BoekDB_Import::start_import();
+				} else {
+					wp_schedule_single_event(time() + 5, BoekDB_Import::START_IMPORT_HOOK);
+				}
+			} else {
+				self::add_error('Import draait al!');
+			}
+		}
+
+		private static function test_api_connection() {
+			$testResponse = Boekdb_Api_Service::test_api_connection();
+			if(!$testResponse['success']) {
+				self::add_error($testResponse['message']);
+			} else {
+				self::add_message($testResponse['message']);
+			}
+		}
+
+		private static function stop_import() {
 			global $wpdb;
 
-			if ( isset( $_POST['save'] ) && 'save' === $_POST['save'] ) {
-				$api_key = $_POST['etalage_api_key'];
-				$name    = $_POST['etalage_name'];
+			$wpdb->query("UPDATE {$wpdb->prefix}boekdb_etalages SET offset=0, running=0");
+		}
 
-				if ( strlen( $api_key ) === 0 || strlen( $name ) === 0 ) {
-					self::add_error( 'Er is iets fout gegaan' );
-				} elseif(! Boekdb_Api_Service::validate_api_key( $api_key )) {
-					self::add_error( 'API key is niet geldig' );
-				} else {
-					$wpdb->query(
-						$wpdb->prepare(
-							"INSERT INTO {$wpdb->prefix}boekdb_etalages (`name`, `api_key`) VALUES (%s, %s)",
-							$name,
-							$api_key
-						)
-					);
-					self::add_message( 'Etalage opgeslagen.' );
-				}
-			} elseif ( isset( $_POST['run'] ) && 'run' === $_POST['run'] ) {
-				if ( ! boekdb_is_import_running() ) {
-					if(WP_DEBUG) {
-						BoekDB_Import::start_import();
-					} else {
-						wp_schedule_single_event( time() + 5, BoekDB_Import::START_IMPORT_HOOK );
-					}
-				} else {
-					self::add_error( 'Import draait al!' );
-				}
-			} elseif ( isset ( $_POST['test'] ) && 'test' === $_POST['test'] ) {
-				$testResponse = Boekdb_Api_Service::test_api_connection();
-				if(!$testResponse['success']) {
-					self::add_error($testResponse['message']);
-				} else {
-					self::add_message($testResponse['message']);
-				}
-			} elseif ( isset ( $_POST['stop'] ) && 'stop' === $_POST['stop'] ) {
-				$wpdb->query("UPDATE {$wpdb->prefix}boekdb_etalages SET offset=0, running=0");
-			} elseif ( isset($_POST['cleanup']) && 'cleanup' === $_POST['cleanup']) {
-				if(WP_DEBUG) {
-					BoekDB_Cleanup::cleanup();
-				} else {
-					wp_schedule_single_event( time() + 5, BoekDB_Cleanup::CLEANUP_HOOK );
-				}
-				self::add_message('Opruimen gestart');
-			} elseif ( isset ( $_POST['reset'] ) ) {
-				$id = (int) $_POST['reset'];
-				if ( $id > 0 ) {
-					$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->prefix}boekdb_etalages SET last_import=null WHERE id = %d",
-						$id ) );
+		private static function save_etalage() {
+			global $wpdb;
 
-					self::add_message( 'Reset succesvol.' );
-				}
-			} elseif ( isset ( $_POST['delete'] ) ) {
-				$id = (int) $_POST['delete'];
-				if ( $id > 0 ) {
-					BoekDB_Cleanup::delete_etalage($id);
-					set_transient( 'boekdb_admin_notice', 'Etalage is verwijderd omdat de API-sleutel ongeldig was.', 60 );
-				}
+			$api_key = sanitize_text_field($_POST['etalage_api_key']);
+			$name    = sanitize_text_field($_POST['etalage_name']);
+
+			if ( strlen( $api_key ) === 0 || strlen( $name ) === 0 ) {
+				self::add_error( 'Er is iets fout gegaan' );
+			} elseif(! Boekdb_Api_Service::validate_api_key( $api_key )) {
+				self::add_error( 'API key is niet geldig' );
+			} else {
+				$wpdb->query(
+					$wpdb->prepare(
+						"INSERT INTO {$wpdb->prefix}boekdb_etalages (`name`, `api_key`) VALUES (%s, %s)",
+						$name,
+						$api_key
+					)
+				);
+				self::add_message( 'Etalage opgeslagen.' );
+			}
+		}
+
+		private static function start_cleanup() {
+			if(WP_DEBUG) {
+				BoekDB_Cleanup::cleanup();
+			} else {
+				wp_schedule_single_event(time() + 5, BoekDB_Cleanup::CLEANUP_HOOK);
+			}
+			self::add_message('Opruimen gestart');
+		}
+
+		private static function reset_etalage() {
+			global $wpdb;
+			$id = (int) $_POST['reset'];
+			if ( $id > 0 ) {
+				$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->prefix}boekdb_etalages SET last_import=null WHERE id = %d",
+					$id ) );
+
+				self::add_message( 'Reset succesvol.' );
+			}
+		}
+
+		private static function delete_etalage() {
+			$id = (int) $_POST['delete'];
+			if ( $id > 0 ) {
+				BoekDB_Cleanup::delete_etalage($id);
+				set_transient( 'boekdb_admin_notice', 'Etalage is verwijderd.', 60 );
 			}
 		}
 
