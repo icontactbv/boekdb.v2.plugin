@@ -192,6 +192,7 @@ class Boekdb_Api_Service {
 			'headers' => [
 				'Authorization' => 'Bearer ' . $api_key,
 			],
+			'redirection' => 0,
 		] );
 
 		boekdb_debug($response);
