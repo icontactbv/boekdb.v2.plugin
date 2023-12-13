@@ -318,40 +318,40 @@ function boekdb_get_alternate_urls( $postId ) {
 add_filter( 'cron_schedules', 'boekdb_add_minutely' );
 
 if (!defined('WP_UNINSTALL_PLUGIN')) {
-	add_filter( 'post_type_link', 'boekdb_modify_boek_permalink', 10, 2 );
-
-	function boekdb_modify_boek_permalink($post_link, $post) {
-		error_log('Modifying permalink: ' . $post->ID);
-
-		// Only apply changes for 'boekdb_boek' post type
-		if ('boekdb_boek' === $post->post_type) {
-			// Try to get the link from the cache
-			$cached_post_link = get_transient('boekdb_permalink_' . $post->ID);
-
-			// If not in the cache
-			if ($cached_post_link === false) {
-				$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
-				if ($selected_url) {
-					// Use selected alternate URL if it exists
-					$post_link = $selected_url;
-				} else {
-					// Fallback to using the prefix
-					$prefix = boekdb_get_etalage_prefix($post->ID);
-					if ($prefix) {
-						$post_link = home_url('/boek/' . esc_sql($prefix) . '/' . $post->post_name . '/');
-					}
-				}
-
-				// Cache the link for 12 hours
-				set_transient('boekdb_permalink_' . $post->ID, $post_link, 12 * HOUR_IN_SECONDS);
-			} else {
-				$post_link = $cached_post_link;
-			}
-		}
-
-		error_log('The permalink returned: ' . $post_link);
-		return $post_link;
-	}
+//	add_filter( 'post_type_link', 'boekdb_modify_boek_permalink', 10, 2 );
+//
+//	function boekdb_modify_boek_permalink($post_link, $post) {
+//		error_log('Modifying permalink: ' . $post->ID);
+//
+//		// Only apply changes for 'boekdb_boek' post type
+//		if ('boekdb_boek' === $post->post_type) {
+//			// Try to get the link from the cache
+//			$cached_post_link = get_transient('boekdb_permalink_' . $post->ID);
+//
+//			// If not in the cache
+//			if ($cached_post_link === false) {
+//				$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
+//				if ($selected_url) {
+//					// Use selected alternate URL if it exists
+//					$post_link = $selected_url;
+//				} else {
+//					// Fallback to using the prefix
+//					$prefix = boekdb_get_etalage_prefix($post->ID);
+//					if ($prefix) {
+//						$post_link = home_url('/boek/' . esc_sql($prefix) . '/' . $post->post_name . '/');
+//					}
+//				}
+//
+//				// Cache the link for 12 hours
+//				set_transient('boekdb_permalink_' . $post->ID, $post_link, 12 * HOUR_IN_SECONDS);
+//			} else {
+//				$post_link = $cached_post_link;
+//			}
+//		}
+//
+//		error_log('The permalink returned: ' . $post_link);
+//		return $post_link;
+//	}
 }
 
 /**
