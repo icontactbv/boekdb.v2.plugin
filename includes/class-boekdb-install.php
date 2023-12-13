@@ -15,18 +15,18 @@ class BoekDB_Install {
 	 * Hook in tabs.
 	 */
 	public static function init() {
-		add_action( 'init', array( __CLASS__, 'check_version' ), 5 );
-		add_action( 'admin_notices', array( __CLASS__, 'boekdb_update_notice' ) );
-		add_action( 'admin_notices', array( __CLASS__, 'boekdb_admin_notice' ) );
-		add_action( 'wp_ajax_dismiss_boekdb_update_notice', array( __CLASS__, 'dismiss_boekdb_update_notice' ) );
-		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_scripts' ) );
+		add_action( 'init', array( self::class, 'check_version' ), 5 );
+		add_action( 'admin_notices', array( self::class, 'boekdb_update_notice' ) );
+		add_action( 'admin_notices', array( self::class, 'boekdb_admin_notice' ) );
+		add_action( 'wp_ajax_dismiss_boekdb_update_notice', array( self::class, 'dismiss_boekdb_update_notice' ) );
+		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 
 		// Schedule the version check event
 		if ( ! wp_next_scheduled( 'boekdb_version_check' ) ) {
 			wp_schedule_event( time(), 'daily', 'boekdb_version_check' );
 		}
 
-		add_action( 'boekdb_version_check', array( __CLASS__, 'scheduled_version_check' ) );
+		add_action( 'boekdb_version_check', array( self::class, 'scheduled_version_check' ) );
 	}
 
 	/**
@@ -61,7 +61,7 @@ class BoekDB_Install {
 		}
 
 		if ( false === Boekdb_Api_Service::check_connection_and_version() ) {
-			add_action( 'admin_notices', array( __CLASS__, 'boekdb_connection_error' ) );
+			add_action( 'admin_notices', array( self::class, 'boekdb_connection_error' ) );
 		}
 
 		// If we made it till here nothing is running yet, lets set the transient now.

@@ -30,13 +30,13 @@ class BoekDB_Admin_Meta_Boxes {
 	 * Constructor.
 	 */
 	public function __construct() {
-		add_action( 'add_meta_boxes', array( $this, 'remove_meta_boxes' ), 10 );
-		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ), 30 );
-		add_action( 'save_post', array( $this, 'save_meta_boxes' ), 1, 2 );
+		add_action( 'add_meta_boxes', array( self::class, 'remove_meta_boxes' ), 10 );
+		add_action( 'add_meta_boxes', array( self::class, 'add_meta_boxes' ), 30 );
+		add_action( 'save_post', array( self::class, 'save_meta_boxes' ), 1, 2 );
 
 		// Error handling (for showing errors from meta boxes on next page load).
-		add_action( 'admin_notices', array( $this, 'output_errors' ) );
-		add_action( 'shutdown', array( $this, 'save_errors' ) );
+		add_action( 'admin_notices', array( self::class, 'output_errors' ) );
+		add_action( 'shutdown', array( self::class, 'save_errors' ) );
 	}
 
 	/**
@@ -134,7 +134,7 @@ class BoekDB_Admin_Meta_Boxes {
 		add_meta_box(
 			'boek_fields',
 			'BoekDB velden',
-			array( __CLASS__, 'meta_boek_fields_html' ),
+			array( self::class, 'meta_boek_fields_html' ),
 			'boekdb_boek'
 		);
 	}

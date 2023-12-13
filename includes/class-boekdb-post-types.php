@@ -17,18 +17,18 @@ class BoekDB_Post_Types {
 	 * Hook in methods.
 	 */
 	public static function init() {
-		add_action( 'init', array( __CLASS__, 'register_taxonomies' ), 5 );
-		add_action( 'init', array( __CLASS__, 'register_post_types' ), 5 );
+		add_action( 'init', array( self::class, 'register_taxonomies' ), 5 );
+		add_action( 'init', array( self::class, 'register_post_types' ), 5 );
 
-		add_filter( 'posts_join', array( __CLASS__, 'search_join' ), 5 );
-		add_filter( 'posts_where', array( __CLASS__, 'search_where' ), 5 );
-		add_filter( 'posts_distinct', array( __CLASS__, 'search_distinct' ), 5 );
-		add_filter( 'gutenberg_can_edit_post_type', array( __CLASS__, 'gutenberg_can_edit_post_type' ), 10, 2 );
-		add_filter( 'use_block_editor_for_post_type', array( __CLASS__, 'gutenberg_can_edit_post_type' ), 10, 2 );
+		add_filter( 'posts_join', array( self::class, 'search_join' ), 5 );
+		add_filter( 'posts_where', array( self::class, 'search_where' ), 5 );
+		add_filter( 'posts_distinct', array( self::class, 'search_distinct' ), 5 );
+		add_filter( 'gutenberg_can_edit_post_type', array( self::class, 'gutenberg_can_edit_post_type' ), 10, 2 );
+		add_filter( 'use_block_editor_for_post_type', array( self::class, 'gutenberg_can_edit_post_type' ), 10, 2 );
 
-		add_filter( 'manage_boekdb_boek_posts_columns', array( __CLASS__, 'boekdb_add_touch_product_column' ) );
-		add_action( 'admin_init', array( __CLASS__, 'boekdb_touch_product_action' ) );
-		add_action( 'manage_boekdb_boek_posts_custom_column', array( __CLASS__, 'boekdb_render_touch_product_column' ), 10, 2 );
+		add_filter( 'manage_boekdb_boek_posts_columns', array( self::class, 'boekdb_add_touch_product_column' ) );
+		add_action( 'admin_init', array( self::class, 'boekdb_touch_product_action' ) );
+		add_action( 'manage_boekdb_boek_posts_custom_column', array( self::class, 'boekdb_render_touch_product_column' ), 10, 2 );
 	}
 
 	/**
