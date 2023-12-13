@@ -19,7 +19,7 @@ class BoekDB_Cleanup {
 	 * @return void
 	 */
 	public static function init() {
-		add_action( self::CLEANUP_HOOK, array( self::class, 'cleanup' ) );
+		//add_action( self::CLEANUP_HOOK, array( self::class, 'cleanup' ) );
 
 		if ( ! wp_next_scheduled( self::CLEANUP_HOOK ) ) {
 			wp_schedule_event( time(), 'daily', self::CLEANUP_HOOK );
