@@ -330,6 +330,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 	 */
 	function boekdb_modify_boek_permalink($post_link, $post) {
 		if ('boekdb_boek' === $post->post_type) {
+			boekdb_debug('Modifying permalink for post ' . $post->ID);
 			$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
 			if ($selected_url) {
 				// Use selected alternate URL if it exists
