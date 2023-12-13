@@ -332,8 +332,8 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 			// If not in the cache
 			if ($cached_post_link === false) {
 				$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
-				boekdb_debug($selected_url);
-				if ($selected_url !== '') {
+				boekdb_debug(var_export($selected_url, true));
+				if (trim($selected_url) !== '') {
 					// Use selected alternate URL if it exists
 					$post_link = $selected_url;
 				} else {
@@ -342,7 +342,6 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 					if ($prefix !== '') {
 						$post_link = home_url('/boek/' . esc_sql($prefix) . '/' . $post->post_name . '/');
 					}
-					// If prefix isn't present, $post_link will remain unchanged
 				}
 
 				// Cache the link for 12 hours
