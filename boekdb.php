@@ -340,10 +340,8 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 					$prefix = boekdb_get_etalage_prefix($post->ID);
 					if ($prefix !== '') {
 						$post_link = home_url('/boek/' . esc_sql($prefix) . '/' . $post->post_name . '/');
-					} else {
-						// Revert back to default structure if prefix is not available
-						$post_link = str_replace('%boekdb_boek%', $post->post_name, $post_link);
 					}
+					// When prefix not available, do not add any prefix and use the expected structure
 				}
 
 				// Cache the link for 12 hours
