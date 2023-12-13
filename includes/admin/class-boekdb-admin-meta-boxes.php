@@ -204,11 +204,8 @@ class BoekDB_Admin_Meta_Boxes {
 		}
 	}
 
-	public static function save_etalage_url($post_id) {
-		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-			return;
-		}
-		if ( isset( $_POST['selected_alternate_url'] ) ) {
+	function save_etalage_url($post_id) {
+		if (array_key_exists('selected_alternate_url', $_POST)) {
 			update_post_meta(
 				$post_id,
 				'selected_alternate_url',
