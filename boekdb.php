@@ -317,18 +317,23 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 	 * @return string The modified permalink
 	 */
 	function boekdb_modify_boek_permalink($post_link, $post) {
+		boekdb_debug("BoekDB boek permalink modification initiated");
 		if ('boekdb_boek' === $post->post_type) {
+			error_log("Post type matches boekdb_boek");
 			$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
 			if ($selected_url) {
 				// Use selected alternate URL if it exists
+				boekdb_debug("Using selected alternative URL: " . $selected_url);
 				$post_link = $selected_url;
 			} else {
 				// Fallback to using the prefix
+				boekdb_debug("Using fallback prefix");
 				$prefix = boekdb_get_etalage_prefix($post->ID);
 				if ($prefix) {
 					$post_link = home_url('/boek/' . esc_sql($prefix) . '/' . $post->post_name . '/');
 				}
 			}
+			boekdb_debug('Final permalink: ' . $post_link);
 		}
 
 		return $post_link;
