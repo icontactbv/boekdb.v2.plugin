@@ -26,12 +26,12 @@ class BoekDB_Post_Types {
 		add_filter( 'gutenberg_can_edit_post_type', array( self::class, 'gutenberg_can_edit_post_type' ), 10, 2 );
 		add_filter( 'use_block_editor_for_post_type', array( self::class, 'gutenberg_can_edit_post_type' ), 10, 2 );
 
+		add_filter('manage_boekdb_boek_posts_columns', array(self::class, 'add_productform_column'));
+		add_action('manage_boekdb_boek_posts_custom_column', array(self::class, 'render_productform_column'), 10, 2);
+
 		add_action( 'admin_init', array( self::class, 'boekdb_touch_product_action' ) );
 		add_filter( 'manage_boekdb_boek_posts_columns', array( self::class, 'boekdb_add_touch_product_column' ), 10, 1 );
 		add_action( 'manage_boekdb_boek_posts_custom_column', array( self::class, 'boekdb_render_touch_product_column' ), 10, 2 );
-
-		add_filter('manage_boekdb_boek_posts_columns', array(self::class, 'add_productform_column'));
-		add_action('manage_boekdb_boek_posts_custom_column', array(self::class, 'render_productform_column'), 10, 2);
 	}
 
 	/**
@@ -381,8 +381,7 @@ class BoekDB_Post_Types {
 	 */
 	public static function render_productform_column($column, $post_id) {
 		if ('productform' === $column) {
-			// Replace 'boekdb_productform' with the actual meta key for the product form
-			$productform = get_post_meta($post_id, 'boekdb_productform', true);
+			$productform = get_post_meta($post_id, 'boekdb_verschijningsvorm', true);
 			echo esc_html($productform);
 		}
 	}
