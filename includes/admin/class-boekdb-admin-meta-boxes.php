@@ -165,7 +165,7 @@ class BoekDB_Admin_Meta_Boxes {
 	}
 
 	public static function render_etalage_url_meta_box($post) {
-		$alternate_urls = get_alternate_urls($post->ID);
+		$alternate_urls = boekdb_get_alternate_urls($post->ID);
 
 		$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
 
