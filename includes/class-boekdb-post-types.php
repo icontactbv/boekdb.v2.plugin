@@ -28,7 +28,7 @@ class BoekDB_Post_Types {
 
 		add_filter( 'manage_boekdb_boek_posts_columns', array( __CLASS__, 'boekdb_add_touch_product_column' ) );
 		add_action( 'admin_init', array( __CLASS__, 'boekdb_touch_product_action' ) );
-		add_action( 'manage_boekdb_boek_posts_custom_column', array( __CLASS__, 'boekdb_render_touch_product_column' ), 10 ,2 );
+		//add_action( 'manage_boekdb_boek_posts_custom_column', array( __CLASS__, 'boekdb_render_touch_product_column' ), 10, 2 );
 	}
 
 	/**
