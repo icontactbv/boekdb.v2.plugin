@@ -346,6 +346,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 				$post_link = $cached_post_link;
 			}
 		}
+
 		boekdb_debug('post link (post): ' . $post_link);
 		return $post_link;
 	}
@@ -356,23 +357,23 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
  *
  * @param int  $boek_post_id  The ID of the book post
  *
- * @return string|null The etalage prefix if found, null otherwise
+ * @return string|null The etalage prefix if found, empty string otherwise
  */
-function boekdb_get_etalage_prefix( $boek_post_id ) {
+function boekdb_get_etalage_prefix($boek_post_id) {
 	global $wpdb;
 	$prefix = $wpdb->get_var(
 		$wpdb->prepare(
 			"
-		SELECT e.prefix 
-		FROM `{$wpdb->prefix}boekdb_etalages` AS e 
-		JOIN `{$wpdb->prefix}boekdb_etalage_boeken` AS eb 
-		ON e.id = eb.etalage_id 
-		WHERE eb.boek_id = %d 
-		AND e.prefix IS NOT NULL 
-		AND e.prefix != '' LIMIT 1",
+        SELECT e.prefix 
+        FROM `{$wpdb->prefix}boekdb_etalages` AS e 
+        JOIN `{$wpdb->prefix}boekdb_etalage_boeken` AS eb 
+        ON e.id = eb.etalage_id 
+        WHERE eb.boek_id = %d 
+        AND e.prefix IS NOT NULL 
+        AND e.prefix != '' LIMIT 1",
 			$boek_post_id
 		)
 	);
 
-	return $prefix;
+	return $prefix !== null ? $prefix : '';
 }
