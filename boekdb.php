@@ -332,7 +332,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 			// If not in the cache
 			if ($cached_post_link === false) {
 				$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
-
+				boekdb_debug($selected_url);
 				if ($selected_url !== '') {
 					// Use selected alternate URL if it exists
 					$post_link = $selected_url;
