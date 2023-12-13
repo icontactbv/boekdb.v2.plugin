@@ -156,7 +156,7 @@ class BoekDB_Admin_Meta_Boxes {
 		// Add meta box for Etalage URL
 		add_meta_box(
 			'etalage_url_meta_box',
-			'Etalage URL',
+			'Alternatieve URL\'s voor etalages:',
 			array( self::class, 'render_etalage_url_meta_box' ),
 			'boekdb_boek',
 			'normal',
@@ -164,16 +164,36 @@ class BoekDB_Admin_Meta_Boxes {
 		);
 	}
 
+	/**
+	 * Renders the etalage URL meta box on the post edit screen.
+	 *
+	 * @param object  $post  The WordPress post object.
+	 *
+	 * @return void
+	 */
 	public static function render_etalage_url_meta_box($post) {
 		$alternate_urls = boekdb_get_alternate_urls($post->ID);
 
-		$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
+		if (count($alternate_urls) > 1) {
+			$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
 
-		echo('<select name="selected_alternate_url">');
-		foreach($alternate_urls as $alternate_url) {
-			echo('<option value="' . esc_attr($alternate_url['url']) . "\" " . selected($selected_url, $alternate_url['url'], false) . ">" . esc_html("Etalage: " . $alternate_url['name'] . " - URL: " . $alternate_url['url']) . "</option>");
+			echo '<ul>';
+
+			foreach($alternate_urls as $alternate_url) {
+				echo '<li>';
+				echo '<input type="radio" name="selected_alternate_url" value="' . esc_attr($alternate_url['url']) . '" ' . checked($selected_url, $alternate_url['url'], false) . ' > ';
+				echo '<a href="' . esc_url($alternate_url['url']) . '" target="_blank">' . esc_html("Etalage: " . $alternate_url['name'] . " - URL: " . $alternate_url['url']) . '</a></li>';
+			}
+
+			echo '</ul>';
+		} elseif (count($alternate_urls) === 1) {
+			echo '<p>Er is 1 alternatieve URL voor deze etalage:</p>';
+			echo '<ul>';
+			echo '<li><a href="' . esc_url($alternate_urls[0]['url']) . '" target="_blank">' . esc_html($alternate_urls[0]['url']) . '</a></li>';
+			echo '</ul>';
+		} else {
+			echo '<p>Er zijn geen alternatieve URL\'s voor deze etalage.</p>';
 		}
-		echo('</select>');
 	}
 
 	public static function save_etalage_url($post_id) {

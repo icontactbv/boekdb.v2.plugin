@@ -309,18 +309,25 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 	add_filter( 'post_type_link', 'boekdb_modify_boek_permalink', 10, 2 );
 
 	/**
-	 * Modifies the permalink for the 'boekdb_boek' post type
+	 * Modifies the permalink for a book post type
 	 *
 	 * @param string   $post_link  The original permalink
-	 * @param WP_Post  $post       The post object
+	 * @param WP_Post  $post       The current post being modified
 	 *
 	 * @return string The modified permalink
 	 */
-	function boekdb_modify_boek_permalink( $post_link, $post ) {
-		if ( 'boekdb_boek' === $post->post_type ) {
-			$prefix = boekdb_get_etalage_prefix( $post->ID );
-			if ( $prefix ) {
-				$post_link = home_url( '/boek/' . esc_sql( $prefix ) . '/' . $post->post_name . '/' );
+	function boekdb_modify_boek_permalink($post_link, $post) {
+		if ('boekdb_boek' === $post->post_type) {
+			$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
+			if ($selected_url) {
+				// Use selected alternate URL if it exists
+				$post_link = $selected_url;
+			} else {
+				// Fallback to using the prefix
+				$prefix = boekdb_get_etalage_prefix($post->ID);
+				if ($prefix) {
+					$post_link = home_url('/boek/' . esc_sql($prefix) . '/' . $post->post_name . '/');
+				}
 			}
 		}
 

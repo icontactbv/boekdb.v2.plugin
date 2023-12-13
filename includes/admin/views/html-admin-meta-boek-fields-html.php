@@ -10,23 +10,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 ?>
 
-<div style="margin-top:20px">
-	<h4>Alternatieve URL's voor etalages:</h4>
-	<?php
-	global $post;
-	$alternate_urls = boekdb_get_alternate_urls( $post->ID );
-	if ( ! empty( $alternate_urls ) ) {
-		echo '<ul>';
-		foreach ( $alternate_urls as $alternate_url ) {
-			echo '<li>Etalage: ' . esc_html( $alternate_url['name'] ) . '<br><a href="' . esc_url( $alternate_url['url'] ) . '">' . esc_html( $alternate_url['url'] ) . '</a></li>';
-		}
-		echo '</ul>';
-	} else {
-		echo "<p>Er zijn geen alternatieve URL's voor etalages.</p>";
-	}
-	?>
-</div>
-
 <?php if ( isset( $meta['boekdb_annotatie'] ) ) : ?>
 	<h4>Annotatie</h4>
 	<textarea name="boekdb_annotatie" id="boekdb_annotatie" cols="120" rows="5"><?php echo $meta['boekdb_annotatie'][0]; ?></textarea>
