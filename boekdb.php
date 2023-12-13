@@ -344,11 +344,13 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 					$prefix = boekdb_get_etalage_prefix($post->ID);
 					if ($prefix) {
 						$post_link = home_url('/boek/' . esc_sql($prefix) . '/' . $post->post_name . '/');
+					} else {
+						// If there's no prefix, fallback to WordPress-generated permalink
+						$post_link = get_permalink($post->ID);
 					}
 				}
 
 				// Cache the link for 12 hours
-				// Adjust the time as needed
 				set_transient('boekdb_permalink_' . $post->ID, $post_link, 12 * HOUR_IN_SECONDS);
 			}
 		}
