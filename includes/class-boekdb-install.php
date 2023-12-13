@@ -184,10 +184,10 @@ class BoekDB_Install {
 
 		// Generate a rewrite rule for each etalage prefix
 		foreach ($prefixes as $prefix) {
-			$new_rules['boek/' . esc_sql($prefix->prefix) . '/([^/]+)/?$'] = 'index.php?post_type=boekdb_boek&name=' . $wpdb->escape($wp_rewrite->preg_index(1));
+			$new_rules['boek/' . esc_sql($prefix->prefix) . '/([^/]+)/?$'] = 'index.php?post_type=boekdb_boek&name=' . '{$matches[1]}';
 		}
 
-		// Return the combined rules
+		// Return the combined rules.
 		return $new_rules + $rules;
 	}
 }
