@@ -21,6 +21,8 @@ class BoekDB_Install {
 		add_action( 'wp_ajax_dismiss_boekdb_update_notice', array( self::class, 'dismiss_boekdb_update_notice' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 
+		add_filter('rewrite_rules_array', array( self::class, 'prefixed_rewrite_rule' ));
+
 		// Schedule the version check event
 		if ( ! wp_next_scheduled( 'boekdb_version_check' ) ) {
 			wp_schedule_event( time(), 'daily', 'boekdb_version_check' );
@@ -95,6 +97,7 @@ class BoekDB_Install {
 			 `id` INTEGER NOT NULL AUTO_INCREMENT,
 			 `name` varchar(192) NOT NULL,
 			 `api_key` varchar(192) NOT NULL,
+			 `prefix` varchar(64) DEFAULT NULL,
 			 `importing` tinyint(1) NOT NULL DEFAULT 0,
 			 `offset` MEDIUMINT NOT NULL DEFAULT 0,
 			 `isbns` MEDIUMINT NOT NULL DEFAULT 0,
@@ -170,6 +173,22 @@ class BoekDB_Install {
 				'nonce'    => wp_create_nonce( 'boekdb_dismiss_update_notice' ),
 			)
 		);
+	}
+
+	public static function prefixed_rewrite_rule($rules) {
+		global $wpdb;
+		$new_rules = array();
+
+		// Fetch the etalage prefixes from the database
+		$prefixes = $wpdb->get_results("SELECT prefix FROM {$wpdb->prefix}boekdb_etalages WHERE prefix IS NOT NULL AND prefix != ''");
+
+		// Generate a rewrite rule for each etalage prefix
+		foreach ($prefixes as $prefix) {
+			$new_rules['boek/' . esc_sql($prefix->prefix) . '/([^/]+)/?$'] = 'index.php?post_type=boekdb_boek&name=' . $wpdb->escape($wp_rewrite->preg_index(1));
+		}
+
+		// Return the combined rules
+		return $new_rules + $rules;
 	}
 }
 
