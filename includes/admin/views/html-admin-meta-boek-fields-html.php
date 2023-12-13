@@ -11,16 +11,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 ?>
 
 <div style="margin-top:20px">
-    <h4>Alternatieve URL's voor etalages:</h4>
+	<h4>Alternatieve URL's voor etalages:</h4>
 	<?php
 	global $post;
-	$alternate_urls = boekdb_get_alternate_urls($post->ID);
-	if (!empty($alternate_urls)) {
-		echo "<ul>";
-		foreach ($alternate_urls as $alternate_url) {
-			echo '<li>Etalage: ' . esc_html($alternate_url['name']) . '<br><a href="' . esc_url($alternate_url['url']) . '">' . esc_html($alternate_url['url']) . '</a></li>';
+	$alternate_urls = boekdb_get_alternate_urls( $post->ID );
+	if ( ! empty( $alternate_urls ) ) {
+		echo '<ul>';
+		foreach ( $alternate_urls as $alternate_url ) {
+			echo '<li>Etalage: ' . esc_html( $alternate_url['name'] ) . '<br><a href="' . esc_url( $alternate_url['url'] ) . '">' . esc_html( $alternate_url['url'] ) . '</a></li>';
 		}
-		echo "</ul>";
+		echo '</ul>';
 	} else {
 		echo "<p>Er zijn geen alternatieve URL's voor etalages.</p>";
 	}

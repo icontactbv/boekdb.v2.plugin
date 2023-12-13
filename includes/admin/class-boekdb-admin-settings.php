@@ -82,6 +82,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * Test the connection to the API and handle the response.
 		 *
 		 * This method tests the connection to the API using the `test_api_connection()` method of the `Boekdb_Api_Service` class. It handles the response based on the success status.
+		 *
 		 * @return void
 		 */
 		private static function test_connection() {
@@ -97,7 +98,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * Stop the import process.
 		 *
 		 * This method stops the import process by resetting the offset and running status of the boekdb_etalages table in the database.
-		 *`.
+		 * `.
 		 *
 		 * @return void
 		 */
@@ -123,9 +124,9 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				self::add_error( 'Er is iets fout gegaan' );
 			} elseif ( ! Boekdb_Api_Service::validate_api_key( $api_key ) ) {
 				self::add_error( 'API key is niet geldig' );
-			} else if(!empty($prefix)){
+			} elseif ( ! empty( $prefix ) ) {
 				// Check if the prefix already exists
-				$existing_prefix = $wpdb->get_var($wpdb->prepare("SELECT prefix FROM {$wpdb->prefix}boekdb_etalages WHERE prefix = %s", $prefix));
+				$existing_prefix = $wpdb->get_var( $wpdb->prepare( "SELECT prefix FROM {$wpdb->prefix}boekdb_etalages WHERE prefix = %s", $prefix ) );
 
 				// If the prefix already exists, do not add new etalage and return error message
 				if ( $existing_prefix !== null ) {

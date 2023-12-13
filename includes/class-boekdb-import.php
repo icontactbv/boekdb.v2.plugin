@@ -240,11 +240,20 @@ class BoekDB_Import {
 			'post_title'  => $boek['titel'],
 		);
 
+		$prefixes_count = self::count_boek_in_prefixed_etalage( $boek_post_id );
+
 		// create/update post
 		if ( is_null( $boek_post_id ) ) {
+			if ( $prefixes_count === 1 ) {
+				$slug = sanitize_title( $boek['titel'] . '-' . self::get_etalage_prefix( $boek_post_id ) );
+			}
 			$post['post_name'] = $slug;
 			$boek_post_id      = wp_insert_post( $post );
 		} else {
+			if ( $prefixes_count === 1 ) {
+				$slug              = sanitize_title( $boek['titel'] . '-' . self::get_etalage_prefix( $boek_post_id ) );
+				$post['post_name'] = $slug;
+			}
 			$boek_post_id = wp_update_post( $post );
 		}
 
@@ -288,6 +297,58 @@ class BoekDB_Import {
 		self::handle_boek_files( $product, $boek_post_id );
 
 		return array( $boek_post_id, $boek['isbn'], $boek['nstc'], $slug );
+	}
+
+	/**
+	 * Count the number of etalages that have a specified book.
+	 *
+	 * @param int $boek_post_id  The post ID of the book
+	 *
+	 * @return int The number of etalages with the book
+	 */
+	protected static function count_boek_in_prefixed_etalage( $boek_post_id ) {
+		global $wpdb;
+		$prefixes = $wpdb->get_results(
+			$wpdb->prepare(
+				"
+		SELECT e.prefix 
+		FROM `{$wpdb->prefix}boekdb_etalages` AS e 
+		JOIN `{$wpdb->prefix}boekdb_etalage_boeken` AS eb 
+		WHERE e.id = eb.etalage_id 
+		AND eb.boek_id = %d 
+		AND e.prefix IS NOT NULL 
+		AND e.prefix != ''",
+				$boek_post_id
+			)
+		);
+
+		return count( $prefixes );
+	}
+
+	/**
+	 * Get the prefix of an etalage associated with a book based on its post ID.
+	 *
+	 * @param int $boek_post_id  The post ID of the book
+	 *
+	 * @return string|null The prefix of the etalage, or null if not found
+	 */
+	protected static function get_etalage_prefix( $boek_post_id ) {
+		global $wpdb;
+		$prefix = $wpdb->get_var(
+			$wpdb->prepare(
+				"
+		SELECT e.prefix 
+		FROM `{$wpdb->prefix}boekdb_etalages` AS e 
+		JOIN `{$wpdb->prefix}boekdb_etalage_boeken` AS eb 
+		ON e.id = eb.etalage_id 
+		WHERE eb.boek_id = %d 
+		AND e.prefix IS NOT NULL 
+		AND e.prefix != '' LIMIT 1",
+				$boek_post_id
+			)
+		);
+
+		return $prefix;
 	}
 
 	/**

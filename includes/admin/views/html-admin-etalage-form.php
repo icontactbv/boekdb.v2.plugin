@@ -25,13 +25,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<th><label for="etalage_api_key"><?php esc_html_e( 'API Key:', 'boekdb' ); ?></label></th>
 			<td><input type="text" name="etalage_api_key" id="etalage_api_key" placeholder="<?php esc_attr_e( 'api-key', 'boekdb' ); ?>" required></td>
 		</tr>
-        <tr>
-            <th><label for="etalage_prefix"><?php esc_html_e( 'Prefix (optioneel):', 'boekdb' ); ?></label></th>
-            <td>
-                <input type="text" name="etalage_prefix" id="etalage_prefix" placeholder="<?php esc_attr_e( 'prefix', 'boekdb' ); ?>">
-                <p class="description"><?php esc_html_e( 'De prefix wordt gebruikt om aangepaste URL\'s te genereren voor de etalage. Als u een prefix instelt, worden de boeken in deze etalage bereikbaar via URLs in de vorm van "boek/[prefix]/[boek-slug]".', 'boekdb' ); ?></p>
-            </td>
-        </tr>
+		<tr>
+			<th><label for="etalage_prefix"><?php esc_html_e( 'Prefix (optioneel):', 'boekdb' ); ?></label></th>
+			<td>
+				<input type="text" name="etalage_prefix" id="etalage_prefix" placeholder="<?php esc_attr_e( 'prefix', 'boekdb' ); ?>">
+				<p class="description"><?php esc_html_e( 'De prefix wordt gebruikt om aangepaste URL\'s te genereren voor de etalage. Als u een prefix instelt, worden de boeken in deze etalage bereikbaar via URLs in de vorm van "boek/[prefix]/[boek-slug]".', 'boekdb' ); ?></p>
+			</td>
+		</tr>
 		</tbody>
 	</table>
 

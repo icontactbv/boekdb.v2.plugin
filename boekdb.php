@@ -272,26 +272,31 @@ function boekdb_add_minutely( $schedules ) {
 /**
  * Fetches the alternate URLs for a given post ID
  *
- * @param int  $postId  The ID of the post
+ * @param int $postId  The ID of the post
  *
  * @return array An array of alternate URLs with their corresponding etalage names
  */
 function boekdb_get_alternate_urls( $postId ) {
 	global $wpdb;
 
-	$prefix_records = $wpdb->get_results($wpdb->prepare("
+	$prefix_records = $wpdb->get_results(
+		$wpdb->prepare(
+			"
 		SELECT e.prefix, e.name 
 		FROM `{$wpdb->prefix}boekdb_etalages` AS e
 		JOIN `{$wpdb->prefix}boekdb_etalage_boeken` AS eb ON e.id = eb.etalage_id
-		WHERE eb.boek_id = %d", $postId));
+		WHERE eb.boek_id = %d",
+			$postId
+		)
+	);
 
 	$alternate_urls = array();
-	foreach ($prefix_records as $record) {
-		$etalage_name = $record->name;
-		$prefix = $record->prefix;
+	foreach ( $prefix_records as $record ) {
+		$etalage_name     = $record->name;
+		$prefix           = $record->prefix;
 		$alternate_urls[] = array(
 			'name' => $etalage_name,
-			'url'  =>  home_url( '/boek/' . esc_sql($prefix) . '/' . get_post_field( 'post_name', $postId ) . '/' ),
+			'url'  => home_url( '/boek/' . esc_sql( $prefix ) . '/' . get_post_field( 'post_name', $postId ) . '/' ),
 		);
 	}
 

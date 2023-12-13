@@ -21,7 +21,7 @@ class BoekDB_Install {
 		add_action( 'wp_ajax_dismiss_boekdb_update_notice', array( self::class, 'dismiss_boekdb_update_notice' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_scripts' ) );
 
-		add_filter('rewrite_rules_array', array( self::class, 'prefixed_rewrite_rule' ));
+		add_filter( 'rewrite_rules_array', array( self::class, 'prefixed_rewrite_rule' ) );
 
 		// Schedule the version check event
 		if ( ! wp_next_scheduled( 'boekdb_version_check' ) ) {
@@ -175,16 +175,16 @@ class BoekDB_Install {
 		);
 	}
 
-	public static function prefixed_rewrite_rule($rules) {
+	public static function prefixed_rewrite_rule( $rules ) {
 		global $wpdb;
 		$new_rules = array();
 
 		// Fetch the etalage prefixes from the database
-		$prefixes = $wpdb->get_results("SELECT prefix FROM {$wpdb->prefix}boekdb_etalages WHERE prefix IS NOT NULL AND prefix != ''");
+		$prefixes = $wpdb->get_results( "SELECT prefix FROM {$wpdb->prefix}boekdb_etalages WHERE prefix IS NOT NULL AND prefix != ''" );
 
 		// Generate a rewrite rule for each etalage prefix
-		foreach ($prefixes as $prefix) {
-			$new_rules['boek/' . esc_sql($prefix->prefix) . '/([^/]+)/?$'] = 'index.php?post_type=boekdb_boek&name=' . '{$matches[1]}';
+		foreach ( $prefixes as $prefix ) {
+			$new_rules[ 'boek/' . esc_sql( $prefix->prefix ) . '/([^/]+)/?$' ] = 'index.php?post_type=boekdb_boek&name=' . '{$matches[1]}';
 		}
 
 		// Return the combined rules.

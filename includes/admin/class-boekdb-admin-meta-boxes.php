@@ -48,6 +48,13 @@ class BoekDB_Admin_Meta_Boxes {
 		self::$meta_box_errors[] = $text;
 	}
 
+	/**
+	 * Saves the meta boxes for a given post ID.
+	 *
+	 * @param int $post_id  The ID of the post being saved.
+	 *
+	 * @return mixed The post ID that was saved.
+	 */
 	public static function save_meta_boxes( $post_id ) {
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return $post_id;
@@ -90,6 +97,13 @@ class BoekDB_Admin_Meta_Boxes {
 		return $post_id;
 	}
 
+	/**
+	 * Generate HTML for displaying the meta fields of a book.
+	 *
+	 * @param WP_Post $boek  The book post object.
+	 *
+	 * @return void
+	 */
 	public static function meta_boek_fields_html( $boek ) {
 		$meta = get_post_meta( $boek->ID );
 
