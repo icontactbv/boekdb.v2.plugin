@@ -328,7 +328,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 		if ('boekdb_boek' === $post->post_type) {
 			// Try to get the link from the cache
 			$cached_post_link = get_transient('boekdb_permalink_' . $post->ID);
-
+			boekdb_debug(var_export($cached_post_link, true));
 			// If not in the cache
 			if ($cached_post_link === false) {
 				$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
