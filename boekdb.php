@@ -322,6 +322,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 
 	function boekdb_modify_boek_permalink($post_link, $post) {
 		boekdb_debug('post link (pre): ' . $post_link);
+		boekdb_debug('post slug: ' . $post->post_name);
 		// Only apply changes for 'boekdb_boek' post type
 		if ('boekdb_boek' === $post->post_type) {
 			// Try to get the link from the cache

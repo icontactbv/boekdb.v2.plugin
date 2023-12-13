@@ -911,7 +911,6 @@ class BoekDB_Import {
 		}
 
 		// uasort books by productform
-		// @note: make sort configurable?
 		uasort( $books, array( self::class, 'sort_books_by_productform' ) );
 		$post_ids = array_keys( $books );
 
@@ -926,6 +925,9 @@ class BoekDB_Import {
 			)
 		);
 
+		// clear the permalink transient for this book
+		delete_transient( 'boekdb_permalink_' . $first_id );
+
 		// disable primary bit on all other books and set slug to secondary
 		foreach ( $books as $book_id => $val ) {
 			update_post_meta( $book_id, 'boekdb_primair', 0 );
@@ -935,6 +937,9 @@ class BoekDB_Import {
 					'ID'        => $book_id,
 				)
 			);
+
+			// clear the permalink transient for this book
+			delete_transient( 'boekdb_permalink_' . $book_id );
 		}
 	}
 
