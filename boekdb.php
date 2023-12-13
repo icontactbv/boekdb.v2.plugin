@@ -304,3 +304,18 @@ function boekdb_get_alternate_urls( $postId ) {
 }
 
 add_filter( 'cron_schedules', 'boekdb_add_minutely' );
+
+if (!defined('WP_UNINSTALL_PLUGIN')) {
+	add_filter( 'post_type_link', 'boekdb_modify_boek_permalink', 10, 2 );
+
+	function boekdb_modify_boek_permalink( $post_link, $post ) {
+		if ( 'boekdb_boek' === $post->post_type ) {
+			$prefix = BoekDB_Import::get_etalage_prefix( $post->ID );
+			if ( $prefix ) {
+				$post_link = home_url( '/boek/' . esc_sql( $prefix ) . '/' . $post->post_name . '/' );
+			}
+		}
+
+		return $post_link;
+	}
+}

@@ -333,11 +333,11 @@ class BoekDB_Import {
 	/**
 	 * Get the prefix of an etalage associated with a book based on its post ID.
 	 *
-	 * @param int $boek_post_id  The post ID of the book
+	 * @param int  $boek_post_id  The post ID of the book
 	 *
 	 * @return string|null The prefix of the etalage, or null if not found
 	 */
-	protected static function get_etalage_prefix( $boek_post_id ) {
+	public static function get_etalage_prefix( $boek_post_id ) {
 		global $wpdb;
 		$prefix = $wpdb->get_var(
 			$wpdb->prepare(
