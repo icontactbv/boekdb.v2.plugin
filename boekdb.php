@@ -322,6 +322,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 
 	function boekdb_modify_boek_permalink($post_link, $post) {
 		boekdb_debug('post link (pre): ' . $post_link);
+
 		// Only apply changes for 'boekdb_boek' post type
 		if ('boekdb_boek' === $post->post_type) {
 			// Try to get the link from the cache
@@ -339,6 +340,9 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 					$prefix = boekdb_get_etalage_prefix($post->ID);
 					if ($prefix !== '') {
 						$post_link = home_url('/boek/' . esc_sql($prefix) . '/' . $post->post_name . '/');
+					} else {
+						// Revert back to default structure if prefix is not available
+						$post_link = str_replace('%boekdb_boek%', $post->post_name, $post_link);
 					}
 				}
 
