@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 ?>
 <tr>
 	<td><?php echo esc_html( $etalage->name ); ?></td>
+    <td><?php echo esc_html( $etalage->prefix ); ?></td>
 	<td><?php echo esc_html( $etalage->boeken ); ?></td>
 	<td><?php echo esc_html( $etalage->isbns ); ?></td>
 	<td><?php echo esc_html( $etalage->offset ); ?></td>
