@@ -321,6 +321,9 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 	add_filter( 'post_type_link', 'boekdb_modify_boek_permalink', 10, 2 );
 
 	function boekdb_modify_boek_permalink($post_link, $post) {
+		error_log('boekdb_modify_boek_permalink $post_link: ' . $post_link);
+		error_log('boekdb_modify_boek_permalink $post: ' . print_r($post, true));
+
 		// Only apply changes for 'boekdb_boek' post type
 		if ('boekdb_boek' === $post->post_type) {
 			// Try to get the link from the cache
