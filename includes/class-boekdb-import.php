@@ -17,20 +17,35 @@ class BoekDB_Import {
 	const DEFAULT_LAST_IMPORT = '2015-01-01T01:00:00+01:00';
 
 	/**
-	 * Hook in tabs.
+	 * Initialize the import process
+	 *
+	 * This method adds action hooks for starting the import and performing the import.
+	 * It also schedules the import process to run hourly and minutely if not already scheduled.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		add_action( self::START_IMPORT_HOOK, array( self::class, 'start_import' ) );
 		add_action( self::IMPORT_HOOK, array( self::class, 'import' ) );
 
+		/**
+		 * Start the import process every hour.
+		 */
 		if ( ! wp_next_scheduled( self::START_IMPORT_HOOK ) ) {
 			wp_schedule_event( time(), 'hourly', self::START_IMPORT_HOOK );
 		}
+
+		/**
+		 * Check for running imports every minute.
+		 */
 		if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
 			wp_schedule_event( time(), 'minutely', self::IMPORT_HOOK );
 		}
 	}
 
+	/**
+	 * Import products from API
+	 */
 	public static function import() {
 		set_time_limit( 0 );
 		boekdb_debug( 'Importing products...' );
@@ -43,7 +58,7 @@ class BoekDB_Import {
 			return;
 		}
 
-		// do one etalage at a time!
+		// do one etalage at a time, reset() returns the first value of the array
 		$etalage = reset( $etalages );
 
 		$offset = $etalage->offset;
@@ -60,8 +75,12 @@ class BoekDB_Import {
 
 			// set update running to 1 (processing)
 			self::update_running( 1, $etalage );
+
 			foreach ( $products as $product ) {
-				self::check_stopped( $etalage );
+				if ( self::check_stopped( $etalage ) ) {
+					// The import was stopped, so we stop processing this etalage
+					return;
+				}
 
 				list( $boek_post_id, $isbn, $nstc, $slug ) = self::handle_boek( $product );
 
@@ -103,13 +122,13 @@ class BoekDB_Import {
 			}
 			$offset = $offset + Boekdb_Api_Service::LIMIT;
 
-			// update the offset in etalage and set running to 1 (next batch)
+			// update the offset in etalage and set running to 1 (next batch).
 			self::update_offset( $offset, $etalage );
 			self::update_running( 2, $etalage );
 
 			boekdb_debug( 'Done with this batch...' );
 
-			// there might be more etalages to import, so schedule a new import
+			// there might be more etalages to import, so schedule a new import.
 			if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
 				wp_schedule_single_event( time(), self::IMPORT_HOOK );
 			}
@@ -117,33 +136,56 @@ class BoekDB_Import {
 			boekdb_debug( 'Finished import on ' . $etalage->name );
 			self::set_last_import( $etalage->id );
 
-			// reset offset and set running to 0 (finished)
+			// reset offset and set running to 0 (finished).
 			self::update_offset( 0, $etalage );
 			self::update_running( 0, $etalage );
 
-			// there might be more etalages to import, so schedule a new import
+			// there might be more etalages to import, so schedule a new import.
 			if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
 				wp_schedule_single_event( time(), self::IMPORT_HOOK );
 			}
 		}
 	}
 
+	/**
+	 * Check if the import process has stopped for a given 'etalage'
+	 *
+	 * @param object $etalage  The 'etalage' object
+	 *
+	 * @return bool Returns true if the import process has stopped for the given 'etalage', false otherwise
+	 */
 	private static function check_stopped( $etalage ) {
 		$running = self::fetch_etalage_running( $etalage->id );
 		if ( $running === 0 ) {
 			boekdb_debug( 'Import stopped on ' . $etalage->name );
-			exit;
+
+			return true;
 		}
 	}
 
+	/**
+	 * Fetch the running status of an etalage based on its ID
+	 *
+	 * @param int $id  The ID of the etalage
+	 *
+	 * @return int The running status of the etalage
+	 */
 	private static function fetch_etalage_running( $id ) {
 		global $wpdb;
-		$sql     = $wpdb->prepare( "SELECT running FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id );
-		$running = $wpdb->get_var( $sql );
+		$table_name = $wpdb->prefix . 'boekdb_etalages';
+		$running    = $wpdb->get_var( $wpdb->prepare( 'SELECT running FROM %s WHERE id = %d', $table_name, $id ) );
 
 		return (int) $running;
 	}
 
+	/**
+	 * Update the 'running' field in the 'boekdb_etalages' table
+	 *
+	 * @param int    $running  The new value for the 'running' field
+	 * @param object $etalage  The object representing the etalage record
+	 *
+	 * @return void
+	 */
 	private static function update_running( $running, $etalage ) {
 		global $wpdb;
 
@@ -159,7 +201,7 @@ class BoekDB_Import {
 	/**
 	 * Load the boek and return the post_id
 	 *
-	 * @param $product
+	 * @param object $product  The product object
 	 *
 	 * @return array
 	 */
@@ -251,7 +293,7 @@ class BoekDB_Import {
 	/**
 	 * Create boek array from product
 	 *
-	 * @param $product
+	 * @param object $product  The product object
 	 *
 	 * @return array
 	 */
@@ -358,6 +400,15 @@ class BoekDB_Import {
 		return $boek;
 	}
 
+	/**
+	 * Find the post ID of a specific field based on the given key-value pair
+	 *
+	 * @param string     $post_type  The post type to search within
+	 * @param string     $key        The meta key to search for
+	 * @param string|int $value      The meta value to match against
+	 *
+	 * @return int|null  The ID of the post that matches the given key-value pair, or null if no match was found
+	 */
 	private static function find_field( $post_type, $key, $value ) {
 		$args    = array(
 			'post_type'   => $post_type,
@@ -383,10 +434,12 @@ class BoekDB_Import {
 	}
 
 	/**
-	 * Parse collection
+	 * Handle the serie for a book product
 	 *
-	 * @param $product
-	 * @param $boek_post_id
+	 * @param mixed $product       The product object containing the serie information
+	 * @param int   $boek_post_id  The ID of the book post
+	 *
+	 * @return void
 	 */
 	protected static function handle_serie( $product, $boek_post_id ) {
 		if ( is_object( $product->serie ) && isset( $product->serie->id ) ) {
@@ -416,8 +469,8 @@ class BoekDB_Import {
 	/**
 	 * Load files for serie
 	 *
-	 * @param $product
-	 * @param $term_id
+	 * @param object $product  The product object
+	 * @param int    $term_id  The term ID of the serie
 	 */
 	protected static function handle_serie_files( $product, $term_id ) {
 		if ( is_null( $product->serie->beeld ) ) {
@@ -462,8 +515,8 @@ class BoekDB_Import {
 	/**
 	 * Load files from boek
 	 *
-	 * @param $product
-	 * @param $boek_post_id
+	 * @param object $product       The product object
+	 * @param int    $boek_post_id  The ID of the book post
 	 */
 	protected static function handle_boek_files( $product, $boek_post_id ) {
 		if ( ! isset( $product->bestanden ) ) {
@@ -481,7 +534,7 @@ class BoekDB_Import {
 			if ( is_null( $attachment_id ) ) {
 				$response = wp_safe_remote_get( $bestand->url );
 				if ( is_wp_error( $response ) ) {
-					error_log( 'Error fetching file: ' . $bestand->url );
+					boekdb_debug( 'Error fetching file: ' . $bestand->url );
 					continue;
 				}
 
@@ -490,7 +543,7 @@ class BoekDB_Import {
 				$file         = wp_upload_bits( $bestandsnaam, null, wp_remote_retrieve_body( $response ) );
 
 				if ( $file['error'] ) {
-					error_log( 'Error saving file to disk: ' . $file['error'] );
+					boekdb_debug( 'Error saving file to disk: ' . $file['error'] );
 					continue;
 				}
 
@@ -509,13 +562,13 @@ class BoekDB_Import {
 					if ( $bestand->soort === 'Cover' || $bestand->soort === 'Back cover' ) {
 						// check if sizes were generated
 						if ( ! isset( $attachment_data['sizes'] ) || ! is_array( $attachment_data['sizes'] ) || empty( $attachment_data['sizes'] ) ) {
-							error_log( 'Failed to generate image sizes for attachment ID: ' . $attachment_id );
+							boekdb_debug( 'Failed to generate image sizes for attachment ID: ' . $attachment_id );
 						}
 					}
 
 					wp_update_attachment_metadata( $attachment_id, $attachment_data );
 				} else {
-					error_log( 'Error inserting attachment: ' . $attachment_id->get_error_message() );
+					boekdb_debug( 'Error inserting attachment: ' . $attachment_id->get_error_message() );
 				}
 
 				update_post_meta( $attachment_id, 'hash', $hash );
@@ -557,10 +610,12 @@ class BoekDB_Import {
 
 
 	/**
-	 * Parse contributors
+	 * Handle betrokkenen for a book product
 	 *
-	 * @param $product
-	 * @param $boek_post_id
+	 * @param object $product       The book product object
+	 * @param int    $boek_post_id  The ID of the book post
+	 *
+	 * @return void
 	 */
 	protected static function handle_betrokkenen( $product, $boek_post_id ) {
 		$term_ids = array(
@@ -597,11 +652,11 @@ class BoekDB_Import {
 	}
 
 	/**
-	 * Create betrokkene array from contributor
+	 * Create an array of betrokkene (related party) data
 	 *
-	 * @param $betrokkene
+	 * @param object $betrokkene  The betrokkene object
 	 *
-	 * @return array
+	 * @return array The betrokkene data array
 	 */
 	protected static function create_betrokkene_array( $betrokkene ) {
 		$boekdb_betrokkene                         = array();
@@ -619,13 +674,12 @@ class BoekDB_Import {
 	}
 
 	/**
-	 * Handle betrokkene
+	 * Handle the betrokkene by creating or updating a term in the specified taxonomy
 	 *
-	 * @param $slug
-	 * @param $taxonomy
-	 * @param $value
+	 * @param array  $betrokkene  The betrokkene data
+	 * @param string $taxonomy    The taxonomy to create or update the term in
 	 *
-	 * @return int|mixed
+	 * @return int                The ID of the created or updated term
 	 */
 	protected static function handle_betrokkene( $betrokkene, $taxonomy ) {
 		$term = get_term_by(
@@ -675,10 +729,12 @@ class BoekDB_Import {
 	}
 
 	/**
-	 * Load files for contributor
+	 * Handle betrokkene files and attach them to the corresponding term
 	 *
-	 * @param $betrokkene
-	 * @param $term_id
+	 * @param array $betrokkene  An array containing information about the files
+	 * @param int   $term_id     The ID of the term to attach the files to
+	 *
+	 * @return void
 	 */
 	protected static function handle_betrokkene_files( $betrokkene, $term_id ) {
 		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
@@ -696,7 +752,7 @@ class BoekDB_Import {
 			if ( is_null( $attachment_id ) ) {
 				$response = wp_safe_remote_get( $bestand->url );
 				if ( is_wp_error( $response ) ) {
-					error_log( 'Error fetching file: ' . $bestand->url );
+					boekdb_debug( 'Error fetching file: ' . $bestand->url );
 					continue;
 				}
 
@@ -705,7 +761,7 @@ class BoekDB_Import {
 				$image        = wp_upload_bits( $bestandsnaam, null, wp_remote_retrieve_body( $response ) );
 
 				if ( $image['error'] ) {
-					error_log( 'Error saving file to disk: ' . $image['error'] );
+					boekdb_debug( 'Error saving file to disk: ' . $image['error'] );
 					continue;
 				}
 
@@ -723,7 +779,7 @@ class BoekDB_Import {
 					);
 					wp_update_attachment_metadata( $attachment_id, $attachment_data );
 				} else {
-					error_log( 'Error inserting attachment: ' . $attachment_id->get_error_message() );
+					boekdb_debug( 'Error inserting attachment: ' . $attachment_id->get_error_message() );
 					continue;
 				}
 
@@ -743,13 +799,13 @@ class BoekDB_Import {
 	}
 
 	/**
-	 * Get taxonomy term_id
+	 * Get the term ID for a given taxonomy term
 	 *
-	 * @param $slug
-	 * @param $taxonomy
-	 * @param $value
+	 * @param string $slug      The slug of the taxonomy term
+	 * @param string $taxonomy  The taxonomy name
+	 * @param string $value     The value to insert if the term doesn't exist
 	 *
-	 * @return int|mixed
+	 * @return int|null The term ID if the term exists, null otherwise
 	 */
 	protected static function get_taxonomy_term_id( $slug, $taxonomy, $value ) {
 		$term = get_term_by( 'slug', $slug, 'boekdb_' . $taxonomy . '_tax' );
@@ -770,6 +826,15 @@ class BoekDB_Import {
 		return $term_id;
 	}
 
+	/**
+	 * Link a product (book) to an etalage and update the ISBNs
+	 *
+	 * @param int    $boek_id     The ID of the book to link
+	 * @param string $isbn        The ISBN value for the book
+	 * @param int    $etalage_id  The ID of the etalage to link the book to
+	 *
+	 * @return void
+	 */
 	private static function link_product( $boek_id, $isbn, $etalage_id ) {
 		global $wpdb;
 
@@ -789,6 +854,15 @@ class BoekDB_Import {
 		);
 	}
 
+	/**
+	 * Check if a book should be set as the primary title based on nstc value
+	 *
+	 * @param int|null    $post_id  The ID of the book post
+	 * @param string|null $nstc     The nstc value for filtering books
+	 * @param string      $slug     The primary slug for the book
+	 *
+	 * @return void
+	 */
 	private static function check_primary_title( $post_id, $nstc, $slug ) {
 		global $wpdb;
 
@@ -863,6 +937,14 @@ class BoekDB_Import {
 		}
 	}
 
+	/**
+	 * Update the offset and running status of an etalage.
+	 *
+	 * @param int    $offset   The new offset value
+	 * @param object $etalage  The etalage object to update
+	 *
+	 * @return void
+	 */
 	private static function update_offset( $offset, $etalage ) {
 		global $wpdb;
 
@@ -877,6 +959,14 @@ class BoekDB_Import {
 		);
 	}
 
+	/**
+	 * Set the last import value for a given id
+	 *
+	 * @param int         $id     The id of the import
+	 * @param string|null $value  The value to set as the last import date. If null, the current time will be used.
+	 *
+	 * @return bool|int False on failure, or the number of rows updated on success.
+	 */
 	private static function set_last_import( $id, $value = null ) {
 		global $wpdb;
 		if ( is_null( $value ) ) {
@@ -890,6 +980,15 @@ class BoekDB_Import {
 		);
 	}
 
+	/**
+	 * Start the import process
+	 *
+	 * Set the time limit to 0 to prevent script timeout.
+	 * If an import is already running, check if the import schedule is set.
+	 * If not, schedule a single event to start the import.
+	 *
+	 * @return void
+	 */
 	public static function start_import() {
 		set_time_limit( 0 );
 
@@ -935,6 +1034,13 @@ class BoekDB_Import {
 		}
 	}
 
+	/**
+	 * Check available ISBNs
+	 *
+	 * @param object $etalage  - The etalage object
+	 *
+	 * @return bool - Returns true if the filters have changed and the etalage needs to be reset, else returns false
+	 */
 	private static function check_available_isbns( $etalage ) {
 		global $wpdb;
 
@@ -962,14 +1068,24 @@ class BoekDB_Import {
 				array( 'id' => $etalage->id )
 			);
 
-			// reset
+			// reset.
 			return true;
 		}
 
-		// no reset
+		// no reset.
 		return false;
 	}
 
+	/**
+	 * Sorts books by product form.
+	 *
+	 * @param string $a  The product form of book A.
+	 * @param string $b  The product form of book B.
+	 *
+	 * @return int Returns -1 if book A should be sorted before book B,
+	 *              0 if book A and book B have the same sorting priority,
+	 *              or 1 if book A should be sorted after book B
+	 */
 	private static function sort_books_by_productform( $a, $b ) {
 		$sort = array(
 			'Paper' => 1,
@@ -989,7 +1105,7 @@ class BoekDB_Import {
 		} else {
 			$b = 99;
 		}
-		if ( $a == $b ) {
+		if ( $a === $b ) {
 			return 0;
 		}
 

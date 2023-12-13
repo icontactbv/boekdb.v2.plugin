@@ -25,6 +25,10 @@ class BoekDB_Post_Types {
 		add_filter( 'posts_distinct', array( __CLASS__, 'search_distinct' ), 5 );
 		add_filter( 'gutenberg_can_edit_post_type', array( __CLASS__, 'gutenberg_can_edit_post_type' ), 10, 2 );
 		add_filter( 'use_block_editor_for_post_type', array( __CLASS__, 'gutenberg_can_edit_post_type' ), 10, 2 );
+
+		add_filter( 'manage_boekdb_boek_posts_columns', array( __CLASS__, 'boekdb_add_touch_product_column' ) );
+		add_action( 'admin_init', array( __CLASS__, 'boekdb_touch_product_action' ) );
+		add_action( 'manage_boekdb_boek_posts_custom_column', array( __CLASS__, 'boekdb_render_touch_product_column', 10, 2 ) );
 	}
 
 	/**
@@ -40,6 +44,14 @@ class BoekDB_Post_Types {
 		self::register_serie_taxonomy();
 	}
 
+	/**
+	 * Register Betrokkenen Taxonomies
+	 *
+	 * Registers three taxonomies: Auteurs, Illustrators, and Sprekers.
+	 *
+	 * @access protected
+	 * @return void
+	 */
 	protected static function register_betrokkenen_taxonomies() {
 		$args = array(
 			'hierarchical'      => false,
@@ -85,6 +97,9 @@ class BoekDB_Post_Types {
 		register_taxonomy( 'boekdb_spreker_tax', array( 'boekdb_boek' ), $args );
 	}
 
+	/**
+	 * Register Onderwerpen Taxonomies
+	 */
 	protected static function register_onderwerpen_taxonomies() {
 		$args = array(
 			'hierarchical'      => false,
@@ -130,6 +145,9 @@ class BoekDB_Post_Types {
 		register_taxonomy( 'boekdb_thema_tax', 'boekdb_boek', $args );
 	}
 
+	/**
+	 * Register the 'boekdb_serie_tax' taxonomy for the 'boekdb_boek' post type.
+	 */
 	protected static function register_serie_taxonomy() {
 		$args = array(
 			'hierarchical'      => false,
@@ -163,6 +181,13 @@ class BoekDB_Post_Types {
 		self::register_boek_post_type();
 	}
 
+	/**
+	 * Register the "boekdb_boek" post type.
+	 *
+	 * This method registers a custom post type called "boekdb_boek" with the specified labels, settings, and capabilities.
+	 *
+	 * @return void
+	 */
 	protected static function register_boek_post_type() {
 		if ( post_type_exists( 'boekdb_boek' ) ) {
 			return;
@@ -209,8 +234,14 @@ class BoekDB_Post_Types {
 	}
 
 	/**
-	 * Join posts and postmeta tables
+	 * Add additional join condition for search query
+	 *
+	 * Joins posts and postmeta tables
 	 * http://codex.wordpress.org/Plugin_API/Filter_Reference/posts_join
+	 *
+	 * @param string $join  The join condition for the search query.
+	 *
+	 * @return string The updated join condition for the search query.
 	 */
 	public static function search_join( $join ) {
 		global $wpdb;
@@ -223,8 +254,14 @@ class BoekDB_Post_Types {
 	}
 
 	/**
+	 * Modify the WHERE clause of a search query.
+	 *
 	 * Modify the search query with posts_where
 	 * http://codex.wordpress.org/Plugin_API/Filter_Reference/posts_where
+	 *
+	 * @param string $where  The original WHERE clause of the search query.
+	 *
+	 * @return string The modified WHERE clause.
 	 */
 	public static function search_where( $where ) {
 		global $pagenow, $wpdb;
@@ -241,67 +278,83 @@ class BoekDB_Post_Types {
 	}
 
 	/**
-	 * Prevent duplicates
+	 * Search Distinct, prevent duplicates
+	 *
+	 * Determines if the search query is being executed and returns 'DISTINCT' if true.
+	 * Otherwise, it returns the original $where parameter.
 	 * http://codex.wordpress.org/Plugin_API/Filter_Reference/posts_distinct
+	 *
+	 * @param string $where  The original WHERE clause.
+	 *
+	 * @return string
 	 */
 	public static function search_distinct( $where ) {
-		global $wpdb;
-
 		if ( is_search() ) {
 			return 'DISTINCT';
 		}
 
 		return $where;
 	}
+
+	/**
+	 * Add touch_product column to the given columns array.
+	 *
+	 * @param array $columns  The array of columns.
+	 *
+	 * @return array The updated array of columns with touch_product column.
+	 */
+	public static function boekdb_add_touch_product_column( $columns ) {
+		$columns['touch_product'] = 'Touch Product';
+
+		return $columns;
+	}
+
+	/**
+	 * Render the touch product column for the given post.
+	 *
+	 * @param string $column   The name of the column being rendered.
+	 * @param int    $post_id  The post ID.
+	 *
+	 * @return void
+	 */
+	public static function boekdb_render_touch_product_column( $column, $post_id ) {
+		if ( 'touch_product' === $column ) {
+			$url = add_query_arg(
+				array(
+					'action' => 'touch_product',
+					'post'   => $post_id,
+					'nonce'  => wp_create_nonce( 'touch_product_' . $post_id ),
+				),
+				admin_url( 'edit.php' )
+			);
+			echo '<a href="' . esc_url( $url ) . '" class="button">Touch Product</a>';
+		}
+	}
+
+	/**
+	 * Perform touch action on a product.
+	 *
+	 * @return void
+	 */
+	public static function boekdb_touch_product_action() {
+		if ( isset( $_GET['action'], $_GET['post'], $_GET['nonce'] )
+			&& $_GET['action'] === 'touch_product'
+			&& wp_verify_nonce( $_GET['nonce'], 'touch_product_' . $_GET['post'] )
+		) {
+			$post_id = $_GET['post'];
+			if ( BoekDB_Api_Service::touch_product( $post_id ) ) {
+				// add a transient to store the admin message
+				set_transient( 'boekdb_admin_notice', 'Product touch succesvol!', 5 );
+			} else {
+				// add a transient to store the error message
+				set_transient( 'boekdb_admin_notice', 'Kon product touch niet uitvoeren!', 5 );
+			}
+
+			// redirect to prevent refreshing the page from causing a double touch
+			wp_safe_redirect( admin_url( 'edit.php?post_type=boekdb_boek' ) );
+			exit;
+		}
+	}
 }
 
 BoekDB_Post_Types::init();
-
-/*
- * Add Touch Product button to Boek post type
- */
-add_filter( 'manage_boekdb_boek_posts_columns', 'add_touch_product_column' );
-
-function add_touch_product_column( $columns ) {
-	$columns['touch_product'] = 'Touch Product';
-
-	return $columns;
-}
-
-add_action( 'manage_boekdb_boek_posts_custom_column', 'render_touch_product_column', 10, 2 );
-
-function render_touch_product_column( $column, $post_id ) {
-	if ( 'touch_product' === $column ) {
-		$url = add_query_arg(
-			array(
-				'action' => 'touch_product',
-				'post'   => $post_id,
-				'nonce'  => wp_create_nonce( 'touch_product_' . $post_id ),
-			),
-			admin_url( 'edit.php' )
-		);
-		echo '<a href="' . $url . '" class="button">Touch Product</a>';
-	}
-}
-
-add_action( 'admin_init', 'touch_product_action' );
-
-function touch_product_action() {
-	if ( isset( $_GET['action'], $_GET['post'], $_GET['nonce'] )
-		&& $_GET['action'] === 'touch_product'
-		&& wp_verify_nonce( $_GET['nonce'], 'touch_product_' . $_GET['post'] )
-	) {
-		$post_id = $_GET['post'];
-		if ( BoekDB_Api_Service::touch_product( $post_id ) ) {
-			// add a transient to store the admin message
-			set_transient( 'boekdb_admin_notice', 'Product touch succesvol!', 5 );
-		} else {
-			// add a transient to store the error message
-			set_transient( 'boekdb_admin_notice', 'Kon product touch niet uitvoeren!', 5 );
-		}
-
-		// redirect to prevent refreshing the page from causing a double touch
-		wp_redirect( admin_url( 'edit.php?post_type=boekdb_boek' ) );
-		exit;
-	}
-}
