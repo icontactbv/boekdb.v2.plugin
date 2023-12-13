@@ -181,14 +181,21 @@ class BoekDB_Admin_Meta_Boxes {
 			'url' => get_permalink($post)
 		);
 
-		$alternate_urls[] = $default_url;
+		array_push($alternate_urls, $default_url);
 
 		if (count($alternate_urls) > 1) {
 			echo '<ul>';
 			foreach($alternate_urls as $alternate_url) {
 				echo '<li>';
-				echo '<input type="radio" name="selected_alternate_url" value="' . esc_attr($alternate_url['url']) . '" ' . checked($selected_url, $alternate_url['url'], false) . ' > ';
-				echo '<a href="' . esc_url($alternate_url['url']) . '" target="_blank">' . esc_html("Etalage: " . $alternate_url['name'] . " - URL: " . $alternate_url['url']) . '</a>';
+				echo '<input type="radio" name="selected_alternate_url" value="' . esc_attr($alternate_url['url']) . '" ' . checked($selected_url, $alternate_url['url'], false) . '>&nbsp;';
+
+				if($alternate_url['name'] == 'Default') {
+					echo $alternate_url['name'].':&nbsp;';
+				} else {
+					echo 'Etalage "'. $alternate_url['name'] .'":&nbsp;';
+				}
+
+				echo '<a href="' . esc_url($alternate_url['url']) . '" target="_blank">' . esc_url($alternate_url['url']) . '</a>';
 				echo '</li>';
 			}
 			echo '</ul>';
