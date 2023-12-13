@@ -308,9 +308,17 @@ add_filter( 'cron_schedules', 'boekdb_add_minutely' );
 if (!defined('WP_UNINSTALL_PLUGIN')) {
 	add_filter( 'post_type_link', 'boekdb_modify_boek_permalink', 10, 2 );
 
+	/**
+	 * Modifies the permalink for the 'boekdb_boek' post type
+	 *
+	 * @param string   $post_link  The original permalink
+	 * @param WP_Post  $post       The post object
+	 *
+	 * @return string The modified permalink
+	 */
 	function boekdb_modify_boek_permalink( $post_link, $post ) {
 		if ( 'boekdb_boek' === $post->post_type ) {
-			$prefix = BoekDB_Import::get_etalage_prefix( $post->ID );
+			$prefix = boekdb_get_etalage_prefix( $post->ID );
 			if ( $prefix ) {
 				$post_link = home_url( '/boek/' . esc_sql( $prefix ) . '/' . $post->post_name . '/' );
 			}
@@ -318,4 +326,30 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 
 		return $post_link;
 	}
+}
+
+/**
+ * Retrieves the etalage prefix for a given book post ID
+ *
+ * @param int  $boek_post_id  The ID of the book post
+ *
+ * @return string|null The etalage prefix if found, null otherwise
+ */
+function boekdb_get_etalage_prefix( $boek_post_id ) {
+	global $wpdb;
+	$prefix = $wpdb->get_var(
+		$wpdb->prepare(
+			"
+		SELECT e.prefix 
+		FROM `{$wpdb->prefix}boekdb_etalages` AS e 
+		JOIN `{$wpdb->prefix}boekdb_etalage_boeken` AS eb 
+		ON e.id = eb.etalage_id 
+		WHERE eb.boek_id = %d 
+		AND e.prefix IS NOT NULL 
+		AND e.prefix != '' LIMIT 1",
+			$boek_post_id
+		)
+	);
+
+	return $prefix;
 }
