@@ -148,4 +148,9 @@
 		<exclude-pattern>/path/to/Tests/*Test\.php</exclude-pattern>
 	</rule>
 
+	<!-- don't check for yoda conditions anywhere -->
+	<rule ref="WordPress.PHP.YodaConditions">
+		<exclude-pattern>*\.php</exclude-pattern>
+	</rule>
+
 </ruleset>
