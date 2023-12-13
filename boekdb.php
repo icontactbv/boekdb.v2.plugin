@@ -329,6 +329,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 	 * @return string The modified permalink
 	 */
 	function boekdb_modify_boek_permalink($post_link, $post) {
+		boekdb_debug($post_link);
 		if ('boekdb_boek' === $post->post_type) {
 			// Try to get the link from the cache
 			$post_link = get_transient('boekdb_permalink_' . $post->ID);
@@ -344,9 +345,6 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 					$prefix = boekdb_get_etalage_prefix($post->ID);
 					if ($prefix) {
 						$post_link = home_url('/boek/' . esc_sql($prefix) . '/' . $post->post_name . '/');
-					} else {
-						// If there's no prefix, fallback to WordPress-generated permalink
-						$post_link = get_permalink($post->ID);
 					}
 				}
 
