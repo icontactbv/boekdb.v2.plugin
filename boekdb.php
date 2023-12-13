@@ -321,6 +321,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 	add_filter( 'post_type_link', 'boekdb_modify_boek_permalink', 10, 2 );
 
 	function boekdb_modify_boek_permalink($post_link, $post) {
+		boekdb_debug('post link (pre): ' . $post_link);
 		// Only apply changes for 'boekdb_boek' post type
 		if ('boekdb_boek' === $post->post_type) {
 			// Try to get the link from the cache
@@ -348,6 +349,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 			}
 		}
 
+		boekdb_debug('post link (post): ' . $post_link);
 		return $post_link;
 	}
 }
