@@ -26,7 +26,7 @@ class BoekDB_Post_Types {
 		add_filter( 'gutenberg_can_edit_post_type', array( self::class, 'gutenberg_can_edit_post_type' ), 10, 2 );
 		add_filter( 'use_block_editor_for_post_type', array( self::class, 'gutenberg_can_edit_post_type' ), 10, 2 );
 
-		add_filter( 'manage_boekdb_boek_posts_columns', array( self::class, 'boekdb_add_touch_product_column' ) );
+		add_filter( 'manage_boekdb_boek_posts_columns', array( self::class, 'boekdb_add_touch_product_column' ), 10, 1 );
 		add_action( 'admin_init', array( self::class, 'boekdb_touch_product_action' ) );
 		add_action( 'manage_boekdb_boek_posts_custom_column', array( self::class, 'boekdb_render_touch_product_column' ), 10, 2 );
 	}
