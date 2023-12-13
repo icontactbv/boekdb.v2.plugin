@@ -57,6 +57,15 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			}
 		}
 
+		/**
+		 * Run the import process.
+		 *
+		 * If import is not already running, either start it immediately or schedule it for execution after 5 seconds.
+		 * If import is already running, add an error message.
+		 *
+		 * @access private
+		 * @return void
+		 */
 		private static function run_import() {
 			if ( ! boekdb_is_import_running() ) {
 				if ( WP_DEBUG ) {
@@ -69,6 +78,12 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			}
 		}
 
+		/**
+		 * Test the connection to the API and handle the response.
+		 *
+		 * This method tests the connection to the API using the `test_api_connection()` method of the `Boekdb_Api_Service` class. It handles the response based on the success status.
+		 * @return void
+		 */
 		private static function test_connection() {
 			$testResponse = Boekdb_Api_Service::test_api_connection();
 			if ( ! $testResponse['success'] ) {
@@ -78,34 +93,69 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			}
 		}
 
+		/**
+		 * Stop the import process.
+		 *
+		 * This method stops the import process by resetting the offset and running status of the boekdb_etalages table in the database.
+		 *`.
+		 *
+		 * @return void
+		 */
 		private static function stop_import() {
 			global $wpdb;
 
 			$wpdb->query( "UPDATE {$wpdb->prefix}boekdb_etalages SET offset=0, running=0" );
 		}
 
+		/**
+		 * Saves a new etalage to the database.
+		 *
+		 * @return void
+		 */
 		private static function save_etalage() {
 			global $wpdb;
 
 			$api_key = sanitize_text_field( $_POST['etalage_api_key'] );
 			$name    = sanitize_text_field( $_POST['etalage_name'] );
+			$prefix  = sanitize_text_field( $_POST['etalage_prefix'] );
 
 			if ( strlen( $api_key ) === 0 || strlen( $name ) === 0 ) {
 				self::add_error( 'Er is iets fout gegaan' );
 			} elseif ( ! Boekdb_Api_Service::validate_api_key( $api_key ) ) {
 				self::add_error( 'API key is niet geldig' );
-			} else {
-				$wpdb->query(
-					$wpdb->prepare(
-						"INSERT INTO {$wpdb->prefix}boekdb_etalages (`name`, `api_key`) VALUES (%s, %s)",
-						$name,
-						$api_key
-					)
-				);
-				self::add_message( 'Etalage opgeslagen.' );
+			} else if(!empty($prefix)){
+				// Check if the prefix already exists
+				$existing_prefix = $wpdb->get_var($wpdb->prepare("SELECT prefix FROM {$wpdb->prefix}boekdb_etalages WHERE prefix = %s", $prefix));
+
+				// If the prefix already exists, do not add new etalage and return error message
+				if ( $existing_prefix !== null ) {
+					self::add_error( 'De opgegeven prefix bestaat al!' );
+					return;
+				}
 			}
+
+			$wpdb->query(
+				$wpdb->prepare(
+					"INSERT INTO {$wpdb->prefix}boekdb_etalages (`name`, `api_key`, `prefix`) VALUES (%s, %s, %s)",
+					$name,
+					$api_key,
+					$prefix
+				)
+			);
+
+			// Flush rewrite rules after the changes made in the settings so that it takes effect immediately
+			flush_rewrite_rules();
+			self::add_message( 'Etalage opgeslagen.' );
 		}
 
+		/**
+		 * Starts the cleanup process.
+		 *
+		 * If WP_DEBUG is enabled, the cleanup will be performed immediately using the BoekDB_Cleanup::cleanup() method.
+		 * If WP_DEBUG is disabled, a single event will be scheduled to run the cleanup after 5 seconds using the BoekDB_Cleanup::CLEANUP_HOOK.
+		 *
+		 * @return void
+		 */
 		private static function start_cleanup() {
 			if ( WP_DEBUG ) {
 				BoekDB_Cleanup::cleanup();
@@ -115,6 +165,11 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			self::add_message( 'Opruimen gestart' );
 		}
 
+		/**
+		 * Resets the last import date of an etalage in the database.
+		 *
+		 * @return void
+		 */
 		private static function reset_etalage() {
 			global $wpdb;
 			$id = (int) $_POST['reset'];
@@ -130,6 +185,11 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			}
 		}
 
+		/**
+		 * Deletes an etalage from the database.
+		 *
+		 * @return void
+		 */
 		private static function delete_etalage() {
 			$id = (int) $_POST['delete'];
 			if ( $id > 0 ) {
@@ -171,6 +231,11 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			}
 		}
 
+		/**
+		 * Outputs the administration settings page.
+		 *
+		 * @return void
+		 */
 		public static function output() {
 			$etalages       = self::get_etalages();
 			$import_running = boekdb_is_import_running();
@@ -181,6 +246,11 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			include __DIR__ . '/views/html-admin-settings.php';
 		}
 
+		/**
+		 * Retrieves all the etalages from the database.
+		 *
+		 * @return array An associative array of etalages where the key is the etalage ID and the value is the etalage object.
+		 */
 		public static function get_etalages() {
 			global $wpdb;
 
