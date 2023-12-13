@@ -248,11 +248,16 @@ class BoekDB_Import {
 				$slug = sanitize_title( $boek['titel'] . '-' . self::get_etalage_prefix( $boek_post_id ) );
 			}
 			$post['post_name'] = $slug;
-			$boek_post_id      = wp_insert_post( $post );
+
+			boekdb_debug( 'Creating slug ' . $slug );
+
+			$boek_post_id = wp_insert_post( $post );
 		} else {
 			if ( $prefixes_count === 1 ) {
 				$slug              = sanitize_title( $boek['titel'] . '-' . self::get_etalage_prefix( $boek_post_id ) );
 				$post['post_name'] = $slug;
+
+				boekdb_debug( 'Updating slug to ' . $slug );
 			}
 			$boek_post_id = wp_update_post( $post );
 		}
