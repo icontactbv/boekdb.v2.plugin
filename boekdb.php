@@ -320,22 +320,14 @@ add_filter( 'cron_schedules', 'boekdb_add_minutely' );
 if (!defined('WP_UNINSTALL_PLUGIN')) {
 	add_filter( 'post_type_link', 'boekdb_modify_boek_permalink', 10, 2 );
 
-	/**
-	 * Modifies the permalink for a book post type
-	 *
-	 * @param string   $post_link  The original permalink
-	 * @param WP_Post  $post       The current post being modified
-	 *
-	 * @return string The modified permalink
-	 */
 	function boekdb_modify_boek_permalink($post_link, $post) {
-		boekdb_debug($post_link);
+		// Only apply changes for 'boekdb_boek' post type
 		if ('boekdb_boek' === $post->post_type) {
 			// Try to get the link from the cache
-			$post_link = get_transient('boekdb_permalink_' . $post->ID);
+			$cached_post_link = get_transient('boekdb_permalink_' . $post->ID);
 
 			// If not in the cache
-			if ($post_link === false) {
+			if ($cached_post_link === false) {
 				$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
 				if ($selected_url) {
 					// Use selected alternate URL if it exists
@@ -350,6 +342,8 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 
 				// Cache the link for 12 hours
 				set_transient('boekdb_permalink_' . $post->ID, $post_link, 12 * HOUR_IN_SECONDS);
+			} else {
+				$post_link = $cached_post_link;
 			}
 		}
 
