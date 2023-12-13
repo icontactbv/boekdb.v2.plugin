@@ -535,6 +535,7 @@ class BoekDB_Import {
 				$response = wp_safe_remote_get( $bestand->url );
 				if ( is_wp_error( $response ) ) {
 					boekdb_debug( 'Error fetching file: ' . $bestand->url );
+					boekdb_debug( $response );
 					continue;
 				}
 
@@ -753,6 +754,7 @@ class BoekDB_Import {
 				$response = wp_safe_remote_get( $bestand->url );
 				if ( is_wp_error( $response ) ) {
 					boekdb_debug( 'Error fetching file: ' . $bestand->url );
+					boekdb_debug( $response );
 					continue;
 				}
 
