@@ -173,26 +173,27 @@ class BoekDB_Admin_Meta_Boxes {
 	 */
 	public static function render_etalage_url_meta_box($post) {
 		$alternate_urls = boekdb_get_alternate_urls($post->ID);
+		$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
+
+		// Default URL without prefix
+		$default_url = array(
+			'name' => 'Default',
+			'url' => get_permalink($post)
+		);
+
+		$alternate_urls[] = $default_url;
 
 		if (count($alternate_urls) > 1) {
-			$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
-
 			echo '<ul>';
-
 			foreach($alternate_urls as $alternate_url) {
 				echo '<li>';
 				echo '<input type="radio" name="selected_alternate_url" value="' . esc_attr($alternate_url['url']) . '" ' . checked($selected_url, $alternate_url['url'], false) . ' > ';
-				echo '<a href="' . esc_url($alternate_url['url']) . '" target="_blank">' . esc_html("Etalage: " . $alternate_url['name'] . " - URL: " . $alternate_url['url']) . '</a></li>';
+				echo '<a href="' . esc_url($alternate_url['url']) . '" target="_blank">' . esc_html("Etalage: " . $alternate_url['name'] . " - URL: " . $alternate_url['url']) . '</a>';
+				echo '</li>';
 			}
-
-			echo '</ul>';
-		} elseif (count($alternate_urls) === 1) {
-			echo '<p>Er is 1 alternatieve URL voor deze etalage:</p>';
-			echo '<ul>';
-			echo '<li><a href="' . esc_url($alternate_urls[0]['url']) . '" target="_blank">' . esc_html($alternate_urls[0]['url']) . '</a></li>';
 			echo '</ul>';
 		} else {
-			echo '<p>Er zijn geen alternatieve URL\'s voor deze etalage.</p>';
+			echo '<p>Er zijn geen alternatieve URLs voor deze etalage.</p>';
 		}
 	}
 
