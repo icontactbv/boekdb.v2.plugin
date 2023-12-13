@@ -203,6 +203,9 @@ class BoekDB_Admin_Meta_Boxes {
 				'selected_alternate_url',
 				$_POST['selected_alternate_url']
 			);
+
+			// Clear the cache
+			delete_transient('boekdb_permalink_' . $post_id);
 		}
 	}
 
