@@ -7,6 +7,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Class BoekDB
+ *
+ * The BoekDB class represents the main functionality of the BoekDB plugin.
+ */
 final class BoekDB {
 	/**
 	 * The single instance of the class.
@@ -14,7 +19,7 @@ final class BoekDB {
 	 * @var BoekDB
 	 */
 
-	protected static $_instance = null;
+	protected static $instance = null;
 	/**
 	 * BoekDB version.
 	 *
@@ -66,11 +71,11 @@ final class BoekDB {
 	 * @see    BoekDB()
 	 */
 	public static function instance() {
-		if ( is_null( self::$_instance ) ) {
-			self::$_instance = new self();
+		if ( is_null( self::$instance ) ) {
+			self::$instance = new self();
 		}
 
-		return self::$_instance;
+		return self::$instance;
 	}
 
 	/**
@@ -96,10 +101,10 @@ final class BoekDB {
 	 */
 	public static function fetch_etalages( $readytorun = false ) {
 		global $wpdb;
-		$query = $readytorun ? self::QUERY_READY_ETALAGES : self::QUERY_ALL_ETALAGES;
-		$query = str_replace( '{:prefix}', $wpdb->prefix, $query );
-		boekdb_debug( $readytorun ? 'fetching ready to run etalages' : 'fetching all etalages' );
-		boekdb_debug( $query );
-		return $wpdb->get_results( $query, OBJECT );
+
+		$fetch = $readytorun ? self::QUERY_READY_ETALAGES : self::QUERY_ALL_ETALAGES;
+		$fetch = str_replace( '{:prefix}', $wpdb->prefix, $fetch );
+
+		return $wpdb->get_results( $fetch, OBJECT );
 	}
 }

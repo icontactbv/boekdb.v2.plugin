@@ -13,6 +13,11 @@ defined( 'ABSPATH' ) || exit;
 class BoekDB_Cleanup {
 	const CLEANUP_HOOK = 'boekdb_cleanup';
 
+	/**
+	 * Initialize the class by setting up the necessary hooks and scheduling a cleanup event.
+	 *
+	 * @return void
+	 */
 	public static function init() {
 		add_action( self::CLEANUP_HOOK, array( self::class, 'cleanup' ) );
 
@@ -22,10 +27,13 @@ class BoekDB_Cleanup {
 	}
 
 	/**
-	 * Delete posts and delete from custom table
+	 * Removes the trashed books from the etalage.
 	 *
-	 * @param $etalage_id
-	 * @param $isbns
+	 * @param int   $etalage_id  The ID of the etalage.
+	 * @param array $isbns       An array of ISBNs.
+	 *
+	 * @return void
+	 * @global object $wpdb        WordPress database object.
 	 */
 	public static function trash_removed( $etalage_id, $isbns ) {
 		global $wpdb;
@@ -71,6 +79,16 @@ class BoekDB_Cleanup {
 		}
 	}
 
+	/**
+	 * Delete posts and related data.
+	 *
+	 * This method deletes posts and their related data, including attachments, meta data,
+	 * and taxonomy relationships. It also triggers a debug message for each deleted post.
+	 *
+	 * @param array $post_ids  The IDs of the posts to delete.
+	 *
+	 * @return void
+	 */
 	public static function delete_posts( $post_ids ) {
 		global $wpdb;
 
@@ -111,6 +129,13 @@ class BoekDB_Cleanup {
 		}
 	}
 
+	/**
+	 * Delete an etalage by its ID.
+	 *
+	 * @param int $id  The ID of the etalage to be deleted.
+	 *
+	 * @return void
+	 */
 	public static function delete_etalage( $id ) {
 		global $wpdb;
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id ) );
@@ -127,6 +152,14 @@ class BoekDB_Cleanup {
 		self::delete_etalage_posts( $post_ids, $id );
 	}
 
+	/**
+	 * Delete etalage posts based on the provided post IDs and deleted etalage ID.
+	 *
+	 * @param array $post_ids         The array of post IDs to be deleted.
+	 * @param int   $deleted_etalage  The ID of the etalage that was deleted.
+	 *
+	 * @return void
+	 */
 	public static function delete_etalage_posts( $post_ids, $deleted_etalage ) {
 		global $wpdb;
 
@@ -152,6 +185,12 @@ class BoekDB_Cleanup {
 		}
 	}
 
+	/**
+	 * Clean up the database by removing unnecessary records.
+	 *
+	 * @return void
+	 * @global wpdb $wpdb The global database object.
+	 */
 	public static function cleanup() {
 		global $wpdb;
 
@@ -212,8 +251,15 @@ class BoekDB_Cleanup {
 		self::delete_terms( $term_ids );
 	}
 
+	/**
+	 * Collect all term IDs and their associated taxonomies for cleanup.
+	 *
+	 * @return array Returns an array where the keys are term IDs and the values are their taxonomies.
+	 * @global wpdb $wpdb WordPress database object.
+	 */
 	private static function collect_term_ids_for_cleanup() {
 		global $wpdb;
+
 		// Identify all the taxonomies attached to 'boekdb_boek' post type
 		$relevant_taxonomies = get_object_taxonomies( 'boekdb_boek' );
 		$term_ids            = array();
@@ -242,6 +288,13 @@ class BoekDB_Cleanup {
 		return $term_ids;
 	}
 
+	/**
+	 * Delete terms from specified taxonomies and perform additional cleanup tasks if necessary.
+	 *
+	 * @param array $term_ids  An array of term IDs and their corresponding taxonomies.
+	 *
+	 * @return void
+	 */
 	public static function delete_terms( $term_ids ) {
 		global $wpdb;
 
@@ -263,7 +316,6 @@ class BoekDB_Cleanup {
 				if ( $taxonomy === 'boekdb_auteur_tax' ) {
 					// get all term_meta
 					$term_meta = get_term_meta( $term_id );
-					boekdb_debug( 'term_meta for term ' . $term_id . ': ' . print_r( $term_meta, true ) );
 
 					// fetch auteursfoto_id
 					$auteursfoto_id = get_term_meta( $term_id, 'auteursfoto_id', true );

@@ -173,7 +173,7 @@ class BoekDB_Import {
 	private static function fetch_etalage_running( $id ) {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'boekdb_etalages';
-		$running    = $wpdb->get_var( $wpdb->prepare( 'SELECT running FROM %s WHERE id = %d', $table_name, $id ) );
+		$running    = $wpdb->get_var( $wpdb->prepare( "SELECT running FROM {$table_name} WHERE id = %d", $id ) );
 
 		return (int) $running;
 	}
