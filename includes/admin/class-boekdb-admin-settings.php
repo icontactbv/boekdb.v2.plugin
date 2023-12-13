@@ -118,13 +118,13 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 
 			$api_key = sanitize_text_field( $_POST['etalage_api_key'] );
 			$name    = sanitize_text_field( $_POST['etalage_name'] );
-			$prefix  = sanitize_text_field( $_POST['etalage_prefix'] );
+			$prefix  = strtolower( sanitize_text_field( $_POST['etalage_prefix'] ) );
 
 			if ( strlen( $api_key ) === 0 || strlen( $name ) === 0 ) {
 				self::add_error( 'Er is iets fout gegaan' );
 			} elseif ( ! Boekdb_Api_Service::validate_api_key( $api_key ) ) {
 				self::add_error( 'API key is niet geldig' );
-			} elseif ( ! empty( $prefix ) ) {
+			} elseif ( ! empty( $prefix ) || $prefix === 'default') {
 				// Check if the prefix already exists
 				$existing_prefix = $wpdb->get_var( $wpdb->prepare( "SELECT prefix FROM {$wpdb->prefix}boekdb_etalages WHERE prefix = %s", $prefix ) );
 
