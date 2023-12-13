@@ -33,6 +33,7 @@ class BoekDB_Admin_Meta_Boxes {
 		add_action( 'add_meta_boxes', array( $this, 'remove_meta_boxes' ), 10 );
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ), 30 );
 		add_action( 'save_post', array( self::class, 'save_meta_boxes' ), 1, 2 );
+		add_action( 'save_post', array( $this, 'save_etalage_url' ), 10, 1 );
 
 		// Error handling (for showing errors from meta boxes on next page load).
 		add_action( 'admin_notices', array( $this, 'output_errors' ) );
@@ -151,6 +152,41 @@ class BoekDB_Admin_Meta_Boxes {
 			array( self::class, 'meta_boek_fields_html' ),
 			'boekdb_boek'
 		);
+
+		// Add meta box for Etalage URL
+		add_meta_box(
+			'etalage_url_meta_box',
+			'Etalage URL',
+			array( self::class, 'render_etalage_url_meta_box' ),
+			'boekdb_boek',
+			'normal',
+			'high'
+		);
+	}
+
+	public static function render_etalage_url_meta_box($post) {
+		$alternate_urls = get_alternate_urls($post->ID);
+
+		$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
+
+		echo('<select name="selected_alternate_url">');
+		foreach($alternate_urls as $alternate_url) {
+			echo('<option value="' . esc_attr($alternate_url['url']) . "\" " . selected($selected_url, $alternate_url['url'], false) . ">" . esc_html("Etalage: " . $alternate_url['name'] . " - URL: " . $alternate_url['url']) . "</option>");
+		}
+		echo('</select>');
+	}
+
+	public static function save_etalage_url($post_id) {
+		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+			return;
+		}
+		if ( isset( $_POST['selected_alternate_url'] ) ) {
+			update_post_meta(
+				$post_id,
+				'selected_alternate_url',
+				$_POST['selected_alternate_url']
+			);
+		}
 	}
 
 	/**
