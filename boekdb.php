@@ -293,23 +293,23 @@ function boekdb_get_alternate_urls( $postId ) {
 	$alternate_urls = array();
 
 	// If there are no prefixes, return the empty array
-	if(empty($prefix_records)) {
+	if ( empty( $prefix_records ) ) {
 		return $alternate_urls;
 	}
 
-	foreach ($prefix_records as $record) {
+	foreach ( $prefix_records as $record ) {
 		$etalage_name     = $record->name;
 		$prefix           = $record->prefix;
 		$alternate_urls[] = array(
 			'name' => $etalage_name,
-			'url'  => home_url('/boek/' . esc_sql($prefix) . '/' . get_post_field('post_name', $postId) . '/'),
+			'url'  => home_url( '/boek/' . esc_sql( $prefix ) . '/' . get_post_field( 'post_name', $postId ) . '/' ),
 		);
 	}
 
 	// Add the default URL
 	$alternate_urls[] = array(
 		'name' => 'default',
-		'url'  => home_url('/boek/' . get_post_field('post_name', $postId) . '/'),
+		'url'  => home_url( '/boek/' . get_post_field( 'post_name', $postId ) . '/' ),
 	);
 
 	return $alternate_urls;
@@ -317,30 +317,30 @@ function boekdb_get_alternate_urls( $postId ) {
 
 add_filter( 'cron_schedules', 'boekdb_add_minutely' );
 
-if (!defined('WP_UNINSTALL_PLUGIN')) {
+if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	add_filter( 'post_type_link', 'boekdb_modify_boek_permalink', 10, 2 );
 
-	function boekdb_modify_boek_permalink($post_link, $post) {
+	function boekdb_modify_boek_permalink( $post_link, $post ) {
 		// Only apply changes for 'boekdb_boek' post type
-		if ('boekdb_boek' === $post->post_type) {
+		if ( 'boekdb_boek' === $post->post_type ) {
 			// Try to get the link from the cache
-			$cached_post_link = get_transient('boekdb_permalink_' . $post->ID);
+			$cached_post_link = get_transient( 'boekdb_permalink_' . $post->ID );
 
 			// If not in the cache
-			if ($cached_post_link === false || $cached_post_link === '') {
-				$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
-				$prefix = boekdb_get_etalage_prefix($post->ID);
+			if ( $cached_post_link === false || $cached_post_link === '' ) {
+				$selected_url = get_post_meta( $post->ID, 'selected_alternate_url', true );
+				$prefix       = boekdb_get_etalage_prefix( $post->ID );
 
-				if (trim($selected_url) !== '') {
+				if ( trim( $selected_url ) !== '' ) {
 					// Use selected alternate URL if it exists
 					$post_link = $selected_url;
-				} else if ($prefix !== '') {
+				} elseif ( $prefix !== '' ) {
 					// Use prefix if it exists
-					$post_link = home_url('/boek/' . esc_sql($prefix) . '/' . $post->post_name . '/');
+					$post_link = home_url( '/boek/' . esc_sql( $prefix ) . '/' . $post->post_name . '/' );
 				}
 
 				// Cache the link for 12 hours
-				set_transient('boekdb_permalink_' . $post->ID, $post_link, 12 * HOUR_IN_SECONDS);
+				set_transient( 'boekdb_permalink_' . $post->ID, $post_link, 12 * HOUR_IN_SECONDS );
 			} else {
 				$post_link = $cached_post_link;
 			}
@@ -352,11 +352,11 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 /**
  * Retrieves the etalage prefix for a given book post ID
  *
- * @param int  $boek_post_id  The ID of the book post
+ * @param int $boek_post_id  The ID of the book post
  *
  * @return string|null The etalage prefix if found, empty string otherwise
  */
-function boekdb_get_etalage_prefix($boek_post_id) {
+function boekdb_get_etalage_prefix( $boek_post_id ) {
 	global $wpdb;
 	$prefix = $wpdb->get_var(
 		$wpdb->prepare(

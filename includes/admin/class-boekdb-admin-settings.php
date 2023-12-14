@@ -124,13 +124,19 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				self::add_error( 'Er is iets fout gegaan' );
 			} elseif ( ! Boekdb_Api_Service::validate_api_key( $api_key ) ) {
 				self::add_error( 'API key is niet geldig' );
-			} elseif ( ! empty( $prefix ) || $prefix === 'default') {
+			} elseif ( ! empty( $prefix ) || $prefix === 'default' ) {
 				// Check if the prefix already exists
-				$existing_prefix = $wpdb->get_var( $wpdb->prepare( "SELECT prefix FROM {$wpdb->prefix}boekdb_etalages WHERE prefix = %s", $prefix ) );
+				$existing_prefix = $wpdb->get_var(
+					$wpdb->prepare(
+						"SELECT prefix FROM {$wpdb->prefix}boekdb_etalages WHERE prefix = %s",
+						$prefix
+					)
+				);
 
 				// If the prefix already exists, do not add new etalage and return error message
 				if ( $existing_prefix !== null ) {
 					self::add_error( 'De opgegeven prefix bestaat al!' );
+
 					return;
 				}
 			}
@@ -202,7 +208,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		/**
 		 * Add a message.
 		 *
-		 * @param string $text  Message.
+		 * @param  string $text  Message.
 		 */
 		public static function add_message( $text ) {
 			self::$messages[] = $text;
@@ -211,7 +217,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		/**
 		 * Add an error.
 		 *
-		 * @param string $text  Message.
+		 * @param  string $text  Message.
 		 */
 		public static function add_error( $text ) {
 			self::$errors[] = $text;
@@ -238,8 +244,8 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * @return void
 		 */
 		public static function output() {
-			$etalages       = self::get_etalages();
-			$import_running = boekdb_is_import_running();
+			$boekdb_etalages = self::get_etalages();
+			$import_running  = boekdb_is_import_running();
 			if ( $import_running ) {
 				self::add_message( 'Er draait op dit moment een import' );
 			}
@@ -255,7 +261,10 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		public static function get_etalages() {
 			global $wpdb;
 
-			$etalage_result = $wpdb->get_results( "SELECT e.id, e.name, e.prefix, e.api_key, DATE_FORMAT(e.last_import, '%Y-%m-%d %H:%i:%s') as last_import, e.isbns, e.running, e.offset, COUNT(eb.boek_id) as boeken FROM {$wpdb->prefix}boekdb_etalages e LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON e.id = eb.etalage_id GROUP BY e.id", OBJECT );
+			$etalage_result = $wpdb->get_results(
+				"SELECT e.id, e.name, e.prefix, e.api_key, DATE_FORMAT(e.last_import, '%Y-%m-%d %H:%i:%s') as last_import, e.isbns, e.running, e.offset, COUNT(eb.boek_id) as boeken FROM {$wpdb->prefix}boekdb_etalages e LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON e.id = eb.etalage_id GROUP BY e.id",
+				OBJECT
+			);
 			$etalages       = array();
 			foreach ( $etalage_result as $etalage ) {
 				$etalages[ $etalage->id ] = $etalage;

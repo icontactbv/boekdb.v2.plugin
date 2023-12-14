@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<thead>
 			<tr>
 				<th class="manage-column"><?php esc_html_e( 'Naam', 'boekdb' ); ?></th>
-                <th class="manage-column"><?php esc_html_e( 'Prefix', 'boekdb' ); ?></th>
+				<th class="manage-column"><?php esc_html_e( 'Prefix', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'Geïmporteerd', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'BoekDB aantal', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'Offset', 'boekdb' ); ?></th>
@@ -37,7 +37,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<tbody>
 			<?php
 
-			foreach ( $etalages as $etalage ) :
+			foreach ( $boekdb_etalages as $etalage ) :
 				if ( $etalage->running > 0 ) {
 					$disabled = 'disabled="disabled" aria-disabled="true"';
 				} else {

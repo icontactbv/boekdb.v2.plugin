@@ -167,37 +167,37 @@ class BoekDB_Admin_Meta_Boxes {
 	/**
 	 * Renders the etalage URL meta box on the post edit screen.
 	 *
-	 * @param object  $post  The WordPress post object.
+	 * @param object $post  The WordPress post object.
 	 *
 	 * @return void
 	 */
-	public static function render_etalage_url_meta_box($post) {
-		$alternate_urls = boekdb_get_alternate_urls($post->ID);
-		$selected_url = get_post_meta($post->ID, 'selected_alternate_url', true);
+	public static function render_etalage_url_meta_box( $post ) {
+		$alternate_urls = boekdb_get_alternate_urls( $post->ID );
+		$selected_url   = get_post_meta( $post->ID, 'selected_alternate_url', true );
 
 		// If no alternate URL was selected previously
-		if (!$selected_url) {
+		if ( ! $selected_url ) {
 			// Set the selected URL to the current permalink
-			$selected_url = get_permalink($post->ID);
+			$selected_url = get_permalink( $post->ID );
 		}
 
-		if (count($alternate_urls) > 1) {
+		if ( count( $alternate_urls ) > 1 ) {
 			echo '<ul>';
-			foreach ($alternate_urls as $alternate_url) {
+			foreach ( $alternate_urls as $alternate_url ) {
 				echo '<li>';
 
 				echo '<input type="radio" name="selected_alternate_url" value="'
-				     . esc_attr($alternate_url['url']) . '" '
-				     . checked($selected_url, $alternate_url['url'], false) . '>&nbsp;';
+					. esc_attr( $alternate_url['url'] ) . '" '
+					. checked( $selected_url, $alternate_url['url'], false ) . '>&nbsp;';
 
-				if ($alternate_url['name'] == 'default') {
+				if ( $alternate_url['name'] == 'default' ) {
 					echo '"' . $alternate_url['name'] . '":&nbsp;';
 				} else {
 					echo 'Etalage "' . $alternate_url['name'] . '":&nbsp;';
 				}
 
-				echo '<a href="' . esc_url($alternate_url['url'])
-				     . '" target="_blank">' . esc_url($alternate_url['url']) . '</a>';
+				echo '<a href="' . esc_url( $alternate_url['url'] )
+					. '" target="_blank">' . esc_url( $alternate_url['url'] ) . '</a>';
 				echo '</li>';
 			}
 			echo '</ul>';
@@ -206,8 +206,8 @@ class BoekDB_Admin_Meta_Boxes {
 		}
 	}
 
-	function save_etalage_url($post_id) {
-		if (array_key_exists('selected_alternate_url', $_POST)) {
+	function save_etalage_url( $post_id ) {
+		if ( array_key_exists( 'selected_alternate_url', $_POST ) ) {
 			update_post_meta(
 				$post_id,
 				'selected_alternate_url',
@@ -215,7 +215,7 @@ class BoekDB_Admin_Meta_Boxes {
 			);
 
 			// Clear the cache
-			delete_transient('boekdb_permalink_' . $post_id);
+			delete_transient( 'boekdb_permalink_' . $post_id );
 		}
 	}
 
