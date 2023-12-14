@@ -89,8 +89,8 @@ final class BoekDB {
 		return untrailingslashit( plugins_url( '/', BOEKDB_PLUGIN_FILE ) );
 	}
 
-	const QUERY_READY_ETALAGES = "SELECT id, name, api_key, running, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {:prefix}boekdb_etalages WHERE running = 2";
-	const QUERY_ALL_ETALAGES   = "SELECT id, name, api_key, running, isbns, offset, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {:prefix}boekdb_etalages";
+	const QUERY_READY_ETALAGES = "SELECT id, name, api_key, running, isbns, `offset`, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {:prefix}boekdb_etalages WHERE running = 2";
+	const QUERY_ALL_ETALAGES   = "SELECT id, name, api_key, running, isbns, `offset`, DATE_FORMAT(last_import, '%Y-%m-%d\T%H:%i:%s\+01:00') as last_import, filter_hash FROM {:prefix}boekdb_etalages";
 
 	/**
 	 * Fetch etalages
