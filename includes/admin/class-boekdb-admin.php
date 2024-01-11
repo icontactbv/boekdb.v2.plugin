@@ -6,9 +6,7 @@
  * @package BoekDB
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly.
-}
+defined( 'ABSPATH' ) || exit;
 
 /**
  * BoekDB_Admin class.
@@ -29,7 +27,6 @@ class BoekDB_Admin {
 		include_once __DIR__ . '/class-boekdb-admin-menus.php';
 		include_once __DIR__ . '/class-boekdb-admin-settings.php';
 	}
-
 }
 
 return new BoekDB_Admin();

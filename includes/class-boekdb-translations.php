@@ -1,19 +1,32 @@
 <?php
 /**
- * BoekDB Translations
- *
- * Translation arrays
+ * Translations arrays for BoekDB
  *
  * @package BoekDB
  */
 
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * BoekDB Translations class
+ */
 final class BoekDB_Translations {
+	/**
+	 * Mappings for luisterboek
+	 *
+	 * @var array
+	 */
 	public static $verschijningsvorm = array(
 		'Luisterboek : MP3 download' => 'Luisterboek',
 		'Luisterboek Download'       => 'Luisterboek',
 		'Luisterboek CD'             => 'Luisterboek',
 	);
 
+	/**
+	 * Translations from THEMA to readable strings
+	 *
+	 * @var array
+	 */
 	public static $thema = array(
 		'A'              => 'Kunst',
 		'AB'             => 'Kunst: algemene onderwerpen',

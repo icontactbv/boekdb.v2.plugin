@@ -32,7 +32,8 @@ class BoekDB_Admin_Meta_Boxes {
 	public function __construct() {
 		add_action( 'add_meta_boxes', array( $this, 'remove_meta_boxes' ), 10 );
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ), 30 );
-		add_action( 'save_post', array( $this, 'save_meta_boxes' ), 1, 2 );
+		add_action( 'save_post', array( self::class, 'save_meta_boxes' ), 1, 2 );
+		add_action( 'save_post', array( $this, 'save_etalage_url' ), 10, 1 );
 
 		// Error handling (for showing errors from meta boxes on next page load).
 		add_action( 'admin_notices', array( $this, 'output_errors' ) );
@@ -42,12 +43,19 @@ class BoekDB_Admin_Meta_Boxes {
 	/**
 	 * Add an error message.
 	 *
-	 * @param  string  $text  Error to add.
+	 * @param string $text  Error to add.
 	 */
 	public static function add_error( $text ) {
 		self::$meta_box_errors[] = $text;
 	}
 
+	/**
+	 * Saves the meta boxes for a given post ID.
+	 *
+	 * @param int $post_id  The ID of the post being saved.
+	 *
+	 * @return mixed The post ID that was saved.
+	 */
 	public static function save_meta_boxes( $post_id ) {
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return $post_id;
@@ -60,11 +68,9 @@ class BoekDB_Admin_Meta_Boxes {
 			if ( strlen( trim( $boekdb_annotatie ) ) === 0 && $annotatie_overwritten === '1' ) {
 				update_post_meta( $post_id, 'boekdb_annotatie', $meta['boekdb_annotatie_org'][0] );
 				update_post_meta( $post_id, 'boekdb_annotatie_overwritten', '0' );
-			} else {
-				if ( $annotatie_overwritten === '1' || $meta['boekdb_annotatie'][0] !== $boekdb_annotatie ) {
+			} elseif ( $annotatie_overwritten === '1' || $meta['boekdb_annotatie'][0] !== $boekdb_annotatie ) {
 					update_post_meta( $post_id, 'boekdb_annotatie', $boekdb_annotatie );
 					update_post_meta( $post_id, 'boekdb_annotatie_overwritten', '1' );
-				}
 			}
 		}
 		if ( isset( $_POST['boekdb_flaptekst'] ) ) {
@@ -73,15 +79,13 @@ class BoekDB_Admin_Meta_Boxes {
 			if ( strlen( trim( $boekdb_flaptekst ) ) === 0 && $flaptekst_overwritten === '1' ) {
 				update_post_meta( $post_id, 'boekdb_flaptekst', trim( $meta['boekdb_flaptekst_org'][0] ) );
 				update_post_meta( $post_id, 'boekdb_flaptekst_overwritten', '0' );
-			} else {
-				if ( $flaptekst_overwritten === '1' || trim( $meta['boekdb_flaptekst'][0] ) !== $boekdb_flaptekst ) {
+			} elseif ( $flaptekst_overwritten === '1' || trim( $meta['boekdb_flaptekst'][0] ) !== $boekdb_flaptekst ) {
 					update_post_meta( $post_id, 'boekdb_flaptekst', $boekdb_flaptekst );
 					update_post_meta( $post_id, 'boekdb_flaptekst_overwritten', '1' );
-				}
 			}
 		}
 
-		if ( isset ( $_POST['quote'] ) && is_array( $_POST['quote'] ) ) {
+		if ( isset( $_POST['quote'] ) && is_array( $_POST['quote'] ) ) {
 			$quotes = get_post_meta( $post_id, 'boekdb_recensiequotes' )[0];
 			foreach ( $_POST['quote'] as $hash => $value ) {
 				if ( isset( $quotes[ $hash ] ) ) {
@@ -94,6 +98,13 @@ class BoekDB_Admin_Meta_Boxes {
 		return $post_id;
 	}
 
+	/**
+	 * Generate HTML for displaying the meta fields of a book.
+	 *
+	 * @param WP_Post $boek  The book post object.
+	 *
+	 * @return void
+	 */
 	public static function meta_boek_fields_html( $boek ) {
 		$meta = get_post_meta( $boek->ID );
 
@@ -135,8 +146,77 @@ class BoekDB_Admin_Meta_Boxes {
 	 * Add Meta boxes.
 	 */
 	public function add_meta_boxes() {
-		add_meta_box( 'boek_fields', 'BoekDB velden',
-			array( __CLASS__, 'meta_boek_fields_html' ), 'boekdb_boek' );
+		add_meta_box(
+			'boek_fields',
+			'BoekDB velden',
+			array( self::class, 'meta_boek_fields_html' ),
+			'boekdb_boek'
+		);
+
+		// Add meta box for Etalage URL
+		add_meta_box(
+			'etalage_url_meta_box',
+			'Alternatieve URL\'s voor etalages:',
+			array( self::class, 'render_etalage_url_meta_box' ),
+			'boekdb_boek',
+			'normal',
+			'high'
+		);
+	}
+
+	/**
+	 * Renders the etalage URL meta box on the post edit screen.
+	 *
+	 * @param object $post  The WordPress post object.
+	 *
+	 * @return void
+	 */
+	public static function render_etalage_url_meta_box( $post ) {
+		$alternate_urls = boekdb_get_alternate_urls( $post->ID );
+		$selected_url   = get_post_meta( $post->ID, 'selected_alternate_url', true );
+
+		// If no alternate URL was selected previously
+		if ( ! $selected_url ) {
+			// Set the selected URL to the current permalink
+			$selected_url = get_permalink( $post->ID );
+		}
+
+		if ( count( $alternate_urls ) > 1 ) {
+			echo '<ul>';
+			foreach ( $alternate_urls as $alternate_url ) {
+				echo '<li>';
+
+				echo '<input type="radio" name="selected_alternate_url" value="'
+					. esc_attr( $alternate_url['url'] ) . '" '
+					. checked( $selected_url, $alternate_url['url'], false ) . '>&nbsp;';
+
+				if ( $alternate_url['name'] == 'default' ) {
+					echo '"' . $alternate_url['name'] . '":&nbsp;';
+				} else {
+					echo 'Etalage "' . $alternate_url['name'] . '":&nbsp;';
+				}
+
+				echo '<a href="' . esc_url( $alternate_url['url'] )
+					. '" target="_blank">' . esc_url( $alternate_url['url'] ) . '</a>';
+				echo '</li>';
+			}
+			echo '</ul>';
+		} else {
+			echo '<p>Er zijn geen alternatieve URLs voor deze etalage.</p>';
+		}
+	}
+
+	function save_etalage_url( $post_id ) {
+		if ( array_key_exists( 'selected_alternate_url', $_POST ) ) {
+			update_post_meta(
+				$post_id,
+				'selected_alternate_url',
+				$_POST['selected_alternate_url']
+			);
+
+			// Clear the cache
+			delete_transient( 'boekdb_permalink_' . $post_id );
+		}
 	}
 
 	/**
