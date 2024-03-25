@@ -1055,7 +1055,7 @@ class BoekDB_Import {
 				wp_schedule_single_event( time(), self::IMPORT_HOOK );
 			}
 		} catch ( Exception $e ) {
-			add_action( 'admin_notices', array( Boekdb_Api_Service::class, 'boekdb_connection_error'));
+			add_action( 'admin_notices', array( BoekDB_Install::class, 'boekdb_connection_error'));
 		}
 	}
 
