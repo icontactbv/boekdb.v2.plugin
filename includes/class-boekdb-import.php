@@ -161,6 +161,8 @@ class BoekDB_Import {
 
 			return true;
 		}
+
+		return false;
 	}
 
 	/**
