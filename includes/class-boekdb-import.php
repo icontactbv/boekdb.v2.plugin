@@ -52,6 +52,12 @@ class BoekDB_Import {
 
 		// fetch running imports
 		$etalages = BoekDB::fetch_etalages( true );
+		if( $etalages === false ) {
+			boekdb_debug( 'Error fetching etalages' );
+
+			return;
+		}
+
 		if ( count( $etalages ) === 0 ) {
 			boekdb_debug( 'No imports ready to run found.' );
 
@@ -69,6 +75,13 @@ class BoekDB_Import {
 		$last_import = $last_import->format( 'Y-m-d\TH:i:sP' );
 
 		$products = Boekdb_Api_Service::fetch_products( $etalage->api_key, $last_import, $offset );
+
+		if ( $products === false ) {
+			boekdb_debug( 'Error fetching products from API' );
+
+			return;
+		}
+
 		if ( count( $products ) > 0 ) {
 			boekdb_debug( 'Fetched ' . $etalage->name . ' with offset ' . $offset );
 			boekdb_debug( 'Contains ' . count( $products ) . ' books' );
@@ -161,6 +174,8 @@ class BoekDB_Import {
 
 			return true;
 		}
+
+		return false;
 	}
 
 	/**
@@ -1009,34 +1024,38 @@ class BoekDB_Import {
 			return;
 		}
 
-		$etalages = BoekDB::fetch_etalages();
-		foreach ( $etalages as $etalage ) {
-			// validate api key
-			if ( ! Boekdb_Api_Service::validate_api_key( $etalage->api_key ) ) {
-				// delete etalage
-				BoekDB_Cleanup::delete_etalage( $etalage->id );
-				set_transient(
-					'boekdb_admin_notice',
-					'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.',
-					3600
-				);
+		try {
+			$etalages = BoekDB::fetch_etalages();
+			foreach ( $etalages as $etalage ) {
+				// validate api key
+				if ( ! Boekdb_Api_Service::validate_api_key( $etalage->api_key ) ) {
+					// delete etalage
+					BoekDB_Cleanup::delete_etalage( $etalage->id );
+					set_transient(
+						'boekdb_admin_notice',
+						'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.',
+						3600
+					);
+				}
+
+				self::update_running( 2, $etalage );
+
+				$reset = self::check_available_isbns( $etalage );
+				if ( $reset ) {
+					boekdb_debug( 'last import has been reset' );
+				}
+
+				$last_import = $etalage->last_import;
+				if ( $reset || is_null( $last_import ) ) {
+					$last_import = self::DEFAULT_LAST_IMPORT;
+					self::set_last_import( $etalage->id, $last_import );
+				}
+
+				// fire first import event
+				wp_schedule_single_event( time(), self::IMPORT_HOOK );
 			}
-
-			self::update_running( 2, $etalage );
-
-			$reset = self::check_available_isbns( $etalage );
-			if ( $reset ) {
-				boekdb_debug( 'last import has been reset' );
-			}
-
-			$last_import = $etalage->last_import;
-			if ( $reset || is_null( $last_import ) ) {
-				$last_import = self::DEFAULT_LAST_IMPORT;
-				self::set_last_import( $etalage->id, $last_import );
-			}
-
-			// fire first import event
-			wp_schedule_single_event( time(), self::IMPORT_HOOK );
+		} catch ( Exception $e ) {
+			set_transient( 'boekdb_admin_notice', 'Let op! Connectie met BoekDB is verbroken.', 3600 );
 		}
 	}
 

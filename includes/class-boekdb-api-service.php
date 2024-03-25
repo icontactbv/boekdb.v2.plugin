@@ -194,7 +194,7 @@ class Boekdb_Api_Service {
 	public static function validate_api_key( $api_key ) {
 		// Test the connection first
 		if ( ! self::check_connection_and_version() ) {
-			return false;
+			throw new Exception( 'API connection failed' );
 		}
 
 		// Make a request to any read-only endpoint
@@ -208,7 +208,7 @@ class Boekdb_Api_Service {
 		);
 
 		// Check if the API key is invalid (Unauthorized)
-		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) == 401 ) {
+		if ( wp_remote_retrieve_response_code( $response ) == 401 ) {
 			boekdb_debug( 'Invalid API key: ' . $api_key );
 			return false;
 		}
