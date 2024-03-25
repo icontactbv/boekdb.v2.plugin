@@ -97,7 +97,7 @@ final class BoekDB {
 	 *
 	 * @param bool $readytorun  A flag to check readiness.
 	 *
-	 * @return array An array of etalages.
+	 * @return array|bool An array of etalages or false if failed
 	 */
 	public static function fetch_etalages( $readytorun = false ) {
 		global $wpdb;
@@ -105,6 +105,12 @@ final class BoekDB {
 		$fetch = $readytorun ? self::QUERY_READY_ETALAGES : self::QUERY_ALL_ETALAGES;
 		$fetch = str_replace( '{:prefix}', $wpdb->prefix, $fetch );
 
-		return $wpdb->get_results( $fetch, OBJECT );
+		$etalages =  $wpdb->get_results( $fetch, OBJECT );
+
+		if ( ! is_array( $etalages ) ) {
+			return false;
+		}
+
+		return $etalages;
 	}
 }

@@ -52,6 +52,12 @@ class BoekDB_Import {
 
 		// fetch running imports
 		$etalages = BoekDB::fetch_etalages( true );
+		if( $etalages === false ) {
+			boekdb_debug( 'Error fetching etalages' );
+
+			return;
+		}
+
 		if ( count( $etalages ) === 0 ) {
 			boekdb_debug( 'No imports ready to run found.' );
 
@@ -69,6 +75,13 @@ class BoekDB_Import {
 		$last_import = $last_import->format( 'Y-m-d\TH:i:sP' );
 
 		$products = Boekdb_Api_Service::fetch_products( $etalage->api_key, $last_import, $offset );
+
+		if ( $products === false ) {
+			boekdb_debug( 'Error fetching products from API' );
+
+			return;
+		}
+
 		if ( count( $products ) > 0 ) {
 			boekdb_debug( 'Fetched ' . $etalage->name . ' with offset ' . $offset );
 			boekdb_debug( 'Contains ' . count( $products ) . ' books' );
