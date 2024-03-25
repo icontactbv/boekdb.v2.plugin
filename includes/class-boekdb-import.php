@@ -1009,34 +1009,38 @@ class BoekDB_Import {
 			return;
 		}
 
-		$etalages = BoekDB::fetch_etalages();
-		foreach ( $etalages as $etalage ) {
-			// validate api key
-			if ( ! Boekdb_Api_Service::validate_api_key( $etalage->api_key ) ) {
-				// delete etalage
-				BoekDB_Cleanup::delete_etalage( $etalage->id );
-				set_transient(
-					'boekdb_admin_notice',
-					'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.',
-					3600
-				);
+		try {
+			$etalages = BoekDB::fetch_etalages();
+			foreach ( $etalages as $etalage ) {
+				// validate api key
+				if ( ! Boekdb_Api_Service::validate_api_key( $etalage->api_key ) ) {
+					// delete etalage
+					BoekDB_Cleanup::delete_etalage( $etalage->id );
+					set_transient(
+						'boekdb_admin_notice',
+						'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.',
+						3600
+					);
+				}
+
+				self::update_running( 2, $etalage );
+
+				$reset = self::check_available_isbns( $etalage );
+				if ( $reset ) {
+					boekdb_debug( 'last import has been reset' );
+				}
+
+				$last_import = $etalage->last_import;
+				if ( $reset || is_null( $last_import ) ) {
+					$last_import = self::DEFAULT_LAST_IMPORT;
+					self::set_last_import( $etalage->id, $last_import );
+				}
+
+				// fire first import event
+				wp_schedule_single_event( time(), self::IMPORT_HOOK );
 			}
-
-			self::update_running( 2, $etalage );
-
-			$reset = self::check_available_isbns( $etalage );
-			if ( $reset ) {
-				boekdb_debug( 'last import has been reset' );
-			}
-
-			$last_import = $etalage->last_import;
-			if ( $reset || is_null( $last_import ) ) {
-				$last_import = self::DEFAULT_LAST_IMPORT;
-				self::set_last_import( $etalage->id, $last_import );
-			}
-
-			// fire first import event
-			wp_schedule_single_event( time(), self::IMPORT_HOOK );
+		} catch ( Exception $e ) {
+			add_action( 'admin_notices', array( Boekdb_Api_Service::class, 'boekdb_connection_error'));
 		}
 	}
 
