@@ -1,3 +1,4 @@
 /vendor/
 boekdb-plugin-v2.zip
 *.zip
+.phpunit.result.cache
