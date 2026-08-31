@@ -313,40 +313,40 @@ class BoekDB_Import {
 	 */
 	protected static function create_boek_array( $product ) {
 		$boek                           = array();
-		$boek['nstc']                   = $product->nstc;
+		$boek['nstc']                   = $product->nstc ?? null;
 		$boek['titel']                  = $product->titel;
 		$boek['isbn']                   = $product->isbn;
-		$boek['subtitel']               = $product->subtitel;
-		$boek['deeltitel']              = $product->deeltitel;
-		$boek['sectietitel']            = $product->sectietitel;
-		$boek['origineletitel']         = $product->origineletitel;
-		$boek['serietitel']             = $product->serietitel;
-		$boek['deel']                   = $product->deel;
-		$boek['druk']                   = $product->druk;
-		$boek['verschijningsvorm']      = $product->verschijningsvorm;
+		$boek['subtitel']               = $product->subtitel ?? null;
+		$boek['deeltitel']              = $product->deeltitel ?? null;
+		$boek['sectietitel']            = $product->sectietitel ?? null;
+		$boek['origineletitel']         = $product->origineletitel ?? null;
+		$boek['serietitel']             = $product->serietitel ?? null;
+		$boek['deel']                   = $product->deel ?? null;
+		$boek['druk']                   = $product->druk ?? null;
+		$boek['verschijningsvorm']      = $product->verschijningsvorm ?? null;
 		$boek['verschijningsvorm_code'] = isset( $product->verschijningsvorm_code ) ? $product->verschijningsvorm_code : null;
-		$boek['uitgever']               = $product->uitgever;
-		$boek['imprint']                = $product->imprint;
-		$boek['inhoudsopgave']          = $product->inhoudsopgave;
-		$boek['taal']                   = $product->taal;
-		$boek['illustraties']           = $product->illustraties;
-		$boek['lengte']                 = $product->lengte;
-		$boek['breedte']                = $product->breedte;
-		$boek['dikte']                  = $product->dikte;
-		$boek['gewicht']                = $product->gewicht;
-		$boek['paginas_hoofdwerk']      = $product->paginas_hoofdwerk;
-		$boek['paginas_proloog']        = $product->paginas_proloog;
-		$boek['paginas_epiloog']        = $product->paginas_epiloog;
-		$boek['duur']                   = $product->duur;
-		$boek['bestandsgrootte']        = $product->bestandsgrootte;
-		$boek['leeftijdscategorie']     = $product->leeftijdscategorie;
-		$boek['avi']                    = $product->avi;
-		$boek['beschikbaarheidsdatum']  = $product->beschikbaarheidsdatum;
-		$boek['publicatiedatum']        = $product->publicatiedatum;
-		$boek['prijs']                  = $product->prijs;
-		$boek['status']                 = $product->status;
-		$boek['leverbaarheid']          = $product->leverbaarheid;
-		$boek['biografie']              = $product->biografie;
+		$boek['uitgever']               = $product->uitgever ?? null;
+		$boek['imprint']                = $product->imprint ?? null;
+		$boek['inhoudsopgave']          = $product->inhoudsopgave ?? null;
+		$boek['taal']                   = $product->taal ?? null;
+		$boek['illustraties']           = $product->illustraties ?? null;
+		$boek['lengte']                 = $product->lengte ?? null;
+		$boek['breedte']                = $product->breedte ?? null;
+		$boek['dikte']                  = $product->dikte ?? null;
+		$boek['gewicht']                = $product->gewicht ?? null;
+		$boek['paginas_hoofdwerk']      = $product->paginas_hoofdwerk ?? null;
+		$boek['paginas_proloog']        = $product->paginas_proloog ?? null;
+		$boek['paginas_epiloog']        = $product->paginas_epiloog ?? null;
+		$boek['duur']                   = $product->duur ?? null;
+		$boek['bestandsgrootte']        = $product->bestandsgrootte ?? null;
+		$boek['leeftijdscategorie']     = $product->leeftijdscategorie ?? null;
+		$boek['avi']                    = $product->avi ?? null;
+		$boek['beschikbaarheidsdatum']  = $product->beschikbaarheidsdatum ?? null;
+		$boek['publicatiedatum']        = $product->publicatiedatum ?? null;
+		$boek['prijs']                  = $product->prijs ?? null;
+		$boek['status']                 = $product->status ?? null;
+		$boek['leverbaarheid']          = $product->leverbaarheid ?? null;
+		$boek['biografie']              = $product->biografie ?? null;
 		$boek['actieprijzen']           = array();
 		$boek['links']                  = array();
 		$boek['literaireprijzen']       = array();
@@ -354,8 +354,8 @@ class BoekDB_Import {
 		$boek['recensielinks']          = array();
 
 		// overschrijfbare velden
-		$boek['annotatie'] = $product->annotatie;
-		$boek['flaptekst'] = $product->flaptekst;
+		$boek['annotatie'] = $product->annotatie ?? null;
+		$boek['flaptekst'] = $product->flaptekst ?? null;
 
 		if ( isset( $product->actieprijzen ) && ! is_null( $product->actieprijzen ) ) {
 			foreach ( $product->actieprijzen as $actieprijs ) {
@@ -456,7 +456,7 @@ class BoekDB_Import {
 	 * @return void
 	 */
 	protected static function handle_serie( $product, $boek_post_id ) {
-		if ( is_object( $product->serie ) && isset( $product->serie->id ) ) {
+		if ( isset( $product->serie ) && is_object( $product->serie ) && isset( $product->serie->id ) ) {
 			// clear old taxonomy
 			wp_set_object_terms( $boek_post_id, null, 'boekdb_serie_tax' );
 
@@ -496,10 +496,23 @@ class BoekDB_Import {
 		$attachment_id = self::find_field( 'attachment', 'hash', $hash );
 
 		if ( is_null( $attachment_id ) ) {
-			$get          = wp_safe_remote_get( $bestand->url );
+			$get = wp_safe_remote_get( $bestand->url );
+			if ( is_wp_error( $get ) ) {
+				boekdb_debug( 'Error fetching file: ' . $bestand->url );
+				boekdb_debug( $get );
+
+				return;
+			}
+
 			$type         = $bestand->type;
 			$bestandsnaam = sanitize_file_name( $bestand->bestandsnaam );
 			$image        = wp_upload_bits( $bestandsnaam, null, wp_remote_retrieve_body( $get ) );
+
+			if ( $image['error'] ) {
+				boekdb_debug( 'Error saving file to disk: ' . $image['error'] );
+
+				return;
+			}
 
 			$attachment = array(
 				'post_title'     => $bestand->soort,

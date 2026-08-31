@@ -1,0 +1,141 @@
+[
+  {
+    "id": 1001,
+    "isbn": "9789000000001",
+    "nstc": "8717322112233",
+    "titel": "De Nachtwacht",
+    "subtitel": "Een spannend verhaal uit Amsterdam",
+    "deeltitel": "Deel Een",
+    "sectietitel": "Proloog",
+    "origineletitel": "The Night Watch",
+    "serie": {
+      "id": 501,
+      "omschrijving": "De populaire Nachtwacht-serie over de Gouden Eeuw.",
+      "beeld": {
+        "soort": "Serieomslag",
+        "type": "image/jpeg",
+        "url": "https://boekdbv2.nl/images/serie-501.jpg",
+        "bestandsnaam": "serie-501.jpg"
+      }
+    },
+    "serietitel": "De Nachtwacht Serie",
+    "deel": "1",
+    "druk": "3e druk",
+    "uitgever": "Uitgeverij Prometheus",
+    "imprint": "Prometheus",
+    "flaptekst": "Een pakkend verhaal over een schilder in het Amsterdam van de Gouden Eeuw.",
+    "inhoudsopgave": "Hoofdstuk 1: De opdracht\nHoofdstuk 2: Het atelier",
+    "annotatie": "Boekhandelsinformatie: populaire historische roman.",
+    "biografie": "De auteur woont en werkt in Amsterdam.",
+    "verschijningsvorm": "Paperback / softback",
+    "verschijningsvorm_code": "BC",
+    "taal": "Nederlands",
+    "illustraties": true,
+    "lengte": "210 mm",
+    "breedte": "135 mm",
+    "dikte": "25 mm",
+    "gewicht": "350 gram",
+    "paginas_hoofdwerk": "320",
+    "paginas_proloog": "8",
+    "paginas_epiloog": "4",
+    "duur": "8 uur 30 minuten",
+    "bestandsgrootte": "2 MB",
+    "leeftijdscategorie": "Volwassenen",
+    "avi": "M7",
+    "publicatiedatum": "2024-02-01",
+    "beschikbaarheidsdatum": "2024-01-15",
+    "prijs": "24.99",
+    "actieprijzen": [
+      {
+        "actieprijs": 19.99,
+        "actieperiode_start": "2024-03-01",
+        "actieperiode_einde": "2024-03-31"
+      }
+    ],
+    "betrokkenen": [
+      {
+        "id": 1,
+        "naam": "Anna de Vries",
+        "voornaam": "Anna",
+        "tussenvoegsel": "de",
+        "achternaam": "Vries",
+        "organisatie": null,
+        "biografie": "Anna de Vries is schrijfster van historische romans.",
+        "bibliografie": "Meerdere bekroonde romans op haar naam.",
+        "rol": "Auteur",
+        "bestanden": [
+          {
+            "soort": "Auteursfoto",
+            "type": "image/jpeg",
+            "url": "https://boekdbv2.nl/images/auteur-1.jpg",
+            "bestandsnaam": "auteur-1.jpg",
+            "copyright": "Foto: Jan Jansen"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "naam": "Peter Bakker",
+        "voornaam": "Peter",
+        "tussenvoegsel": null,
+        "achternaam": "Bakker",
+        "organisatie": null,
+        "biografie": null,
+        "bibliografie": null,
+        "rol": "Illustrator",
+        "bestanden": []
+      },
+      {
+        "id": 3,
+        "naam": "Sanne Willemsen",
+        "voornaam": "Sanne",
+        "tussenvoegsel": null,
+        "achternaam": "Willemsen",
+        "organisatie": null,
+        "biografie": null,
+        "bibliografie": null,
+        "rol": "Voorlezer",
+        "bestanden": []
+      },
+      {
+        "id": 4,
+        "naam": "Vertaalbureau Nederland",
+        "voornaam": null,
+        "tussenvoegsel": null,
+        "achternaam": null,
+        "organisatie": "Vertaalbureau Nederland",
+        "biografie": null,
+        "bibliografie": null,
+        "rol": "Vertaler",
+        "bestanden": []
+      }
+    ],
+    "onderwerpen": [
+      { "type": "NUR", "code": "301", "waarde": "Nederlandse fictie algemeen" },
+      { "type": "BISAC", "code": "FIC000000", "waarde": "FICTION / General" },
+      { "type": "Thema", "code": "FBA", "waarde": "Klassieke fictie" }
+    ],
+    "trefwoorden": "spanning, historisch, Amsterdam",
+    "bestanden": [
+      { "soort": "Cover", "type": "image/jpeg", "url": "https://boekdbv2.nl/images/cover-9789000000001.jpg", "bestandsnaam": "cover-9789000000001.jpg" },
+      { "soort": "Back cover", "type": "image/jpeg", "url": "https://boekdbv2.nl/images/backcover-9789000000001.jpg", "bestandsnaam": "backcover-9789000000001.jpg" },
+      { "soort": "Fragment", "type": "application/pdf", "url": "https://boekdbv2.nl/files/fragment-9789000000001.pdf", "bestandsnaam": "fragment-9789000000001.pdf" }
+    ],
+    "leverbaarheid": "Leverbaar",
+    "status": "10",
+    "links": [
+      { "soort": "Website", "url": "https://www.uitgeverijprometheus.nl/boek/de-nachtwacht" }
+    ],
+    "literaireprijzen": [
+      { "naam": "Libris Literatuurprijs", "jaar": "2023", "land": "Nederland", "prestatie": "Winnaar", "omschrijving": "Beste roman van het jaar." }
+    ],
+    "recensielinks": [
+      { "type": "Recensie", "url": "https://www.nrc.nl/recensie/de-nachtwacht", "bron": "NRC", "datum": "2024-01-20" }
+    ],
+    "recensiequotes": [
+      { "tekst": "Een meesterwerk.", "auteur": "NRC", "bron": "NRC Handelsblad", "datum": "2024-01-20" }
+    ],
+    "fondsgroep": "Fictie",
+    "laatste_update": "2024-02-01 10:00:00"
+  }
+]
