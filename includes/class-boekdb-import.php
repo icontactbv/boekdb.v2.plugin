@@ -487,7 +487,7 @@ class BoekDB_Import {
 	 * @param int    $term_id  The term ID of the serie
 	 */
 	protected static function handle_serie_files( $product, $term_id ) {
-		if ( is_null( $product->serie->beeld ) ) {
+		if ( ! isset( $product->serie->beeld ) ) {
 			return;
 		}
 

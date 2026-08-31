@@ -2,6 +2,8 @@
   {
     "isbn": "9789000000005",
     "titel": "Sparse Geneste Boek",
+    "serietitel": "Sparse Serie",
+    "serie": { "id": 77, "omschrijving": "Serie zonder beeld" },
     "betrokkenen": [
       { "naam": "Sparse Illustrator", "rol": "Illustrator" }
     ],
