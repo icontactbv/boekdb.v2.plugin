@@ -25,6 +25,11 @@ require_once $boekdb_tests_dir . '/includes/functions.php';
 tests_add_filter(
 	'pre_http_request',
 	function ( $preempt, $args, $url ) {
+		// A test that hooked in earlier and supplied a canned response keeps it.
+		if ( false !== $preempt ) {
+			return $preempt;
+		}
+
 		return new WP_Error( 'boekdb_tests_http_blocked', 'Outbound HTTP is blocked during tests: ' . $url );
 	},
 	10,
