@@ -257,4 +257,38 @@ class ImportProductTest extends WP_UnitTestCase {
 
 		$this->assert_product_was_imported( '9789000000003', 'Sparse Boek' );
 	}
+
+	/**
+	 * Imports a product whose top-level fields are populated but whose nested object
+	 * scalars (contributor, collection, prize, review and quote fields) are explicitly
+	 * null wherever the schema or the API mutator allows it.
+	 *
+	 * @test
+	 */
+	public function imports_a_product_whose_nested_fields_are_null() {
+		$this->products_body = $this->load_fixture( 'product-nested-nulls.json' );
+
+		BoekDB_Import::import();
+
+		$post_id = $this->assert_product_was_imported( '9789000000004', 'Schaduwen Zonder Namen' );
+
+		$auteur_terms = wp_get_object_terms( $post_id, 'boekdb_auteur_tax' );
+		$this->assertNotEmpty( $auteur_terms, 'the auteur term should still be attached despite the nested nulls' );
+		$this->assertSame( 'Nulls Auteur', $auteur_terms[0]->name );
+	}
+
+	/**
+	 * Imports a product whose nested objects (a contributor, a file, a subject, a link
+	 * and a review quote) each carry only a handful of keys, the rest being entirely
+	 * absent rather than null.
+	 *
+	 * @test
+	 */
+	public function imports_a_product_whose_nested_objects_are_sparse() {
+		$this->products_body = $this->load_fixture( 'product-sparse-nested.json' );
+
+		BoekDB_Import::import();
+
+		$this->assert_product_was_imported( '9789000000005', 'Sparse Geneste Boek' );
+	}
 }

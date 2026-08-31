@@ -370,7 +370,7 @@ class BoekDB_Import {
 		if ( isset( $product->links ) && ! is_null( $product->links ) ) {
 			foreach ( $product->links as $link ) {
 				$boek['links'][] = array(
-					'soort' => strtolower( $link->soort ),
+					'soort' => strtolower( $link->soort ?? '' ),
 					'url'   => $link->url,
 				);
 			}
@@ -392,9 +392,9 @@ class BoekDB_Import {
 			foreach ( $product->recensiequotes as $quote ) {
 				$boek['recensiequotes'][ md5( $quote->tekst ) ] = array(
 					'tekst'  => $quote->tekst,
-					'auteur' => $quote->auteur,
-					'bron'   => $quote->bron,
-					'datum'  => $quote->datum,
+					'auteur' => $quote->auteur ?? null,
+					'bron'   => $quote->bron ?? null,
+					'datum'  => $quote->datum ?? null,
 					'tonen'  => true,
 				);
 			}
@@ -688,15 +688,15 @@ class BoekDB_Import {
 	 */
 	protected static function create_betrokkene_array( $betrokkene ) {
 		$boekdb_betrokkene                         = array();
-		$boekdb_betrokkene['id']                   = $betrokkene->id;
+		$boekdb_betrokkene['id']                   = $betrokkene->id ?? null;
 		$boekdb_betrokkene['naam']                 = $betrokkene->naam;
-		$boekdb_betrokkene['boekdb_voornaam']      = $betrokkene->voornaam;
-		$boekdb_betrokkene['boekdb_tussenvoegsel'] = $betrokkene->tussenvoegsel;
-		$boekdb_betrokkene['boekdb_achternaam']    = $betrokkene->achternaam;
-		$boekdb_betrokkene['boekdb_organisatie']   = $betrokkene->organisatie;
-		$boekdb_betrokkene['boekdb_biografie']     = $betrokkene->biografie;
-		$boekdb_betrokkene['boekdb_bibliografie']  = $betrokkene->bibliografie;
-		$boekdb_betrokkene['bestanden']            = $betrokkene->bestanden;
+		$boekdb_betrokkene['boekdb_voornaam']      = $betrokkene->voornaam ?? null;
+		$boekdb_betrokkene['boekdb_tussenvoegsel'] = $betrokkene->tussenvoegsel ?? null;
+		$boekdb_betrokkene['boekdb_achternaam']    = $betrokkene->achternaam ?? null;
+		$boekdb_betrokkene['boekdb_organisatie']   = $betrokkene->organisatie ?? null;
+		$boekdb_betrokkene['boekdb_biografie']     = $betrokkene->biografie ?? null;
+		$boekdb_betrokkene['boekdb_bibliografie']  = $betrokkene->bibliografie ?? null;
+		$boekdb_betrokkene['bestanden']            = $betrokkene->bestanden ?? null;
 
 		return $boekdb_betrokkene;
 	}
