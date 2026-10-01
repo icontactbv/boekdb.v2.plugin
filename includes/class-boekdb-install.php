@@ -72,10 +72,46 @@ class BoekDB_Install {
 
 		self::update_boekdb_version();
 		self::register_tables();
+		self::migrate_primary_meta();
 
 		flush_rewrite_rules();
 
 		delete_transient( 'boekdb_installing' );
+	}
+
+	/**
+	 * Move books marked under the old key to the one every reader uses.
+	 *
+	 * Books without an nstc were marked as the primary edition under an English key, while
+	 * archives and templates filter on the Dutch one. Those books were missing from every
+	 * overview. Runs on upgrade, and again changes nothing.
+	 *
+	 * @return void
+	 */
+	public static function migrate_primary_meta() {
+		global $wpdb;
+
+		// Collected before the rows go, to clear the cache of exactly these books afterwards.
+		$post_ids = $wpdb->get_col(
+			"SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key = 'boekdb_primary'" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		);
+
+		$wpdb->query(
+			"INSERT INTO {$wpdb->postmeta} ( post_id, meta_key, meta_value )
+				SELECT old.post_id, 'boekdb_primair', old.meta_value
+				FROM {$wpdb->postmeta} old
+				WHERE old.meta_key = 'boekdb_primary'
+				AND NOT EXISTS (
+					SELECT 1 FROM {$wpdb->postmeta} current
+					WHERE current.post_id = old.post_id AND current.meta_key = 'boekdb_primair'
+				)" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		);
+
+		$wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key = 'boekdb_primary'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+
+		foreach ( $post_ids as $post_id ) {
+			wp_cache_delete( (int) $post_id, 'post_meta' );
+		}
 	}
 
 	/**

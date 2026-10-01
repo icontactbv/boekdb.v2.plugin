@@ -14,6 +14,14 @@ class BoekDB_Cleanup {
 	const CLEANUP_HOOK = 'boekdb_cleanup';
 
 	/**
+	 * Seconds a book is left alone after it was last written to, so one that is still being
+	 * imported is not mistaken for one that left its etalage. The link to the etalage is
+	 * written after its files are downloaded, and an interrupted import picks books it
+	 * created earlier back up.
+	 */
+	const NEW_BOOK_GRACE = 3600;
+
+	/**
 	 * Initialize the class by setting up the necessary hooks and scheduling a cleanup event.
 	 *
 	 * @return void
@@ -38,20 +46,22 @@ class BoekDB_Cleanup {
 	public static function trash_removed( $etalage_id, $isbns ) {
 		global $wpdb;
 
-		$prepared_query  = $wpdb->prepare(
-			"SELECT i.boek_id 
+		$query = "SELECT i.boek_id
 					FROM {$wpdb->prefix}boekdb_isbns i
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON eb.boek_id = i.boek_id
 					    INNER JOIN {$wpdb->posts} p ON p.ID = i.boek_id
-					WHERE eb.etalage_id = %d",
-			$etalage_id
-		);
-		$prepared_query .= ' AND i.isbn NOT IN (';
-		foreach ( $isbns as $isbn ) {
-			$prepared_query .= $wpdb->prepare( '%s,', $isbn );
+					WHERE eb.etalage_id = %d";
+
+		if ( count( $isbns ) > 0 ) {
+			$placeholders = implode( ', ', array_fill( 0, count( $isbns ), '%s' ) );
+			$query       .= " AND i.isbn NOT IN ( $placeholders )";
 		}
-		$prepared_query = substr( $prepared_query, 0, - 1 ) . ')';
-		$result         = $wpdb->get_results( $prepared_query );
+
+		// An empty list leaves the condition off entirely. Writing NOT IN () produced SQL the
+		// database refused, so an etalage that lost every book kept all of them.
+		$result = $wpdb->get_results(
+			$wpdb->prepare( $query, array_merge( array( $etalage_id ), array_values( $isbns ) ) ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders
+		);
 
 		$post_ids = array();
 		foreach ( $result as $boek ) {
@@ -80,6 +90,105 @@ class BoekDB_Cleanup {
 	}
 
 	/**
+	 * Delete the files of a book that is being removed, except the ones still in use.
+	 *
+	 * A file is downloaded once and then shared: two editions of a title have the same
+	 * cover, and the attachment hangs on whichever book was imported last. Removing that
+	 * book used to take the cover of the other one with it.
+	 *
+	 * @param int $post_id  The book being deleted.
+	 *
+	 * @return void
+	 */
+	public static function delete_attached_media( $post_id ) {
+		$attachments = get_attached_media( '', $post_id );
+
+		foreach ( $attachments as $attachment ) {
+			if ( self::attachment_is_in_use( $attachment->ID, $post_id ) ) {
+				// Hang it on a book that is still using it, so it goes when that one does.
+				self::attach_to_another_user( $attachment->ID, $post_id );
+
+				continue;
+			}
+
+			wp_delete_attachment( $attachment->ID, true );
+		}
+
+		boekdb_debug( 'deleted attachments' );
+	}
+
+	/**
+	 * Hand a file to another book that uses it.
+	 *
+	 * @param int $attachment_id  The file.
+	 * @param int $post_id        The book being deleted.
+	 *
+	 * @return void
+	 */
+	private static function attach_to_another_user( $attachment_id, $post_id ) {
+		global $wpdb;
+
+		$new_parent = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT post_id FROM {$wpdb->postmeta}
+					WHERE meta_value = %d AND post_id <> %d
+					AND meta_key IN ( '_thumbnail_id', 'boekdb_file_backcover_id', 'boekdb_file_voorbeeld_id' )
+					LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$attachment_id,
+				$post_id
+			)
+		);
+
+		if ( $new_parent > 0 ) {
+			wp_update_post(
+				array(
+					'ID'          => $attachment_id,
+					'post_parent' => $new_parent,
+				)
+			);
+		}
+	}
+
+	/**
+	 * Whether anything still points at an attachment, leaving out whoever is being removed.
+	 *
+	 * @param int $attachment_id  The file.
+	 * @param int $post_id        A book being deleted, or 0.
+	 * @param int $term_id        A term being deleted, or 0.
+	 *
+	 * @return bool
+	 */
+	public static function attachment_is_in_use( $attachment_id, $post_id = 0, $term_id = 0 ) {
+		global $wpdb;
+
+		$used_by_a_book = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->postmeta}
+					WHERE meta_value = %d AND post_id <> %d
+					AND meta_key IN ( '_thumbnail_id', 'boekdb_file_backcover_id', 'boekdb_file_voorbeeld_id' )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$attachment_id,
+				$post_id
+			)
+		);
+
+		if ( $used_by_a_book > 0 ) {
+			return true;
+		}
+
+		$used_by_a_term = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->termmeta}
+					WHERE meta_value = %d AND term_id <> %d
+					AND meta_key IN ( 'auteursfoto_id', 'boekdb_seriebeeld_id' )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$attachment_id,
+				$term_id
+			)
+		);
+
+		return $used_by_a_term > 0;
+	}
+
+	/**
 	 * Delete posts and related data.
 	 *
 	 * This method deletes posts and their related data, including attachments, meta data,
@@ -92,16 +201,7 @@ class BoekDB_Cleanup {
 	public static function delete_posts( $post_ids ) {
 		global $wpdb;
 
-		add_action(
-			'before_delete_post',
-			function ( $id ) {
-				$attachments = get_attached_media( '', $id );
-				foreach ( $attachments as $attachment ) {
-					wp_delete_attachment( $attachment->ID, 'true' );
-				}
-				boekdb_debug( 'deleted attachments' );
-			}
-		);
+		add_action( 'before_delete_post', array( self::class, 'delete_attached_media' ) );
 
 		foreach ( $post_ids as $post_id ) {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d", $post_id ) );
@@ -194,6 +294,15 @@ class BoekDB_Cleanup {
 	public static function cleanup() {
 		global $wpdb;
 
+		if ( BoekDB_Import::is_working() ) {
+			// A book belongs to no etalage until its files have been downloaded, and an
+			// author has no books until the book that mentions it is written. Removing what
+			// looks unused while that is going on deletes work in progress.
+			boekdb_debug( 'Not cleaning up while an import is running' );
+
+			return;
+		}
+
 		// cleanup etalage_boeken
 		$etalages    = BoekDB::fetch_etalages();
 		$etalage_ids = array();
@@ -235,12 +344,16 @@ class BoekDB_Cleanup {
 
 		// cleanup boeken (check if they are not still related to an etalage)
 		$result   = $wpdb->get_results(
-			"SELECT p.ID
+			$wpdb->prepare(
+				"SELECT p.ID
 					FROM $wpdb->posts p
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalage_boeken eb ON eb.boek_id = p.ID
 					    LEFT JOIN {$wpdb->prefix}boekdb_etalages et ON et.id = eb.etalage_id
-					WHERE p.post_type = 'boekdb_boek' GROUP BY p.ID HAVING COUNT(et.id) = 0"
-		);
+					WHERE p.post_type = 'boekdb_boek' AND p.post_modified_gmt < %s
+					GROUP BY p.ID HAVING COUNT(et.id) = 0",
+				gmdate( 'Y-m-d H:i:s', time() - self::NEW_BOOK_GRACE )
+			)
+		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$post_ids = array();
 		foreach ( $result as $boek ) {
 			$post_ids[] = (int) $boek->ID;
@@ -266,18 +379,24 @@ class BoekDB_Cleanup {
 
 		// For each taxonomy, identify terms which aren't associated with any 'boekdb_boek' post.
 		foreach ( $relevant_taxonomies as $taxonomy ) {
-			$query = "
-        SELECT term_id, taxonomy
-        FROM {$wpdb->prefix}term_taxonomy
-        WHERE taxonomy = '{$taxonomy}'
-        AND NOT EXISTS (
-            SELECT *
-            FROM {$wpdb->prefix}term_relationships tr
-            INNER JOIN {$wpdb->prefix}posts p ON p.ID = tr.object_id
-            WHERE tr.term_taxonomy_id=term_taxonomy_id AND p.post_type = 'boekdb_boek'
-        )";
-
-			$results = $wpdb->get_results( $query, ARRAY_A );
+			// The inner condition has to name the outer table, or it compares a column with
+			// itself: as soon as one book carried any term, every term counted as used and
+			// nothing was ever cleaned up.
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT tt.term_id, tt.taxonomy
+						FROM {$wpdb->prefix}term_taxonomy tt
+						WHERE tt.taxonomy = %s
+						AND NOT EXISTS (
+							SELECT 1
+							FROM {$wpdb->prefix}term_relationships tr
+							INNER JOIN {$wpdb->prefix}posts p ON p.ID = tr.object_id
+							WHERE tr.term_taxonomy_id = tt.term_taxonomy_id AND p.post_type = 'boekdb_boek'
+						)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$taxonomy
+				),
+				ARRAY_A
+			);
 
 			// Generate the $term_ids array where keys are term_id and values are taxonomy
 			foreach ( $results as $result ) {
@@ -324,8 +443,13 @@ class BoekDB_Cleanup {
 						delete_term_meta( $term_id, 'auteursfoto_id' );
 						// delete auteursfoto_copyright
 						delete_term_meta( $term_id, 'auteursfoto_copyright' );
-						// delete attachment
-						wp_delete_attachment( $auteursfoto_id, true );
+
+						// The same photo portrays the author of a book and the narrator of
+						// its audio edition, under terms of their own.
+						if ( ! self::attachment_is_in_use( $auteursfoto_id, 0, $term_id ) ) {
+							wp_delete_attachment( $auteursfoto_id, true );
+						}
+
 						boekdb_debug( 'deleted auteursfoto_id and auteursfoto_copyright for term ' . $term_id );
 					}
 				}
@@ -333,12 +457,16 @@ class BoekDB_Cleanup {
 				// same for series: we need to delete the attached image (seriebeeld_id)
 				if ( $taxonomy === 'boekdb_serie_tax' ) {
 					// fetch boekdb_seriebeeld_id
-					$boekdb_seriebeeld_id = get_term_meta( $term_id, 'seriebeeld_id', true );
+					$boekdb_seriebeeld_id = get_term_meta( $term_id, 'boekdb_seriebeeld_id', true );
 					if ( $boekdb_seriebeeld_id ) {
 						// delete boekdb_seriebeeld_id
-						delete_term_meta( $term_id, 'seriebeeld_id' );
-						// delete attachment
-						wp_delete_attachment( $boekdb_seriebeeld_id, true );
+						delete_term_meta( $term_id, 'boekdb_seriebeeld_id' );
+
+						// Two series can carry the same image.
+						if ( ! self::attachment_is_in_use( $boekdb_seriebeeld_id, 0, $term_id ) ) {
+							wp_delete_attachment( $boekdb_seriebeeld_id, true );
+						}
+
 						boekdb_debug( 'deleted seriebeeld_id for term ' . $term_id );
 					}
 				}

@@ -18,6 +18,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<td><?php echo esc_html( $etalage->offset ); ?></td>
 	<td>
 		<?php
+		$boekdb_failed = BoekDB_Import::failed_products( $etalage->id );
+		if ( count( $boekdb_failed ) > 0 ) :
+			$boekdb_failed_isbns = implode( ', ', $boekdb_failed );
+			?>
+			<span class="boekdb-failed" title="<?php echo esc_attr( $boekdb_failed_isbns ); ?>">
+				<?php
+				echo esc_html(
+					sprintf(
+						/* translators: %d: number of books. */
+						_n( '%d niet geïmporteerd', '%d niet geïmporteerd', count( $boekdb_failed ), 'boekdb' ),
+						count( $boekdb_failed )
+					)
+				);
+				?>
+			</span>
+			<br /><small><?php echo esc_html( $boekdb_failed_isbns ); ?></small>
+		<?php else : ?>
+			<?php echo esc_html( '–' ); ?>
+		<?php endif; ?>
+	</td>
+	<td>
+		<?php
 		switch ( $etalage->running ) {
 			case 0:
 				esc_html_e( 'Nee', 'boekdb' );

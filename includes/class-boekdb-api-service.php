@@ -109,6 +109,42 @@ class Boekdb_Api_Service {
 	}
 
 	/**
+	 * Fetch a single product
+	 *
+	 * @param string $api_key  API Key
+	 * @param string $isbn     The isbn to fetch
+	 *
+	 * @return object|bool The product, or false when it could not be fetched
+	 */
+	public static function fetch_product( $api_key, $isbn ) {
+		$response = wp_remote_get(
+			self::BASE_URL . 'products/' . rawurlencode( $isbn ),
+			array(
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $api_key,
+				),
+				'timeout' => 30,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			boekdb_debug( 'Error fetching product ' . $isbn . ': ' . $response->get_error_message() );
+
+			return false;
+		}
+
+		if ( wp_remote_retrieve_response_code( $response ) !== 200 ) {
+			boekdb_debug( 'Error fetching product ' . $isbn . ': ' . wp_remote_retrieve_response_code( $response ) );
+
+			return false;
+		}
+
+		$product = json_decode( wp_remote_retrieve_body( $response ) );
+
+		return is_object( $product ) ? $product : false;
+	}
+
+	/**
 	 * Fetch ISBNs
 	 *
 	 * @param string $api_key  API Key

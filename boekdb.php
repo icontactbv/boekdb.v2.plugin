@@ -2,11 +2,11 @@
 /**
  * Plugin Name: BoekDB.v2
  * Plugin URI: https://www.boekdbv2.nl/
- * Description: This WordPress plugin fetches and displays book data provided by BoekDB. Developed by Icontact B.V. for VBK uitgevers.
+ * Description: This WordPress plugin fetches and displays book data provided by BoekDB. Developed by Icontact B.V. for VBK Uitgevers B.V.
  * Version: 1.2.0
  * Author: Icontact B.V., Kevin de Harde
  * Author URI: https://www.icontact.nl
- * Requires at least: 5.5
+ * Requires at least: 6.4
  * Requires PHP: 7.4
  *
  * @package BoekDB
@@ -181,6 +181,75 @@ function boekdb_serie_data( $id, $term = null ) {
 	$data['serie_beeld_id']     = $beeld;
 
 	return $data;
+}
+
+/**
+ * The name this plugin used to mark some books with, kept working for sites that read it.
+ */
+define( 'BOEKDB_PRIMARY_ALIAS', 'boekdb_primary' );
+
+add_filter( 'get_post_metadata', 'boekdb_read_primary_alias', 10, 4 );
+add_action( 'pre_get_posts', 'boekdb_query_primary_alias' );
+
+/**
+ * Serves the primary mark to anything still asking for it under the old name.
+ *
+ * @param mixed  $value      The value the meta functions would return, null to let them.
+ * @param int    $object_id  The post.
+ * @param string $meta_key   The name being asked for.
+ * @param bool   $single     Whether one value was asked for.
+ *
+ * @return mixed
+ */
+function boekdb_read_primary_alias( $value, $object_id, $meta_key, $single ) {
+	if ( BOEKDB_PRIMARY_ALIAS !== $meta_key ) {
+		return $value;
+	}
+
+	$stored = get_post_meta( $object_id, 'boekdb_primair', $single );
+
+	// A filter that answers for a single value hands back an array to take it from.
+	return $single ? array( $stored ) : $stored;
+}
+
+/**
+ * Points a query at the name the mark is stored under.
+ *
+ * @param WP_Query $query  The query about to run.
+ *
+ * @return void
+ */
+function boekdb_query_primary_alias( $query ) {
+	if ( BOEKDB_PRIMARY_ALIAS === $query->get( 'meta_key' ) ) {
+		$query->set( 'meta_key', 'boekdb_primair' );
+	}
+
+	$meta_query = $query->get( 'meta_query' );
+	if ( is_array( $meta_query ) ) {
+		$query->set( 'meta_query', boekdb_rename_primary_clauses( $meta_query ) );
+	}
+}
+
+/**
+ * Renames the old name wherever it appears in a meta query, however deeply nested.
+ *
+ * @param array $clauses  A meta query, or one of its groups.
+ *
+ * @return array
+ */
+function boekdb_rename_primary_clauses( $clauses ) {
+	foreach ( $clauses as $index => $clause ) {
+		if ( is_array( $clause ) ) {
+			$clauses[ $index ] = boekdb_rename_primary_clauses( $clause );
+			continue;
+		}
+
+		if ( 'key' === $index && BOEKDB_PRIMARY_ALIAS === $clause ) {
+			$clauses[ $index ] = 'boekdb_primair';
+		}
+	}
+
+	return $clauses;
 }
 
 /**

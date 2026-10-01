@@ -33,6 +33,21 @@ class ImportPerformanceTest extends WP_UnitTestCase {
 	private $etalage_id;
 
 	/**
+	 * Whether the first edition is served as no longer for sale, which hands the primary
+	 * place to the next one.
+	 *
+	 * @var bool
+	 */
+	private $demote_first = false;
+
+	/**
+	 * Whether the books are served without an nstc, as a title with a single edition is.
+	 *
+	 * @var bool
+	 */
+	private $drop_nstc = false;
+
+	/**
 	 * Creates a ready-to-run etalage and intercepts outbound HTTP.
 	 */
 	public function set_up() {
@@ -90,9 +105,9 @@ class ImportPerformanceTest extends WP_UnitTestCase {
 			$products[] = array(
 				'isbn'              => '978900000001' . $i,
 				'titel'             => 'De Amerikaanse Burgeroorlog',
-				'nstc'              => '5016648',
+				'nstc'              => $this->drop_nstc ? null : '5016648',
 				'verschijningsvorm' => $vormen[ $i - 1 ],
-				'status'            => '10',
+				'status'            => ( 1 === $i && $this->demote_first ) ? '40' : '10',
 				'betrokkenen'       => array(),
 				'onderwerpen'       => array(),
 			);
@@ -173,5 +188,75 @@ class ImportPerformanceTest extends WP_UnitTestCase {
 			$queries,
 			sprintf( 'An unchanged batch of %d books ran %d queries.', self::BOOKS, $queries )
 		);
+	}
+
+	/**
+	 * The primary edition carries the title's own url, the others a url of their own. A
+	 * book that becomes the primary one keeps its old url for as long as the cached
+	 * permalink lives, which is half a day.
+	 */
+	public function test_a_book_that_becomes_primary_loses_its_cached_permalink() {
+		BoekDB_Import::import();
+
+		global $wpdb;
+		$second_edition = (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_isbns WHERE isbn = %s", '9789000000012' ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		);
+		$this->assertSame( '0', get_post_meta( $second_edition, 'boekdb_primair', true ), 'The second edition starts out as a secondary one.' );
+
+		set_transient( 'boekdb_permalink_' . $second_edition, 'https://example.org/boek/oude-url/', DAY_IN_SECONDS );
+
+		// The paperback is no longer for sale, so the next edition takes its place.
+		$this->demote_first = true;
+		$this->queue_another_run();
+
+		BoekDB_Import::import();
+
+		$this->assertSame( '1', get_post_meta( $second_edition, 'boekdb_primair', true ), 'The second edition should have taken over.' );
+		$this->assertFalse( get_transient( 'boekdb_permalink_' . $second_edition ), 'Its cached permalink should be gone.' );
+	}
+
+	/**
+	 * Same thing when the book already carries the slug it will keep as the primary one.
+	 * Nothing about the post changes then, only the flag that decides which url it gets.
+	 */
+	public function test_a_book_that_only_gains_the_primary_flag_loses_its_cached_permalink() {
+		BoekDB_Import::import();
+
+		global $wpdb;
+		$second_edition = (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_isbns WHERE isbn = %s", '9789000000012' ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		);
+
+		// It already carries the slug of the title itself.
+		$wpdb->update( $wpdb->posts, array( 'post_name' => 'de-amerikaanse-burgeroorlog' ), array( 'ID' => $second_edition ) );
+		clean_post_cache( $second_edition );
+
+		set_transient( 'boekdb_permalink_' . $second_edition, 'https://example.org/boek/oude-url/', DAY_IN_SECONDS );
+
+		$this->demote_first = true;
+		$this->queue_another_run();
+
+		BoekDB_Import::import();
+
+		$this->assertSame( '1', get_post_meta( $second_edition, 'boekdb_primair', true ), 'The second edition should have taken over.' );
+		$this->assertFalse( get_transient( 'boekdb_permalink_' . $second_edition ), 'Its cached permalink should be gone.' );
+	}
+
+	/**
+	 * A book with no nstc has no other editions, so it is the primary one. It has to say so
+	 * under the name every overview reads.
+	 */
+	public function test_a_book_without_an_nstc_is_marked_as_primary() {
+		$this->drop_nstc = true;
+
+		BoekDB_Import::import();
+
+		global $wpdb;
+		$boek_post_id = (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT boek_id FROM {$wpdb->prefix}boekdb_isbns WHERE isbn = %s", '9789000000011' ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		);
+
+		$this->assertSame( '1', get_post_meta( $boek_post_id, 'boekdb_primair', true ), 'A book on its own is the primary edition.' );
 	}
 }

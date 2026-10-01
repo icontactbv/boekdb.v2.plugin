@@ -28,6 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<th class="manage-column"><?php esc_html_e( 'Geïmporteerd', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'BoekDB aantal', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'Offset', 'boekdb' ); ?></th>
+				<th class="manage-column"><?php esc_html_e( 'Niet geïmporteerd', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'Import actief', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'API Key', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'Laatste import', 'boekdb' ); ?></th>

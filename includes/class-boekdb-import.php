@@ -28,6 +28,11 @@ class BoekDB_Import {
 	const LOCK_TIMEOUT = 600;
 
 	/**
+	 * Prefix of the option a run holds its claim on an etalage in.
+	 */
+	const LOCK_OPTION_PREFIX = 'boekdb_import_lock_';
+
+	/**
 	 * Option that says an import was stopped by hand.
 	 */
 	const STOPPED_OPTION = 'boekdb_import_stopped';
@@ -38,12 +43,30 @@ class BoekDB_Import {
 	const START_OPTION_PREFIX = 'boekdb_import_start_';
 
 	/**
+	 * Prefix of the option holding the books of an etalage that could not be imported.
+	 */
+	const FAILED_OPTION_PREFIX = 'boekdb_import_failed_';
+
+	/**
+	 * How often a book that cannot be imported is fetched again before it is left alone.
+	 */
+	const FAILED_ATTEMPTS = 3;
+
+	/**
 	 * Identifies the claim this run holds, so it can tell its own lock from the one a later
 	 * run took over.
 	 *
 	 * @var string|null
 	 */
 	private static $lock_token = null;
+
+	/**
+	 * The lock exactly as this run last wrote it, so a change can be made conditional on
+	 * the lock still being that one.
+	 *
+	 * @var string|null
+	 */
+	private static $lock_value = null;
 
 	/**
 	 * Initialize the import process
@@ -112,7 +135,7 @@ class BoekDB_Import {
 
 		// fetch running imports
 		$etalages = BoekDB::fetch_etalages( true );
-		if( $etalages === false ) {
+		if ( $etalages === false ) {
 			boekdb_debug( 'Error fetching etalages' );
 
 			return;
@@ -146,15 +169,23 @@ class BoekDB_Import {
 			boekdb_debug( 'Fetched ' . $etalage->name . ' with offset ' . $offset );
 			boekdb_debug( 'Contains ' . count( $products ) . ' books' );
 
-			self::claim_lock( $etalage );
+			if ( self::is_stopped() ) {
+				// Stop was pressed while this batch was being fetched.
+				boekdb_debug( 'Import was stopped while fetching ' . $etalage->name );
 
-			// A fatal halts the script on the spot, so no code after this point runs and a
-			// finally block would not either. Only a shutdown function still gets a turn.
-			register_shutdown_function( array( self::class, 'release_lock_on_shutdown' ), $etalage );
+				return;
+			}
+
+			if ( ! self::claim_lock( $etalage ) ) {
+				return;
+			}
 
 			foreach ( $products as $product ) {
 				if ( self::check_stopped( $etalage ) ) {
-					// The import was stopped, so we stop processing this etalage
+					// The import was stopped, so we stop processing this etalage. Its lock
+					// goes with it, or starting again is refused until that times out.
+					self::release_lock( $etalage, 0 );
+
 					return;
 				}
 
@@ -171,54 +202,45 @@ class BoekDB_Import {
 				self::refresh_lock( $etalage );
 
 				// One unusable product used to end the whole batch, leaving every book behind
-				// it unimported and the offset where it was.
-				try {
-					list( $boek_post_id, $isbn, $nstc, $slug ) = self::handle_boek( $product );
+				// it unimported and the offset where it was. A product that cannot be
+				// imported is written down and fetched again on its own at the end of a run.
+				$imported = self::import_product( $product, $etalage );
 
-					boekdb_debug( 'Processing ' . $isbn );
+				if ( ! self::holds_lock( $etalage ) ) {
+					// Writing a book can take longer than the lock lasts. What is still to be
+					// retried belongs to whoever owns the etalage now.
+					boekdb_debug( 'Lost the import lock on ' . $etalage->name );
 
-					self::handle_betrokkenen( $product, $boek_post_id );
+					return;
+				}
 
-					$thema = array();
-					$nur   = array();
-					$bisac = array();
-
-					foreach ( $product->onderwerpen as $onderwerp ) {
-						if ( $onderwerp->type === 'NUR' ) {
-							$nur[] = self::get_taxonomy_term_id(
-								sanitize_title( $onderwerp->code ),
-								'nur',
-								$onderwerp->waarde
-							);
-						} elseif ( $onderwerp->type === 'BISAC' ) {
-							$bisac[] = self::get_taxonomy_term_id(
-								sanitize_title( $onderwerp->code ),
-								'bisac',
-								$onderwerp->waarde
-							);
-						} elseif ( substr( $onderwerp->type, 0, 5 ) === 'Thema' ) {
-							$thema[] = self::get_taxonomy_term_id(
-								sanitize_title( boekdb_thema_omschrijving( $onderwerp->code ) ),
-								'thema',
-								boekdb_thema_omschrijving( $onderwerp->code )
-							);
-						}
-					}
-					wp_set_object_terms( $boek_post_id, $nur, 'boekdb_nur_tax' );
-					wp_set_object_terms( $boek_post_id, $bisac, 'boekdb_bisac_tax' );
-					wp_set_object_terms( $boek_post_id, $thema, 'boekdb_thema_tax' );
-
-					self::link_product( $boek_post_id, $isbn, $etalage->id );
-					self::check_primary_title( $boek_post_id, $nstc, $slug );
-				} catch ( Throwable $e ) {
-					boekdb_debug( 'Skipped ' . ( isset( $product->isbn ) ? $product->isbn : 'a product' ) . ': ' . $e->getMessage() );
+				if ( $imported ) {
+					self::forget_failed_product( $etalage, $product );
+				} else {
+					self::remember_failed_product( $etalage, $product );
 				}
 			}
 			$offset = $offset + Boekdb_Api_Service::LIMIT;
 
-			// update the offset in etalage and set running to 1 (next batch).
+			if ( ! self::holds_lock( $etalage ) ) {
+				// The etalage belongs to another run now, and so does its progress.
+				boekdb_debug( 'Lost the import lock on ' . $etalage->name );
+				self::$lock_token = null;
+
+				return;
+			}
+
+			// update the offset in etalage and set running to 1 (next batch), unless Stop was
+			// pressed while this batch was being written.
 			self::update_offset( $offset, $etalage );
-			self::release_lock( $etalage, 2 );
+			$stopped = self::is_stopped();
+			self::release_lock( $etalage, $stopped ? 0 : 2 );
+
+			if ( $stopped ) {
+				boekdb_debug( 'Import was stopped during ' . $etalage->name );
+
+				return;
+			}
 
 			boekdb_debug( 'Done with this batch...' );
 
@@ -227,7 +249,29 @@ class BoekDB_Import {
 				wp_schedule_single_event( time(), self::IMPORT_HOOK );
 			}
 		} else {
+			if ( ! self::claim_lock( $etalage ) ) {
+				// Another run owns this etalage by now, and with it the say over where the
+				// import got to.
+				boekdb_debug( 'Another run owns ' . $etalage->name );
+
+				return;
+			}
+
 			boekdb_debug( 'Finished import on ' . $etalage->name );
+
+			// Nothing left to fetch in batches, so this is the moment for the books that were
+			// skipped along the way.
+			self::retry_failed_products( $etalage );
+
+			if ( ! self::holds_lock( $etalage ) ) {
+				// Lost along the way, and with it the say over where the import got to.
+				boekdb_debug( 'Lost the import lock on ' . $etalage->name );
+				self::$lock_token = null;
+				self::$lock_value = null;
+
+				return;
+			}
+
 			self::set_last_import( $etalage->id );
 
 			// reset offset and set running to 0 (finished).
@@ -238,6 +282,234 @@ class BoekDB_Import {
 			if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
 				wp_schedule_single_event( time(), self::IMPORT_HOOK );
 			}
+		}
+	}
+
+	/**
+	 * The books of an etalage the import could not get in.
+	 *
+	 * @param int $etalage_id  The etalage.
+	 *
+	 * @return array The isbns, in the order they were written down.
+	 */
+	public static function failed_products( $etalage_id ) {
+		$failed = get_option( self::FAILED_OPTION_PREFIX . (int) $etalage_id );
+
+		if ( ! is_array( $failed ) ) {
+			return array();
+		}
+
+		return array_map( 'strval', array_keys( $failed ) );
+	}
+
+	/**
+	 * Write down a book that could not be imported, to fetch again later.
+	 *
+	 * @param object $etalage  The etalage being imported.
+	 * @param object $product  The product that failed.
+	 *
+	 * @return void
+	 */
+	private static function remember_failed_product( $etalage, $product ) {
+		if ( ! isset( $product->isbn ) ) {
+			return;
+		}
+
+		$failed = get_option( self::FAILED_OPTION_PREFIX . $etalage->id );
+		if ( ! is_array( $failed ) ) {
+			$failed = array();
+		}
+
+		$attempts                 = isset( $failed[ $product->isbn ] ) ? (int) $failed[ $product->isbn ] : 0;
+		$failed[ $product->isbn ] = $attempts + 1;
+
+		update_option( self::FAILED_OPTION_PREFIX . $etalage->id, $failed, false );
+	}
+
+	/**
+	 * Forget the books waiting for a retry that the etalage no longer carries.
+	 *
+	 * A book leaves an etalage without its filters changing: it goes out of print and the
+	 * isbn list gets shorter. The cleanup removes the book, and fetching by isbn knows no
+	 * filters, so without this the retries bring it straight back.
+	 *
+	 * @param object $etalage  The etalage.
+	 * @param array  $isbns    The isbns it carries now.
+	 *
+	 * @return void
+	 */
+	private static function drop_retries_outside( $etalage, $isbns ) {
+		$failed = get_option( self::FAILED_OPTION_PREFIX . $etalage->id );
+		if ( ! is_array( $failed ) || count( $failed ) === 0 ) {
+			return;
+		}
+
+		$kept = array_intersect_key( $failed, array_flip( $isbns ) );
+
+		if ( count( $kept ) === count( $failed ) ) {
+			return;
+		}
+
+		if ( count( $kept ) === 0 ) {
+			delete_option( self::FAILED_OPTION_PREFIX . $etalage->id );
+
+			return;
+		}
+
+		update_option( self::FAILED_OPTION_PREFIX . $etalage->id, $kept, false );
+	}
+
+	/**
+	 * Take a book off the list of books to fetch again.
+	 *
+	 * @param object $etalage  The etalage being imported.
+	 * @param object $product  The product that went in fine.
+	 *
+	 * @return void
+	 */
+	private static function forget_failed_product( $etalage, $product ) {
+		if ( ! isset( $product->isbn ) ) {
+			return;
+		}
+
+		$failed = get_option( self::FAILED_OPTION_PREFIX . $etalage->id );
+		if ( ! is_array( $failed ) || ! isset( $failed[ $product->isbn ] ) ) {
+			return;
+		}
+
+		unset( $failed[ $product->isbn ] );
+
+		if ( count( $failed ) === 0 ) {
+			delete_option( self::FAILED_OPTION_PREFIX . $etalage->id );
+
+			return;
+		}
+
+		update_option( self::FAILED_OPTION_PREFIX . $etalage->id, $failed, false );
+	}
+
+	/**
+	 * Fetch the books that could not be imported earlier, one by one.
+	 *
+	 * Runs at the end of a run, when there is nothing left to fetch in batches. A book that
+	 * keeps failing is left alone after a few tries, and stays on the list so it can be
+	 * looked into.
+	 *
+	 * @param object $etalage  The etalage that just finished.
+	 *
+	 * @return void
+	 */
+	private static function retry_failed_products( $etalage ) {
+		$failed = get_option( self::FAILED_OPTION_PREFIX . $etalage->id );
+		if ( ! is_array( $failed ) || count( $failed ) === 0 ) {
+			return;
+		}
+
+		foreach ( $failed as $isbn => $attempts ) {
+			if ( (int) $attempts >= self::FAILED_ATTEMPTS ) {
+				continue;
+			}
+
+			if ( self::is_stopped() || ! self::holds_lock( $etalage ) ) {
+				// These write books like any batch does, so Stop and a takeover reach them
+				// too.
+				boekdb_debug( 'Stopped retrying on ' . $etalage->name );
+
+				break;
+			}
+
+			self::refresh_lock( $etalage );
+
+			$product = Boekdb_Api_Service::fetch_product( $etalage->api_key, $isbn );
+			if ( false === $product ) {
+				$failed[ $isbn ] = (int) $attempts + 1;
+				continue;
+			}
+
+			if ( self::is_stopped() || ! self::holds_lock( $etalage ) ) {
+				// Stop can be pressed while a book is being fetched, as a takeover can
+				// happen then.
+				boekdb_debug( 'Stopped retrying on ' . $etalage->name );
+
+				break;
+			}
+
+			if ( self::import_product( $product, $etalage ) ) {
+				unset( $failed[ $isbn ] );
+				continue;
+			}
+
+			$failed[ $isbn ] = (int) $attempts + 1;
+		}
+
+		if ( ! self::holds_lock( $etalage ) ) {
+			// The etalage changed hands while this ran. What is still to be retried is the
+			// new owner's bookkeeping, not this run's.
+			return;
+		}
+
+		if ( count( $failed ) === 0 ) {
+			delete_option( self::FAILED_OPTION_PREFIX . $etalage->id );
+
+			return;
+		}
+
+		update_option( self::FAILED_OPTION_PREFIX . $etalage->id, $failed, false );
+	}
+
+	/**
+	 * Import one product.
+	 *
+	 * @param object $product  The product as the API describes it.
+	 * @param object $etalage  The etalage being imported.
+	 *
+	 * @return bool Whether it was imported.
+	 */
+	private static function import_product( $product, $etalage ) {
+		try {
+				list( $boek_post_id, $isbn, $nstc, $slug ) = self::handle_boek( $product );
+
+				boekdb_debug( 'Processing ' . $isbn );
+
+				self::handle_betrokkenen( $product, $boek_post_id );
+
+				$thema = array();
+				$nur   = array();
+				$bisac = array();
+
+			foreach ( $product->onderwerpen as $onderwerp ) {
+				if ( $onderwerp->type === 'NUR' ) {
+					$nur[] = self::get_taxonomy_term_id(
+						sanitize_title( $onderwerp->code ),
+						'nur',
+						$onderwerp->waarde
+					);
+				} elseif ( $onderwerp->type === 'BISAC' ) {
+					$bisac[] = self::get_taxonomy_term_id(
+						sanitize_title( $onderwerp->code ),
+						'bisac',
+						$onderwerp->waarde
+					);
+				} elseif ( substr( $onderwerp->type, 0, 5 ) === 'Thema' ) {
+					$thema[] = self::get_taxonomy_term_id(
+						sanitize_title( boekdb_thema_omschrijving( $onderwerp->code ) ),
+						'thema',
+						boekdb_thema_omschrijving( $onderwerp->code )
+					);
+				}
+			}
+				wp_set_object_terms( $boek_post_id, $nur, 'boekdb_nur_tax' );
+				wp_set_object_terms( $boek_post_id, $bisac, 'boekdb_bisac_tax' );
+				wp_set_object_terms( $boek_post_id, $thema, 'boekdb_thema_tax' );
+
+				self::link_product( $boek_post_id, $isbn, $etalage->id );
+				self::check_primary_title( $boek_post_id, $nstc, $slug );
+
+			return true;
+		} catch ( Throwable $e ) {
+			boekdb_debug( 'Skipped ' . ( isset( $product->isbn ) ? $product->isbn : 'a product' ) . ': ' . $e->getMessage() );
+
+			return false;
 		}
 	}
 
@@ -302,21 +574,87 @@ class BoekDB_Import {
 	 *
 	 * @param object $etalage  The etalage to claim.
 	 *
-	 * @return void
+	 * @return bool Whether this run got it.
 	 */
 	private static function claim_lock( $etalage ) {
-		self::$lock_token = wp_generate_uuid4();
+		global $wpdb;
 
-		update_option(
-			self::lock_option( $etalage->id ),
+		$name = self::lock_option( $etalage->id );
+		$lock = self::read_lock( $etalage->id );
+
+		if ( is_array( $lock ) && isset( $lock['time'] ) && ( time() - (int) $lock['time'] ) < self::LOCK_TIMEOUT ) {
+			// Someone else is working on this etalage. Two runs can come back from the API
+			// with the same batch; only one of them gets to write it.
+			boekdb_debug( 'Another run is already working on ' . $etalage->name );
+
+			return false;
+		}
+
+		if ( false !== $lock ) {
+			// Only the dead lock this run saw. One that was refreshed in between is left
+			// alone, and the insert below then fails.
+			$wpdb->query(
+				$wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s", $name, maybe_serialize( $lock ) ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+			);
+		}
+
+		$token = wp_generate_uuid4();
+		$value = maybe_serialize(
 			array(
-				'token' => self::$lock_token,
+				'token' => $token,
 				'time'  => time(),
-			),
-			false
+			)
 		);
 
+		// A plain insert, which the unique key on option_name makes fail when another run
+		// got there first. add_option() would overwrite that run's lock: it inserts with
+		// ON DUPLICATE KEY UPDATE.
+		$suppressed = $wpdb->suppress_errors( true );
+		$inserted   = $wpdb->insert(
+			$wpdb->options,
+			array(
+				'option_name'  => $name,
+				'option_value' => $value,
+				'autoload'     => 'off',
+			)
+		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->suppress_errors( $suppressed );
+
+		self::forget_cached_lock( $name );
+
+		if ( ! $inserted ) {
+			boekdb_debug( 'Another run claimed ' . $etalage->name . ' first' );
+
+			return false;
+		}
+
+		self::$lock_token = $token;
+		self::$lock_value = $value;
 		self::update_running( 1, $etalage );
+
+		// A fatal halts the script on the spot, so no code after it runs and a finally block
+		// would not either. Only a shutdown function still gets a turn.
+		register_shutdown_function( array( self::class, 'release_lock_on_shutdown' ), $etalage );
+
+		return true;
+	}
+
+	/**
+	 * Drop what WordPress remembers about a lock option, after it was written past the
+	 * option functions.
+	 *
+	 * @param string $name  The option name.
+	 *
+	 * @return void
+	 */
+	private static function forget_cached_lock( $name ) {
+		wp_cache_delete( $name, 'options' );
+
+		$notoptions = wp_cache_get( 'notoptions', 'options' );
+		if ( is_array( $notoptions ) && isset( $notoptions[ $name ] ) ) {
+			unset( $notoptions[ $name ] );
+			wp_cache_set( 'notoptions', $notoptions, 'options' );
+		}
 	}
 
 	/**
@@ -331,9 +669,79 @@ class BoekDB_Import {
 			return false;
 		}
 
-		$lock = get_option( self::lock_option( $etalage->id ) );
+		$lock = self::read_lock( $etalage->id );
 
 		return is_array( $lock ) && isset( $lock['token'] ) && $lock['token'] === self::$lock_token;
+	}
+
+	/**
+	 * Whether a batch is working on an etalage right now.
+	 *
+	 * The running state of an etalage is cleared the moment Stop is pressed, while the batch
+	 * that is busy only notices between books. Its lock is what says it is still there.
+	 *
+	 * @return bool
+	 */
+	public static function is_working() {
+		global $wpdb;
+
+		if ( boekdb_is_import_running() ) {
+			return true;
+		}
+
+		$locks = $wpdb->get_col(
+			$wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( self::LOCK_OPTION_PREFIX ) . '%' ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		);
+
+		foreach ( $locks as $lock ) {
+			$lock = maybe_unserialize( $lock );
+
+			if ( is_array( $lock ) && isset( $lock['time'] ) && ( time() - (int) $lock['time'] ) < self::LOCK_TIMEOUT ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether an import was stopped by hand.
+	 *
+	 * Straight from the database: Stop is pressed in another request, which this one would
+	 * otherwise not see.
+	 *
+	 * @return bool
+	 */
+	private static function is_stopped() {
+		global $wpdb;
+
+		return (bool) $wpdb->get_var(
+			$wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", self::STOPPED_OPTION ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		);
+	}
+
+	/**
+	 * Read the lock of an etalage.
+	 *
+	 * Straight from the database: the run that takes a lock over is another process, and
+	 * this one would otherwise keep seeing the value it cached when it claimed.
+	 *
+	 * @param int $id  The etalage.
+	 *
+	 * @return array|false The lock, or false when there is none.
+	 */
+	private static function read_lock( $id ) {
+		global $wpdb;
+
+		$value = $wpdb->get_var(
+			$wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", self::lock_option( $id ) ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		);
+
+		if ( is_null( $value ) ) {
+			return false;
+		}
+
+		return maybe_unserialize( $value );
 	}
 
 	/**
@@ -344,14 +752,61 @@ class BoekDB_Import {
 	 * @return void
 	 */
 	private static function refresh_lock( $etalage ) {
-		update_option(
-			self::lock_option( $etalage->id ),
+		global $wpdb;
+
+		if ( is_null( self::$lock_value ) ) {
+			return;
+		}
+
+		$name  = self::lock_option( $etalage->id );
+		$value = maybe_serialize(
 			array(
 				'token' => self::$lock_token,
 				'time'  => time(),
-			),
-			false
+			)
 		);
+
+		// Only over the lock this run wrote: between the check above and this write, another
+		// run can have taken the etalage over.
+		$written = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+				$value,
+				$name,
+				self::$lock_value
+			)
+		);
+
+		self::forget_cached_lock( $name );
+
+		if ( $written ) {
+			self::$lock_value = $value;
+
+			return;
+		}
+
+		// Nothing was written, so the lock is not what this run last left behind. If it is
+		// still this run's lock, it was written by something else holding the same claim and
+		// the heartbeat carries on from there.
+		$lock = self::read_lock( $etalage->id );
+		if ( ! is_array( $lock ) || ! isset( $lock['token'] ) || $lock['token'] !== self::$lock_token ) {
+			self::$lock_token = null;
+			self::$lock_value = null;
+
+			return;
+		}
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+				$value,
+				$name,
+				maybe_serialize( $lock )
+			)
+		);
+
+		self::forget_cached_lock( $name );
+		self::$lock_value = $value;
 	}
 
 	/**
@@ -363,10 +818,62 @@ class BoekDB_Import {
 	 * @return void
 	 */
 	private static function release_lock( $etalage, $running ) {
-		delete_option( self::lock_option( $etalage->id ) );
-		self::$lock_token = null;
+		global $wpdb;
+
+		$name = self::lock_option( $etalage->id );
+
+		if ( ! is_null( self::$lock_value ) ) {
+			// The state of the etalage is written first, in a statement that only applies
+			// while the lock is still this run's. Letting go of the lock and writing the
+			// state were two steps, and a run claiming the etalage in between had its state
+			// overwritten by the one on its way out.
+			self::update_running_while_holding_lock( $etalage, $running );
+
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+					$name,
+					self::$lock_value
+				)
+			);
+
+			self::forget_cached_lock( $name );
+			self::$lock_token = null;
+			self::$lock_value = null;
+
+			return;
+		}
+
+		// No lock of this run to let go of, which is how a run that found nothing ends.
+		if ( false !== self::read_lock( $etalage->id ) ) {
+			return;
+		}
 
 		self::update_running( $running, $etalage );
+	}
+
+	/**
+	 * Write the state of an etalage, but only while this run still holds its lock.
+	 *
+	 * @param object $etalage  The etalage.
+	 * @param int    $running  The state to leave behind.
+	 *
+	 * @return void
+	 */
+	private static function update_running_while_holding_lock( $etalage, $running ) {
+		global $wpdb;
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->prefix}boekdb_etalages SET running = %d
+					WHERE id = %d
+					AND EXISTS ( SELECT 1 FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+				$running,
+				$etalage->id,
+				self::lock_option( $etalage->id ),
+				self::$lock_value
+			)
+		);
 	}
 
 	/**
@@ -377,7 +884,7 @@ class BoekDB_Import {
 	 * @return string
 	 */
 	private static function lock_option( $id ) {
-		return 'boekdb_import_lock_' . (int) $id;
+		return self::LOCK_OPTION_PREFIX . (int) $id;
 	}
 
 	/**
@@ -405,8 +912,36 @@ class BoekDB_Import {
 			}
 
 			boekdb_debug( 'Taking back the import lock on ' . $etalage->name );
-			delete_option( self::lock_option( $etalage->id ) );
-			self::update_running( 2, $etalage );
+
+			if ( is_array( $lock ) ) {
+				// Only the dead lock this run saw. Two runs can read the same dead lock, and
+				// the second must not throw away the claim the first has just made.
+				$removed = $wpdb->query(
+					$wpdb->prepare(
+						"DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+						self::lock_option( $etalage->id ),
+						maybe_serialize( $lock )
+					)
+				);
+
+				self::forget_cached_lock( self::lock_option( $etalage->id ) );
+
+				if ( ! $removed ) {
+					continue;
+				}
+			}
+
+			// Only while the etalage is still free: between the delete above and this write
+			// another run can have claimed it.
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$wpdb->prefix}boekdb_etalages SET running = 2
+						WHERE id = %d
+						AND NOT EXISTS ( SELECT 1 FROM {$wpdb->options} WHERE option_name = %s )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+					$etalage->id,
+					self::lock_option( $etalage->id )
+				)
+			);
 		}
 	}
 
@@ -489,29 +1024,10 @@ class BoekDB_Import {
 					update_post_meta( $boek_post_id, 'boekdb_' . $key, $value );
 				}
 				update_post_meta( $boek_post_id, 'boekdb_' . $key . '_org', $value );
+			} elseif ( $key === 'recensiequotes' ) {
+				update_post_meta( $boek_post_id, 'boekdb_recensiequotes', self::keep_hidden_quotes_hidden( $boek_post_id, $value ) );
 			} else {
 				update_post_meta( $boek_post_id, 'boekdb_' . $key, $value );
-			}
-
-			// handle recensiequotes
-			if ( $key === 'recensiequotes' ) {
-				$current_quotes = get_post_meta( $boek_post_id, 'boekdb_recensiequotes' )[0];
-				if ( count( $value ) > 0 ) {
-					$import_quotes = array();
-					foreach ( $value as $hash => $quote ) {
-						// check if quote exists currently
-						if ( isset( $current_quotes[ $hash ] ) ) {
-							// get value for tonen
-							$quote['tonen'] = $current_quotes[ $hash ]['tonen'];
-						}
-						$import_quotes[ $hash ] = $quote;
-					}
-					// overwrite post_meta with parsed quotes
-					update_post_meta( $boek_post_id, 'boekdb_recensiequotes', $import_quotes );
-				} else {
-					// just write to post_meta
-					update_post_meta( $boek_post_id, 'boekdb_recensiequotes', $value );
-				}
 			}
 		}
 
@@ -519,6 +1035,36 @@ class BoekDB_Import {
 		self::handle_boek_files( $product, $boek_post_id );
 
 		return array( $boek_post_id, $boek['isbn'], $boek['nstc'], $slug );
+	}
+
+	/**
+	 * Carry the visibility an editor set over to the quotes that come in.
+	 *
+	 * Whether a review quote is shown is a choice made on the site, not at BoekDB, so it is
+	 * read off what is stored before anything is written over it.
+	 *
+	 * @param int   $boek_post_id  The book.
+	 * @param array $quotes        The quotes as they arrived.
+	 *
+	 * @return array
+	 */
+	private static function keep_hidden_quotes_hidden( $boek_post_id, $quotes ) {
+		if ( ! is_array( $quotes ) || count( $quotes ) === 0 ) {
+			return $quotes;
+		}
+
+		$current = get_post_meta( $boek_post_id, 'boekdb_recensiequotes', true );
+		if ( ! is_array( $current ) ) {
+			return $quotes;
+		}
+
+		foreach ( $quotes as $hash => $quote ) {
+			if ( isset( $current[ $hash ]['tonen'] ) ) {
+				$quotes[ $hash ]['tonen'] = $current[ $hash ]['tonen'];
+			}
+		}
+
+		return $quotes;
 	}
 
 	/**
@@ -709,12 +1255,12 @@ class BoekDB_Import {
 			return;
 		}
 
-		$bestand       = $product->serie->beeld;
-		$hash          = md5( $bestand->url );
-		$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+		$bestand = $product->serie->beeld;
+		$hash    = md5( $bestand->url );
+		list( $attachment_id, $replaced_id, $references ) = self::usable_attachment( $hash );
 
 		if ( is_null( $attachment_id ) ) {
-			$image = self::download_file( $bestand );
+			$image = self::download_file( $bestand, $replaced_id );
 			if ( is_null( $image ) ) {
 				return;
 			}
@@ -725,27 +1271,155 @@ class BoekDB_Import {
 			);
 
 			$attachment_id = wp_insert_attachment( $attachment, $image['file'] );
+			self::take_over_references( $replaced_id, $references, $attachment_id );
 			self::store_attachment_metadata( $attachment_id, $image, $bestand->soort );
 
 			update_post_meta( $attachment_id, 'hash', $hash );
-			update_term_meta( $term_id, 'seriebeeld_id', $attachment_id );
+			// The name boekdb_serie_data() reads it back under.
+			update_term_meta( $term_id, 'boekdb_seriebeeld_id', $attachment_id );
 		} else {
-			// check if seriebeeld is set
-			$seriebeeld_id = get_term_meta( $term_id, 'seriebeeld_id', true );
-			if ( is_null( $seriebeeld_id ) ) {
-				update_term_meta( $term_id, 'seriebeeld_id', $attachment_id );
+			// The file is already on the site, from another serie or an earlier run. The
+			// serie carries the image it is given now, which is not always the one it was
+			// given first: a changed image arrives under another url.
+			update_term_meta( $term_id, 'boekdb_seriebeeld_id', $attachment_id );
+		}
+	}
+
+	/**
+	 * Whether the file behind an attachment is unusable.
+	 *
+	 * Sites hold attachments whose file is an error page, from the days the plugin wrote
+	 * whatever came back. Only the header of the file is read, because this runs for every
+	 * file of every product of every batch.
+	 *
+	 * @param int $attachment_id  The attachment.
+	 *
+	 * @return bool
+	 */
+	private static function attachment_is_broken( $attachment_id ) {
+		$path = get_attached_file( $attachment_id );
+
+		if ( empty( $path ) || ! file_exists( $path ) || filesize( $path ) === 0 ) {
+			return true;
+		}
+
+		$type = (string) get_post_mime_type( $attachment_id );
+
+		if ( strpos( $type, 'image/' ) === 0 ) {
+			// Reads the header, not the image.
+			return getimagesize( $path ) === false;
+		}
+
+		if ( 'application/pdf' === $type ) {
+			$handle = fopen( $path, 'rb' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
+			if ( false === $handle ) {
+				return true;
 			}
+			$head = fread( $handle, 5 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread
+			fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+
+			return '%PDF-' !== $head;
+		}
+
+		return false;
+	}
+
+	/**
+	 * The attachment the site already has for this file, if it still holds a usable file.
+	 *
+	 * An attachment whose file went missing or turned out to be an error page is reported
+	 * back along with everything pointing at it, so the caller can download the file again
+	 * and hand those references over. It is only removed once that replacement is in.
+	 *
+	 * @param string $hash  The hash of the file url.
+	 *
+	 * @return array The attachment to use or null, the unusable one or null, and what points at it.
+	 */
+	private static function usable_attachment( $hash ) {
+		$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+
+		if ( is_null( $attachment_id ) ) {
+			return array( null, null, array() );
+		}
+
+		if ( ! self::attachment_is_broken( $attachment_id ) ) {
+			return array( $attachment_id, null, array() );
+		}
+
+		// Left in place until the replacement is in: a download that fails leaves the site
+		// with the file it had rather than with none at all.
+		return array( null, $attachment_id, self::references_to_attachment( $attachment_id ) );
+	}
+
+	/**
+	 * Everything pointing at an attachment: books through their post meta, authors and
+	 * series through their term meta.
+	 *
+	 * @param int $attachment_id  The attachment.
+	 *
+	 * @return array
+	 */
+	private static function references_to_attachment( $attachment_id ) {
+		global $wpdb;
+
+		$posts = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT post_id, meta_key FROM {$wpdb->postmeta}
+					WHERE meta_value = %d
+					AND meta_key IN ( '_thumbnail_id', 'boekdb_file_backcover_id', 'boekdb_file_voorbeeld_id' )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+				$attachment_id
+			)
+		);
+
+		$terms = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT term_id, meta_key FROM {$wpdb->termmeta}
+					WHERE meta_value = %d
+					AND meta_key IN ( 'auteursfoto_id', 'boekdb_seriebeeld_id' )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+				$attachment_id
+			)
+		);
+
+		return array(
+			'posts' => $posts,
+			'terms' => $terms,
+		);
+	}
+
+	/**
+	 * Hand everything that pointed at an unusable file to its replacement.
+	 *
+	 * @param int|null $replaced_id    The attachment being replaced, or null.
+	 * @param array    $references     What pointed at it.
+	 * @param int      $attachment_id  The attachment that takes its place.
+	 *
+	 * @return void
+	 */
+	private static function take_over_references( $replaced_id, $references, $attachment_id ) {
+		if ( is_null( $replaced_id ) || is_wp_error( $attachment_id ) ) {
+			return;
+		}
+
+		// Only where the old file is still the one in use: a book that was given another
+		// cover while this download ran keeps the newer one.
+		foreach ( $references['posts'] as $reference ) {
+			update_post_meta( $reference->post_id, $reference->meta_key, $attachment_id, $replaced_id );
+		}
+
+		foreach ( $references['terms'] as $reference ) {
+			update_term_meta( $reference->term_id, $reference->meta_key, $attachment_id, $replaced_id );
 		}
 	}
 
 	/**
 	 * Download a file from the API into the uploads directory.
 	 *
-	 * @param object $bestand  The file as the API describes it.
+	 * @param object   $bestand      The file as the API describes it.
+	 * @param int|null $replaced_id  An unusable attachment to remove once the bytes are in.
 	 *
 	 * @return array|null The file as wp_handle_sideload() returns it, or null on failure.
 	 */
-	private static function download_file( $bestand ) {
+	private static function download_file( $bestand, $replaced_id = null ) {
 		if ( ! function_exists( 'download_url' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
@@ -771,9 +1445,31 @@ class BoekDB_Import {
 			return null;
 		}
 
+		$name = sanitize_file_name( $bestand->bestandsnaam );
+
+		// An error page served with a 200 passes for a download. WordPress refuses it as a
+		// file a few lines down, and by then the file it was meant to replace must still be
+		// there.
+		$checked = wp_check_filetype_and_ext( $tmp_file, $name );
+		if ( empty( $checked['type'] ) ) {
+			boekdb_debug( 'Discarding ' . $bestand->url . ': not a ' . $bestand->type );
+			unlink( $tmp_file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+
+			return null;
+		}
+
+		// The bytes are in and they are what they claim to be, so the unusable file this
+		// replaces can go. Not a moment earlier: a download that fails leaves the site with
+		// the file it had. Not a moment later either, because the replacement takes the same
+		// name and would go with it.
+		if ( ! is_null( $replaced_id ) ) {
+			boekdb_debug( 'Replacing unusable attachment ' . $replaced_id );
+			wp_delete_attachment( $replaced_id, true );
+		}
+
 		// wp_handle_sideload() takes its first argument by reference.
 		$sideload = array(
-			'name'     => sanitize_file_name( $bestand->bestandsnaam ),
+			'name'     => $name,
 			'tmp_name' => $tmp_file,
 		);
 		$file     = wp_handle_sideload( $sideload, array( 'test_form' => false ) );
@@ -839,11 +1535,11 @@ class BoekDB_Import {
 		}
 
 		foreach ( $product->bestanden as $bestand ) {
-			$hash          = md5( $bestand->url );
-			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+			$hash = md5( $bestand->url );
+			list( $attachment_id, $replaced_id, $references ) = self::usable_attachment( $hash );
 
 			if ( is_null( $attachment_id ) ) {
-				$file = self::download_file( $bestand );
+				$file = self::download_file( $bestand, $replaced_id );
 				if ( is_null( $file ) ) {
 					continue;
 				}
@@ -854,6 +1550,7 @@ class BoekDB_Import {
 				);
 
 				$attachment_id = wp_insert_attachment( $attachment, $file['file'], $boek_post_id );
+				self::take_over_references( $replaced_id, $references, $attachment_id );
 				if ( ! is_wp_error( $attachment_id ) ) {
 					self::store_attachment_metadata( $attachment_id, $file, $bestand->soort );
 				} else {
@@ -861,13 +1558,7 @@ class BoekDB_Import {
 				}
 
 				update_post_meta( $attachment_id, 'hash', $hash );
-				if ( $bestand->soort === 'Cover' ) {
-					update_post_meta( $boek_post_id, '_thumbnail_id', $attachment_id );
-				} elseif ( $bestand->soort === 'Back cover' ) {
-					update_post_meta( $boek_post_id, 'boekdb_file_backcover_id', $attachment_id );
-				} elseif ( $bestand->soort === 'Fragment' ) {
-					update_post_meta( $boek_post_id, 'boekdb_file_voorbeeld_id', $attachment_id );
-				}
+				self::link_file_to_boek( $boek_post_id, $attachment_id, $bestand->soort );
 			} else {
 				$attachment = get_post( $attachment_id );
 
@@ -882,31 +1573,38 @@ class BoekDB_Import {
 						)
 					);
 				}
-				// check if the file exists
-				if ( ! file_exists( get_attached_file( $attachment_id ) ) ) {
-					// delete the attachment
-					wp_delete_attachment( $attachment_id, true );
 
-					// re-run this function
-					self::handle_boek_files( $product, $boek_post_id );
-
-					// That run downloaded every file of this product again and linked them.
-					// Carrying on here would overwrite those links with the attachment that
-					// was just deleted.
-					return;
-				}
-
-				if ( $attachment->post_title === 'Cover' ) {
-					update_post_meta( $boek_post_id, '_thumbnail_id', $attachment_id );
-				} elseif ( $attachment->post_title === 'Back cover' ) {
-					update_post_meta( $boek_post_id, 'boekdb_file_backcover_id', $attachment_id );
-				} elseif ( $attachment->post_title === 'Fragment' ) {
-					update_post_meta( $boek_post_id, 'boekdb_file_voorbeeld_id', $attachment_id );
-				}
+				// On the role this product gives the file, not the one it had when another
+				// book first brought it in: the same image is the back cover of one edition
+				// and the cover of another.
+				self::link_file_to_boek( $boek_post_id, $attachment_id, $bestand->soort );
 			}
 		}
 	}
 
+
+	/**
+	 * Point a book at one of its files.
+	 *
+	 * @param int    $boek_post_id   The book.
+	 * @param int    $attachment_id  The file.
+	 * @param string $soort          The role BoekDB gives the file for this book.
+	 *
+	 * @return void
+	 */
+	private static function link_file_to_boek( $boek_post_id, $attachment_id, $soort ) {
+		$meta_keys = array(
+			'Cover'      => '_thumbnail_id',
+			'Back cover' => 'boekdb_file_backcover_id',
+			'Fragment'   => 'boekdb_file_voorbeeld_id',
+		);
+
+		if ( ! isset( $meta_keys[ $soort ] ) ) {
+			return;
+		}
+
+		update_post_meta( $boek_post_id, $meta_keys[ $soort ], $attachment_id );
+	}
 
 	/**
 	 * Handle betrokkenen for a book product
@@ -1041,11 +1739,11 @@ class BoekDB_Import {
 				continue;
 			}
 
-			$hash          = md5( $bestand->url );
-			$attachment_id = self::find_field( 'attachment', 'hash', $hash );
+			$hash = md5( $bestand->url );
+			list( $attachment_id, $replaced_id, $references ) = self::usable_attachment( $hash );
 
 			if ( is_null( $attachment_id ) ) {
-				$image = self::download_file( $bestand );
+				$image = self::download_file( $bestand, $replaced_id );
 				if ( is_null( $image ) ) {
 					continue;
 				}
@@ -1056,6 +1754,7 @@ class BoekDB_Import {
 				);
 
 				$attachment_id = wp_insert_attachment( $attachment, $image['file'] );
+				self::take_over_references( $replaced_id, $references, $attachment_id );
 				if ( ! is_wp_error( $attachment_id ) ) {
 					self::store_attachment_metadata( $attachment_id, $image, $bestand->soort );
 				} else {
@@ -1118,6 +1817,16 @@ class BoekDB_Import {
 	private static function link_product( $boek_id, $isbn, $etalage_id ) {
 		global $wpdb;
 
+		// A lookup on the primary key, to tell a book joining this etalage from one that was
+		// already in it.
+		$already_linked = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE etalage_id = %d AND boek_id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$etalage_id,
+				$boek_id
+			)
+		);
+
 		$wpdb->replace(
 			$wpdb->prefix . 'boekdb_etalage_boeken',
 			array(
@@ -1125,6 +1834,12 @@ class BoekDB_Import {
 				'boek_id'    => $boek_id,
 			)
 		);
+
+		if ( 0 === $already_linked ) {
+			// The url of a book carries the prefix of its etalage, so the one worked out
+			// before this is no longer right.
+			delete_transient( 'boekdb_permalink_' . $boek_id );
+		}
 		$wpdb->replace(
 			$wpdb->prefix . 'boekdb_isbns',
 			array(
@@ -1148,7 +1863,7 @@ class BoekDB_Import {
 
 		// if nstc is null, set current book to primary
 		if ( is_null( $nstc ) ) {
-			update_post_meta( $post_id, 'boekdb_primary', 1 );
+			self::set_primary( $post_id, 1 );
 
 			return;
 		}
@@ -1196,13 +1911,30 @@ class BoekDB_Import {
 		$sorted   = array_keys( $books );
 		$first_id = array_shift( $sorted );
 		unset( $books[ $first_id ] );
-		update_post_meta( $first_id, 'boekdb_primair', 1 );
+		self::set_primary( $first_id, 1 );
 		self::set_post_name( $first_id, $slug );
 
 		// disable primary bit on all other books and set slug to secondary
 		foreach ( $books as $book_id => $val ) {
-			update_post_meta( $book_id, 'boekdb_primair', 0 );
+			self::set_primary( $book_id, 0 );
 			self::set_post_name( $book_id, $slugs[ $book_id ] );
+		}
+	}
+
+	/**
+	 * Mark a book as the primary edition of its title, or as one of the others.
+	 *
+	 * Which of the two it is decides the url the book gets, so a book that changes sides
+	 * has to lose its cached permalink even when nothing else about it changes.
+	 *
+	 * @param int $post_id  The book.
+	 * @param int $primary  1 for the primary edition, 0 for the others.
+	 *
+	 * @return void
+	 */
+	private static function set_primary( $post_id, $primary ) {
+		if ( update_post_meta( $post_id, 'boekdb_primair', $primary ) ) {
+			delete_transient( 'boekdb_permalink_' . $post_id );
 		}
 	}
 
@@ -1298,7 +2030,7 @@ class BoekDB_Import {
 	public static function start_import() {
 		set_time_limit( 0 );
 
-		if ( get_option( self::STOPPED_OPTION ) ) {
+		if ( self::is_stopped() ) {
 			boekdb_debug( 'Import was stopped, not starting' );
 
 			return;
@@ -1330,8 +2062,11 @@ class BoekDB_Import {
 				}
 
 				// What the next run will ask BoekDB for. Taking the moment this run ends
-				// instead would skip everything that changed while it was busy.
-				update_option( self::START_OPTION_PREFIX . $etalage->id, current_time( 'mysql', 1 ), false );
+				// instead would skip everything that changed while it was busy. A run that
+				// was stopped and started again keeps the moment it first began.
+				if ( ! get_option( self::START_OPTION_PREFIX . $etalage->id ) ) {
+					update_option( self::START_OPTION_PREFIX . $etalage->id, current_time( 'mysql', 1 ), false );
+				}
 
 				self::update_running( 2, $etalage );
 
@@ -1369,6 +2104,7 @@ class BoekDB_Import {
 			return false;
 		}
 		BoekDB_Cleanup::trash_removed( $etalage->id, $isbns['isbns'] );
+		self::drop_retries_outside( $etalage, $isbns['isbns'] );
 
 		$wpdb->update(
 			$wpdb->prefix . 'boekdb_etalages',
@@ -1379,14 +2115,21 @@ class BoekDB_Import {
 		);
 
 		if ( $isbns['filters'] !== $etalage->filter_hash ) {
+			// Other filters mean another set of books, imported from the start. Keeping the
+			// offset of the previous selection would skip everything before it.
 			$wpdb->update(
 				$wpdb->prefix . 'boekdb_etalages',
 				array(
 					'filter_hash' => $isbns['filters'],
 					'last_import' => null,
+					'offset'      => 0,
 				),
 				array( 'id' => $etalage->id )
 			);
+
+			// Books outside the new filters are removed from the site, and the retries
+			// fetch by isbn, which knows no filters: they would bring them back.
+			delete_option( self::FAILED_OPTION_PREFIX . $etalage->id );
 
 			// reset.
 			return true;

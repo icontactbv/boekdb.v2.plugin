@@ -41,6 +41,12 @@ class FileDownloadTest extends WP_UnitTestCase {
 	const IMAGE_FILE_URL = 'https://www.boekdbv2.nl/productfile/cover/xlarge';
 
 	/**
+	 * A second url answering with that same image, standing in for a file that was replaced
+	 * at BoekDB and therefore carries a new url.
+	 */
+	const OTHER_IMAGE_FILE_URL = 'https://www.boekdbv2.nl/productfile/nieuwe-cover/xlarge';
+
+	/**
 	 * Path of the file served as the response body.
 	 *
 	 * @var string
@@ -143,7 +149,8 @@ class FileDownloadTest extends WP_UnitTestCase {
 		$fixtures = array(
 			self::FILE_URL       => $this->fixture,
 			self::SMALL_FILE_URL => $this->small_fixture,
-			self::IMAGE_FILE_URL => $this->image_fixture,
+			self::IMAGE_FILE_URL       => $this->image_fixture,
+			self::OTHER_IMAGE_FILE_URL => $this->image_fixture,
 		);
 
 		if ( ! isset( $fixtures[ $url ] ) ) {
@@ -342,7 +349,7 @@ class FileDownloadTest extends WP_UnitTestCase {
 			}
 		);
 
-		$attachment_id = (int) get_term_meta( $term_id, 'seriebeeld_id', true );
+		$attachment_id = (int) get_term_meta( $term_id, 'boekdb_seriebeeld_id', true );
 
 		$this->assertNotSame( 0, $attachment_id, 'The serie image should have been attached to the term.' );
 		$this->assertSame( self::FIXTURE_BYTES + 8, filesize( get_attached_file( $attachment_id ) ) );
@@ -438,5 +445,289 @@ class FileDownloadTest extends WP_UnitTestCase {
 		$queries = $wpdb->num_queries - $before;
 
 		$this->assertLessThan( 7, $queries, sprintf( 'Recognising one known file took %d queries.', $queries ) );
+	}
+
+	/**
+	 * Sites hold attachments whose file is an error page: BoekDB answered 500 for a while
+	 * and the old code wrote whatever came back. The url never changed, so the hash still
+	 * matches and the file is never fetched again.
+	 */
+	public function test_an_attachment_holding_an_error_page_is_fetched_again() {
+		$boek_post_id = $this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png' );
+
+		$broken = (int) get_post_meta( $boek_post_id, '_thumbnail_id', true );
+		file_put_contents( get_attached_file( $broken ), '<html><body>500 Internal Server Error</body></html>' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_put_contents_file_put_contents
+
+		$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek_post_id );
+
+		$replacement = (int) get_post_meta( $boek_post_id, '_thumbnail_id', true );
+		$this->assertNotSame( 0, $replacement, 'The book should still have a cover.' );
+		$this->assertNotFalse(
+			getimagesize( get_attached_file( $replacement ) ),
+			'The cover on disk should be an image again.'
+		);
+	}
+
+	/**
+	 * Author photos run through their own download, and had no repair at all.
+	 */
+	public function test_an_author_photo_whose_file_went_missing_is_replaced() {
+		$term_id = self::factory()->term->create( array( 'taxonomy' => 'boekdb_auteur_tax' ) );
+
+		$betrokkene = array(
+			'bestanden' => array(
+				(object) array(
+					'soort'        => 'Auteursfoto',
+					'type'         => 'image/png',
+					'url'          => self::IMAGE_FILE_URL,
+					'bestandsnaam' => 'auteur.png',
+				),
+			),
+		);
+
+		$this->invoke_import( 'handle_betrokkene_files', array( $betrokkene, $term_id ) );
+
+		$first = (int) get_term_meta( $term_id, 'auteursfoto_id', true );
+		$this->assertNotSame( 0, $first, 'The photo should have been attached on the first import.' );
+
+		unlink( get_attached_file( $first ) );
+
+		$this->invoke_import( 'handle_betrokkene_files', array( $betrokkene, $term_id ) );
+
+		$replacement = (int) get_term_meta( $term_id, 'auteursfoto_id', true );
+		$this->assertNotSame( 0, $replacement, 'The author should still have a photo.' );
+		$this->assertFileExists( get_attached_file( $replacement ), 'And its file should be on disk.' );
+	}
+
+	/**
+	 * Imports the serie image of a product into a term.
+	 *
+	 * @param int    $term_id  The serie term.
+	 * @param string $url      The image to import.
+	 *
+	 * @return void
+	 */
+	private function import_serie_image( $term_id, $url = self::IMAGE_FILE_URL ) {
+		$product = (object) array(
+			'serie' => (object) array(
+				'beeld' => (object) array(
+					'soort'        => 'Seriebeeld',
+					'type'         => 'image/png',
+					'url'          => $url,
+					'bestandsnaam' => basename( wp_parse_url( $url, PHP_URL_PATH ) ) . '.png',
+				),
+			),
+		);
+
+		$this->invoke_import( 'handle_serie_files', array( $product, $term_id ) );
+	}
+
+	/**
+	 * The image of a serie is read back through boekdb_serie_data(), which themes use. It
+	 * has to be stored where that function looks.
+	 */
+	public function test_a_serie_image_can_be_read_back() {
+		$term_id = self::factory()->term->create( array( 'taxonomy' => 'boekdb_serie_tax' ) );
+
+		$this->import_serie_image( $term_id );
+
+		$data = boekdb_serie_data( $term_id );
+
+		$this->assertNotNull( $data['serie_beeld_id'], 'The serie image should be readable.' );
+		$this->assertFileExists( get_attached_file( (int) $data['serie_beeld_id'] ) );
+	}
+
+	/**
+	 * Two series can carry the same image. The second one finds the file already there, and
+	 * still needs its own link to it.
+	 */
+	public function test_a_second_serie_with_the_same_image_is_linked_too() {
+		$first  = self::factory()->term->create( array( 'taxonomy' => 'boekdb_serie_tax' ) );
+		$second = self::factory()->term->create( array( 'taxonomy' => 'boekdb_serie_tax' ) );
+
+		$this->import_serie_image( $first );
+		$this->import_serie_image( $second );
+
+		$data = boekdb_serie_data( $second );
+
+		$this->assertNotNull( $data['serie_beeld_id'], 'The second serie should have the image too.' );
+	}
+
+	/**
+	 * The same file can arrive as the back cover of one book and the cover of another. Which
+	 * of the two it is, is a property of the book it comes with, not of the file.
+	 */
+	public function test_a_file_reused_in_another_role_is_linked_in_that_role() {
+		$first = $this->import_file( 'Back cover', 'image/png', self::IMAGE_FILE_URL, 'plaat.png' );
+		$this->assertNotSame( '', get_post_meta( $first, 'boekdb_file_backcover_id', true ), 'The first book has it as its back cover.' );
+
+		$second = $this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'plaat.png' );
+
+		$this->assertNotSame( '', get_post_meta( $second, '_thumbnail_id', true ), 'The second book should have it as its cover.' );
+	}
+
+	/**
+	 * One file is shared by every book and author that uses that url. Replacing an unusable
+	 * one has to take those along, or they keep pointing at an attachment that is gone.
+	 */
+	public function test_replacing_an_unusable_file_takes_the_other_references_along() {
+		$first = $this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png' );
+
+		$broken = (int) get_post_meta( $first, '_thumbnail_id', true );
+
+		// Another book and an author point at the same file.
+		$second = self::factory()->post->create( array( 'post_type' => 'boekdb_boek' ) );
+		update_post_meta( $second, '_thumbnail_id', $broken );
+		$term = self::factory()->term->create( array( 'taxonomy' => 'boekdb_auteur_tax' ) );
+		update_term_meta( $term, 'auteursfoto_id', $broken );
+
+		file_put_contents( get_attached_file( $broken ), '<html><body>500 Internal Server Error</body></html>' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_put_contents_file_put_contents
+
+		$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $first );
+
+		$replacement = (int) get_post_meta( $first, '_thumbnail_id', true );
+
+		$this->assertNotSame( $broken, $replacement, 'The file should have been replaced.' );
+		$this->assertSame( (string) $replacement, get_post_meta( $second, '_thumbnail_id', true ), 'The other book should point at the new file.' );
+		$this->assertSame( (string) $replacement, get_term_meta( $term, 'auteursfoto_id', true ), 'And so should the author.' );
+	}
+
+	/**
+	 * When the image of a serie changes it arrives under another url, and the site may
+	 * already hold that file from a different serie. The serie has to carry the image it is
+	 * given now, not the one it was given first.
+	 */
+	public function test_a_serie_takes_on_an_image_the_site_already_had() {
+		$other = self::factory()->term->create( array( 'taxonomy' => 'boekdb_serie_tax' ) );
+		$this->import_serie_image( $other, self::OTHER_IMAGE_FILE_URL );
+		$shared = (int) get_term_meta( $other, 'boekdb_seriebeeld_id', true );
+
+		$term_id = self::factory()->term->create( array( 'taxonomy' => 'boekdb_serie_tax' ) );
+		$this->import_serie_image( $term_id );
+		$first = (int) get_term_meta( $term_id, 'boekdb_seriebeeld_id', true );
+
+		// Its image changes to the one the other serie already brought in.
+		$this->import_serie_image( $term_id, self::OTHER_IMAGE_FILE_URL );
+
+		$after = (int) get_term_meta( $term_id, 'boekdb_seriebeeld_id', true );
+
+		$this->assertNotSame( $first, $after, 'The serie should no longer carry its old image.' );
+		$this->assertSame( $shared, $after, 'It carries the image it was given now.' );
+	}
+
+	/**
+	 * When the replacement cannot be fetched, the site is better off with the file it has
+	 * than with no file and a book pointing at nothing.
+	 */
+	public function test_a_failed_replacement_leaves_the_books_as_they_were() {
+		$boek = $this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png' );
+
+		$broken = (int) get_post_meta( $boek, '_thumbnail_id', true );
+		file_put_contents( get_attached_file( $broken ), '<html><body>500 Internal Server Error</body></html>' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_put_contents_file_put_contents
+
+		// The download of the replacement times out.
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $args, $url ) {
+				return self::IMAGE_FILE_URL === $url ? new \WP_Error( 'http_request_failed', 'Operation timed out' ) : $preempt;
+			},
+			// After the canned response this class serves.
+			11,
+			3
+		);
+
+		$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek );
+
+		$this->assertSame( (string) $broken, get_post_meta( $boek, '_thumbnail_id', true ), 'The book should still point at the file it had.' );
+		$this->assertNotNull( get_post( $broken ), 'Which therefore has to still exist.' );
+	}
+
+	/**
+	 * Replacing a file takes a while. A book that got another cover in the meantime keeps
+	 * the new one instead of being sent back to the file that was being replaced.
+	 */
+	public function test_a_reference_that_changed_during_the_download_is_left_alone() {
+		$boek = $this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png' );
+
+		$broken = (int) get_post_meta( $boek, '_thumbnail_id', true );
+
+		$other = self::factory()->post->create( array( 'post_type' => 'boekdb_boek' ) );
+		update_post_meta( $other, '_thumbnail_id', $broken );
+
+		file_put_contents( get_attached_file( $broken ), '<html><body>500 Internal Server Error</body></html>' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_put_contents_file_put_contents
+
+		$newer = self::factory()->attachment->create_object(
+			array(
+				'file'           => 'nieuwere-cover.png',
+				'post_mime_type' => 'image/png',
+				'post_title'     => 'Cover',
+			)
+		);
+
+		// While the replacement is being fetched, that other book gets a cover of its own.
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $args, $url ) use ( $other, $newer ) {
+				if ( self::IMAGE_FILE_URL === $url ) {
+					update_post_meta( $other, '_thumbnail_id', $newer );
+				}
+
+				return $preempt;
+			},
+			8,
+			3
+		);
+
+		$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek );
+
+		$this->assertSame( (string) $newer, get_post_meta( $other, '_thumbnail_id', true ), 'The newer cover should have been left alone.' );
+	}
+
+	/**
+	 * An error page served with a 200 passes for a download. WordPress refuses it as a file,
+	 * and by then the old attachment must still be there: a later attempt that does succeed
+	 * can only hand the shared references over if there is something to hand over.
+	 */
+	public function test_an_error_page_served_as_an_image_keeps_the_old_file() {
+		$boek = $this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png' );
+
+		$broken = (int) get_post_meta( $boek, '_thumbnail_id', true );
+
+		$other = self::factory()->post->create( array( 'post_type' => 'boekdb_boek' ) );
+		update_post_meta( $other, '_thumbnail_id', $broken );
+
+		file_put_contents( get_attached_file( $broken ), '<html><body>500 Internal Server Error</body></html>' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_put_contents_file_put_contents
+
+		// The replacement comes back as an error page with a 200.
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $args, $url ) {
+				if ( self::IMAGE_FILE_URL !== $url ) {
+					return $preempt;
+				}
+
+				if ( ! empty( $args['stream'] ) && ! empty( $args['filename'] ) ) {
+					file_put_contents( $args['filename'], '<html><body>502 Bad Gateway</body></html>' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_put_contents_file_put_contents
+				}
+
+				return array(
+					'headers'  => array(),
+					'body'     => '',
+					'response' => array(
+						'code'    => 200,
+						'message' => 'OK',
+					),
+					'cookies'  => array(),
+					'filename' => isset( $args['filename'] ) ? $args['filename'] : null,
+				);
+			},
+			11,
+			3
+		);
+
+		$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek );
+
+		$this->assertNotNull( get_post( $broken ), 'The old file should still be there.' );
+		$this->assertSame( (string) $broken, get_post_meta( $other, '_thumbnail_id', true ), 'And the other book should still point at it.' );
 	}
 }
