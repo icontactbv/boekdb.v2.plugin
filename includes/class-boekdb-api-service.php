@@ -126,7 +126,11 @@ class Boekdb_Api_Service {
 			)
 		);
 		if ( is_wp_error( $result ) ) {
-			die( $result->get_error_message() );
+			// Ending the request here would take the page or cron run that asked for this
+			// down with it.
+			boekdb_debug( 'Error fetching isbns: ' . $result->get_error_message() );
+
+			return false;
 		}
 		$result = wp_remote_retrieve_body( $result );
 		$result = json_decode( $result, true );

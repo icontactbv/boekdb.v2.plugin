@@ -39,6 +39,16 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * Save the settings.
 		 */
 		public static function save() {
+			// This runs on wp_loaded, which fires on every request and before wp-admin asks
+			// anyone to log in, so who is asking has to be settled here.
+			if ( ! current_user_can( 'activate_plugins' ) ) {
+				return;
+			}
+
+			if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( wp_unslash( $_POST['_wpnonce'] ) ), 'boekdb-settings' ) ) {
+				return;
+			}
+
 			// Using isset() checks for each button here
 			if ( isset( $_POST['save'] ) ) {
 				self::save_etalage();
@@ -69,8 +79,9 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		private static function run_import() {
 			if ( ! boekdb_is_import_running() ) {
 				if ( WP_DEBUG ) {
-					BoekDB_Import::start_import();
+					BoekDB_Import::resume_import();
 				} else {
+					delete_option( BoekDB_Import::STOPPED_OPTION );
 					wp_schedule_single_event( time() + 5, BoekDB_Import::START_IMPORT_HOOK );
 				}
 			} else {
@@ -103,9 +114,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * @return void
 		 */
 		private static function stop_import() {
-			global $wpdb;
-
-			$wpdb->query( "UPDATE {$wpdb->prefix}boekdb_etalages SET offset=0, running=0" );
+			BoekDB_Import::stop_import();
 		}
 
 		/**

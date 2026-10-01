@@ -15,6 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 <h2><?php esc_html_e( 'Nieuwe etalage toevoegen', 'boekdb' ); ?></h2>
 
 <form method="post" action="" id="etalageform" enctype="multipart/form-data">
+	<?php wp_nonce_field( 'boekdb-settings', '_wpnonce', true ); ?>
 	<table class="form-table">
 		<tbody>
 		<tr>

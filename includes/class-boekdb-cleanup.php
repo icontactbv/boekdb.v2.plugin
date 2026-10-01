@@ -350,4 +350,4 @@ class BoekDB_Cleanup {
 	}
 }
 
-BoekDB_Import::init();
+BoekDB_Cleanup::init();
