@@ -3,11 +3,11 @@
  * Plugin Name: BoekDB.v2
  * Plugin URI: https://www.boekdbv2.nl/
  * Description: This WordPress plugin fetches and displays book data provided by BoekDB. Developed by Icontact B.V. for VBK uitgevers.
- * Version: 1.1.1
+ * Version: 1.2.0
  * Author: Icontact B.V., Kevin de Harde
  * Author URI: https://www.icontact.nl
  * Requires at least: 5.5
- * Requires PHP: 7.0
+ * Requires PHP: 7.4
  *
  * @package BoekDB
  */

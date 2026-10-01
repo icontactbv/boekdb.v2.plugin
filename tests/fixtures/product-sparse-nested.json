@@ -1,0 +1,23 @@
+[
+  {
+    "isbn": "9789000000005",
+    "titel": "Sparse Geneste Boek",
+    "serietitel": "Sparse Serie",
+    "serie": { "id": 77, "omschrijving": "Serie zonder beeld" },
+    "betrokkenen": [
+      { "naam": "Sparse Illustrator", "rol": "Illustrator" }
+    ],
+    "onderwerpen": [
+      { "type": "Thema", "code": "FBA" }
+    ],
+    "bestanden": [
+      { "url": "https://boekdbv2.nl/images/cover-9789000000005.jpg", "soort": "Cover", "bestandsnaam": "cover-9789000000005.jpg" }
+    ],
+    "links": [
+      { "url": "https://www.example.nl/boek/sparse-geneste-boek" }
+    ],
+    "recensiequotes": [
+      { "tekst": "Kort maar krachtig." }
+    ]
+  }
+]

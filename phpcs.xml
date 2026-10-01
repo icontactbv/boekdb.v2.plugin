@@ -115,6 +115,7 @@
 	</rule>
 
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<exclude-pattern>/tests/wp-tests-config\.php</exclude-pattern>
 		<properties>
 			<property name="prefixes" type="array">
 				<element value="BoekDB"/>
@@ -147,10 +148,10 @@
 	https://github.com/PHPCSStandards/PHP_CodeSniffer/wiki/Annotated-Ruleset
 	-->
 	<rule ref="WordPress.WP.GlobalVariablesOverride">
-		<exclude-pattern>/path/to/Tests/*Test\.php</exclude-pattern>
+		<exclude-pattern>/tests/*</exclude-pattern>
 	</rule>
 	<rule ref="WordPress.Files.FileName">
-		<exclude-pattern>/path/to/Tests/*Test\.php</exclude-pattern>
+		<exclude-pattern>/tests/*</exclude-pattern>
 	</rule>
 
 	<!-- don't check for yoda conditions anywhere -->
