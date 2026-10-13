@@ -16,12 +16,15 @@ This plugin imports books, contributors, series and subjects from BoekDB into Wo
 = 1.2.0 =
 * Security: the settings screen now requires the capability the menu requires and a valid form token. Anyone could delete an etalage, and the books that came with it.
 * Fix: large files no longer stall an import. Downloads stream to disk instead of being held in memory.
-* Fix: an etalage left marked as running is taken back after ten minutes, and a batch that dies hands it back at once.
+* Fix: an etalage left marked as running is taken back after ten minutes, and a batch that dies hands it back and schedules the next one at once.
+* Fix: a batch is 25 books instead of 100. A shorter batch is less likely to outlast the time a server gives a process, and the offset shows progress sooner.
+* New: the settings screen says which etalage is being worked on and which book of its batch it is on, what waits and when the next batch comes, and when each etalage was last finished. Etalages waiting with no batch scheduled get one when the screen is opened.
 * Fix: one book that cannot be processed no longer ends the batch. Skipped books are fetched again afterwards, and listed on the settings screen with their isbns.
 * Fix: Stop keeps an import stopped, and keeps its place instead of starting over.
 * Fix: a finished run records when it started, so changes made while it ran are not skipped.
-* Fix: the daily cleanup runs again, and keeps away from an import Ok.in progress.
+* Fix: the daily cleanup runs again, and keeps away from an import in progress.
 * Fix: series images are stored where they are read back, so they show up at all.
+* Fix: a book in a series without a title no longer raises warnings.
 * Fix: a file shared by several books or authors survives the removal of one of them.
 * Fix: review quotes switched off on the site stay off after an import.
 * Fix: books without an nstc are marked as primary under the name every overview reads, and existing ones are migrated.

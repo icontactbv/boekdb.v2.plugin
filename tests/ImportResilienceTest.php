@@ -276,6 +276,32 @@ class ImportResilienceTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Handing the etalage back is not enough on its own: nothing would pick it up before the
+	 * hourly start, which is how an import could stand still for most of an hour.
+	 */
+	public function test_shutdown_sees_to_it_that_there_is_a_next_run() {
+		wp_clear_scheduled_hook( BoekDB_Import::IMPORT_HOOK );
+
+		$scheduled = null;
+		$this->during_the_first_book(
+			function () use ( &$scheduled ) {
+				global $wpdb;
+
+				$etalage = $wpdb->get_row(
+					$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $this->etalage_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				);
+
+				BoekDB_Import::release_lock_on_shutdown( $etalage );
+				$scheduled = wp_next_scheduled( BoekDB_Import::IMPORT_HOOK );
+			}
+		);
+
+		BoekDB_Import::import();
+
+		$this->assertNotFalse( $scheduled, 'The next batch should have been scheduled.' );
+	}
+
+	/**
 	 * The Stop button clears the running state. Shutdown must not put the etalage back to
 	 * work behind the user's back.
 	 */

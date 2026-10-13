@@ -32,4 +32,13 @@ class ApiServiceTest extends WP_UnitTestCase {
 	public function test_unreachable_api_returns_no_products() {
 		$this->assertFalse( Boekdb_Api_Service::fetch_products( 'test-key', '2026-01-01T00:00:00+01:00', 0 ) );
 	}
+
+	/**
+	 * The API answers on www only and redirects the bare domain. Every request would make a
+	 * detour, and a client that drops the api key on a redirect to another host gets a 401,
+	 * which the start of an import takes for an invalid key.
+	 */
+	public function test_the_api_is_called_on_the_host_that_answers() {
+		$this->assertStringStartsWith( 'https://www.boekdbv2.nl/', Boekdb_Api_Service::BASE_URL );
+	}
 }

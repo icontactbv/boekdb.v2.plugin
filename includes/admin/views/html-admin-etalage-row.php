@@ -15,7 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<td><?php echo esc_html( $etalage->prefix ); ?></td>
 	<td><?php echo esc_html( $etalage->boeken ); ?></td>
 	<td><?php echo esc_html( $etalage->isbns ); ?></td>
-	<td><?php echo esc_html( $etalage->offset ); ?></td>
+	<?php $boekdb_etalage_status = $boekdb_status['etalages'][ (int) $etalage->id ]; ?>
+	<td><?php echo esc_html( BoekDB_Admin_Settings::progress_text( $boekdb_etalage_status ) ); ?></td>
 	<td>
 		<?php
 		$boekdb_failed = BoekDB_Import::failed_products( $etalage->id );
@@ -38,23 +39,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php echo esc_html( '–' ); ?>
 		<?php endif; ?>
 	</td>
-	<td>
-		<?php
-		switch ( $etalage->running ) {
-			case 0:
-				esc_html_e( 'Nee', 'boekdb' );
-				break;
-			case 1:
-				esc_html_e( 'Bezig', 'boekdb' );
-				break;
-			case 2:
-				esc_html_e( 'In planning', 'boekdb' );
-				break;
-		}
-		?>
-	</td>
+	<td><?php echo esc_html( BoekDB_Admin_Settings::state_text( $boekdb_etalage_status ) ); ?></td>
 	<td><small><?php echo esc_html( $etalage->api_key ); ?></small></td>
-	<td><?php echo esc_html( $etalage->last_import ); ?></td>
+	<td>
+		<?php if ( is_null( $boekdb_etalage_status['finished'] ) ) : ?>
+			<?php echo esc_html( $etalage->last_import ); ?>
+		<?php else : ?>
+			<span title="<?php /* translators: %s: the moment the next run fetches changes from. */ echo esc_attr( sprintf( __( 'De volgende ronde haalt wijzigingen op vanaf %s.', 'boekdb' ), $etalage->last_import ) ); ?>">
+				<?php echo esc_html( wp_date( 'Y-m-d H:i:s', $boekdb_etalage_status['finished'] ) ); ?>
+			</span>
+		<?php endif; ?>
+	</td>
 	<td>
 		<button type="submit" name="reset" class="button-primary boekdb-save-button" value="<?php echo esc_attr( $etalage->id ); ?>" <?php echo $disabled; ?>><?php esc_html_e( 'Reset', 'boekdb' ); ?></button>
 		<button type="submit" name="delete" class="button-primary boekdb-save-button" value="<?php echo esc_attr( $etalage->id ); ?>" <?php echo $disabled; ?>><?php esc_html_e( 'Verwijder', 'boekdb' ); ?></button>

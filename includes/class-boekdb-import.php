@@ -48,6 +48,11 @@ class BoekDB_Import {
 	const FAILED_OPTION_PREFIX = 'boekdb_import_failed_';
 
 	/**
+	 * Prefix of the option holding the moment an etalage was last done.
+	 */
+	const FINISHED_OPTION_PREFIX = 'boekdb_import_finished_';
+
+	/**
 	 * How often a book that cannot be imported is fetched again before it is left alone.
 	 */
 	const FAILED_ATTEMPTS = 3;
@@ -176,7 +181,7 @@ class BoekDB_Import {
 				return;
 			}
 
-			if ( ! self::claim_lock( $etalage ) ) {
+			if ( ! self::claim_lock( $etalage, count( $products ) ) ) {
 				return;
 			}
 
@@ -273,6 +278,7 @@ class BoekDB_Import {
 			}
 
 			self::set_last_import( $etalage->id );
+			update_option( self::FINISHED_OPTION_PREFIX . $etalage->id, time(), false );
 
 			// reset offset and set running to 0 (finished).
 			self::update_offset( 0, $etalage );
@@ -550,9 +556,10 @@ class BoekDB_Import {
 	 * Release the lock of a batch that is ending without having finished.
 	 *
 	 * Runs when the script ends, which is the last thing a fatal error leaves room for. The
-	 * batch itself is lost either way, but the etalage goes back in the queue instead of
-	 * waiting out the lock timeout. Nothing happens if the lock has already been handed on,
-	 * which is the normal end of a batch, or if the import was stopped.
+	 * batch itself is lost either way, but the etalage goes back in the queue and the next
+	 * batch is scheduled, instead of waiting out the lock timeout. Nothing happens if the
+	 * lock has already been handed on, which is the normal end of a batch, or if the import
+	 * was stopped.
 	 *
 	 * @param object $etalage  The etalage that was being processed.
 	 *
@@ -567,16 +574,22 @@ class BoekDB_Import {
 		boekdb_debug( 'Import on ' . $etalage->name . ' ended while holding its lock: ' . ( is_null( $error ) ? 'no error reported' : $error['message'] ) );
 
 		self::release_lock( $etalage, 2 );
+
+		// Nothing else picks the etalage up before the hourly start.
+		if ( ! wp_next_scheduled( self::IMPORT_HOOK ) ) {
+			wp_schedule_single_event( time(), self::IMPORT_HOOK );
+		}
 	}
 
 	/**
 	 * Claim an etalage for this run.
 	 *
 	 * @param object $etalage  The etalage to claim.
+	 * @param int    $size     The books in the batch, for the settings screen.
 	 *
 	 * @return bool Whether this run got it.
 	 */
-	private static function claim_lock( $etalage ) {
+	private static function claim_lock( $etalage, $size = 0 ) {
 		global $wpdb;
 
 		$name = self::lock_option( $etalage->id );
@@ -601,8 +614,13 @@ class BoekDB_Import {
 		$token = wp_generate_uuid4();
 		$value = maybe_serialize(
 			array(
-				'token' => $token,
-				'time'  => time(),
+				'token'  => $token,
+				'time'   => time(),
+				// What the settings screen shows of the batch: where it starts, how many
+				// books it has and how many it got to.
+				'offset' => (int) $etalage->offset,
+				'size'   => (int) $size,
+				'done'   => 0,
 			)
 		);
 
@@ -705,6 +723,90 @@ class BoekDB_Import {
 	}
 
 	/**
+	 * What the import is doing, for the settings screen.
+	 *
+	 * Per etalage its state - busy, stuck (a batch that stopped reporting in), waiting or
+	 * idle - and what is known of its batch: the book it got to, the books in it and where
+	 * it starts. A waiting etalage gives where the next batch starts instead.
+	 *
+	 * @return array
+	 */
+	public static function status() {
+		global $wpdb;
+
+		$rows = $wpdb->get_results( "SELECT id, name, running, `offset` FROM {$wpdb->prefix}boekdb_etalages ORDER BY id" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+
+		$etalages = array();
+		foreach ( $rows as $row ) {
+			$lock  = self::read_lock( $row->id );
+			$lock  = is_array( $lock ) ? $lock : array();
+			$fresh = isset( $lock['time'] ) && ( time() - (int) $lock['time'] ) < self::LOCK_TIMEOUT;
+
+			if ( 1 === (int) $row->running ) {
+				$state = $fresh ? 'busy' : 'stuck';
+			} elseif ( 2 === (int) $row->running ) {
+				$state = 'waiting';
+			} else {
+				$state = 'idle';
+			}
+
+			$batch    = in_array( $state, array( 'busy', 'stuck' ), true );
+			$finished = get_option( self::FINISHED_OPTION_PREFIX . $row->id );
+
+			$etalages[ (int) $row->id ] = array(
+				'name'      => $row->name,
+				'state'     => $state,
+				'offset'    => $batch && isset( $lock['offset'] ) ? (int) $lock['offset'] : (int) $row->offset,
+				'size'      => $batch && isset( $lock['size'] ) ? (int) $lock['size'] : 0,
+				'done'      => $batch && isset( $lock['done'] ) ? (int) $lock['done'] : 0,
+				'heartbeat' => isset( $lock['time'] ) ? (int) $lock['time'] : null,
+				'finished'  => $finished ? (int) $finished : null,
+			);
+		}
+
+		return array(
+			'etalages'   => $etalages,
+			'next_batch' => wp_next_scheduled( self::IMPORT_HOOK ),
+			'next_round' => wp_next_scheduled( self::START_IMPORT_HOOK ),
+			'stopped'    => self::is_stopped(),
+		);
+	}
+
+	/**
+	 * Schedule a batch when etalages wait and nothing is going to pick them up.
+	 *
+	 * Each batch schedules the next one. One that is killed, or that ends any other way
+	 * without getting that far, leaves the rest waiting for the hourly start.
+	 *
+	 * @return bool Whether a batch was scheduled.
+	 */
+	public static function ensure_next_batch() {
+		if ( self::is_stopped() || wp_next_scheduled( self::IMPORT_HOOK ) ) {
+			return false;
+		}
+
+		$needed = false;
+		foreach ( self::status()['etalages'] as $etalage ) {
+			if ( 'busy' === $etalage['state'] ) {
+				// It schedules the next batch itself when it is done.
+				return false;
+			}
+
+			if ( in_array( $etalage['state'], array( 'waiting', 'stuck' ), true ) ) {
+				$needed = true;
+			}
+		}
+
+		if ( ! $needed ) {
+			return false;
+		}
+
+		wp_schedule_single_event( time(), self::IMPORT_HOOK );
+
+		return true;
+	}
+
+	/**
 	 * Whether an import was stopped by hand.
 	 *
 	 * Straight from the database: Stop is pressed in another request, which this one would
@@ -758,13 +860,14 @@ class BoekDB_Import {
 			return;
 		}
 
-		$name  = self::lock_option( $etalage->id );
-		$value = maybe_serialize(
-			array(
-				'token' => self::$lock_token,
-				'time'  => time(),
-			)
-		);
+		$name = self::lock_option( $etalage->id );
+		$lock = maybe_unserialize( self::$lock_value );
+		if ( ! is_array( $lock ) ) {
+			$lock = array( 'token' => self::$lock_token );
+		}
+		$lock['time'] = time();
+		$lock['done'] = ( isset( $lock['done'] ) ? (int) $lock['done'] : 0 ) + 1;
+		$value        = maybe_serialize( $lock );
 
 		// Only over the lock this run wrote: between the check above and this write, another
 		// run can have taken the etalage over.
@@ -1229,7 +1332,11 @@ class BoekDB_Import {
 
 			// get taxonomy
 			$result = wp_get_object_terms( $boek_post_id, 'boekdb_serie_tax', true );
-			$term   = $result[0];
+			if ( ! is_array( $result ) || count( $result ) === 0 ) {
+				// A series without a title gives no term to describe.
+				return;
+			}
+			$term = $result[0];
 
 			add_term_meta( $term->term_id, 'boekdb_id', $product->serie->id, true );
 			wp_update_term(

@@ -16,6 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<?php do_action( 'boekdb_before_settings' ); ?>
 
 	<form method="post" id="mainform" action="" enctype="multipart/form-data">
+		<?php foreach ( $boekdb_notices as $boekdb_notice ) : ?>
+			<div class="notice notice-<?php echo esc_attr( $boekdb_notice['type'] ); ?> inline"><p><?php echo esc_html( $boekdb_notice['text'] ); ?></p></div>
+		<?php endforeach; ?>
 		<?php self::show_messages(); // Display error messages if any ?>
 		<?php wp_nonce_field( 'boekdb-settings', '_wpnonce', true ); ?>
 
@@ -27,9 +30,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<th class="manage-column"><?php esc_html_e( 'Prefix', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'Geïmporteerd', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'BoekDB aantal', 'boekdb' ); ?></th>
-				<th class="manage-column"><?php esc_html_e( 'Offset', 'boekdb' ); ?></th>
+				<th class="manage-column"><?php esc_html_e( 'Voortgang', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'Niet geïmporteerd', 'boekdb' ); ?></th>
-				<th class="manage-column"><?php esc_html_e( 'Import actief', 'boekdb' ); ?></th>
+				<th class="manage-column"><?php esc_html_e( 'Status', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'API Key', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'Laatste import', 'boekdb' ); ?></th>
 				<th class="manage-column"><?php esc_html_e( 'Actie', 'boekdb' ); ?></th>

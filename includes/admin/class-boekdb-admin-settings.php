@@ -254,12 +254,129 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 */
 		public static function output() {
 			$boekdb_etalages = self::get_etalages();
-			$import_running  = boekdb_is_import_running();
-			if ( $import_running ) {
-				self::add_message( 'Er draait op dit moment een import' );
-			}
+
+			// Opening the screen gets an import going again that nothing would pick up
+			// before the hourly start.
+			$boekdb_scheduled = BoekDB_Import::ensure_next_batch();
+			$boekdb_status    = BoekDB_Import::status();
+			$boekdb_notices   = self::status_notices( $boekdb_status, $boekdb_scheduled );
 
 			include __DIR__ . '/views/html-admin-settings.php';
+		}
+
+		/**
+		 * What the banner above the etalages says about the import.
+		 *
+		 * @param array $status     What BoekDB_Import::status() returns.
+		 * @param bool  $scheduled  Whether opening the screen had to schedule the next batch.
+		 *
+		 * @return array Notices, each with a type (info or warning) and a text.
+		 */
+		public static function status_notices( $status, $scheduled = false ) {
+			$notices = array();
+			$waiting = 0;
+
+			foreach ( $status['etalages'] as $etalage ) {
+				if ( 'busy' === $etalage['state'] ) {
+					if ( $etalage['size'] > 0 ) {
+						$text = sprintf( 'Bezig met %s: boek %d van %d in de batch vanaf boek %d.', $etalage['name'], $etalage['done'], $etalage['size'], $etalage['offset'] + 1 );
+					} else {
+						$text = sprintf( 'Bezig met %s: de rest van de etalage is binnen, de overgeslagen boeken worden opnieuw geprobeerd.', $etalage['name'] );
+					}
+
+					$seconds   = max( 0, time() - $etalage['heartbeat'] );
+					$notices[] = array(
+						'type' => 'info',
+						'text' => $text . ( 1 === $seconds ? ' Laatste teken van leven: 1 seconde geleden.' : sprintf( ' Laatste teken van leven: %d seconden geleden.', $seconds ) ),
+					);
+				} elseif ( 'stuck' === $etalage['state'] ) {
+					$notices[] = array(
+						'type' => 'warning',
+						'text' => is_null( $etalage['heartbeat'] )
+							? sprintf( '%s lijkt vastgelopen en wordt bij de volgende batch hervat.', $etalage['name'] )
+							: sprintf( '%s lijkt vastgelopen sinds %s en wordt bij de volgende batch hervat.', $etalage['name'], wp_date( 'H:i', $etalage['heartbeat'] ) ),
+					);
+				} elseif ( 'waiting' === $etalage['state'] ) {
+					++$waiting;
+				}
+			}
+
+			if ( $waiting > 0 ) {
+				$text = 1 === $waiting ? '1 etalage wacht' : sprintf( '%d etalages wachten', $waiting );
+
+				if ( $scheduled ) {
+					$notices[] = array(
+						'type' => 'warning',
+						'text' => $text . ', maar er stond geen batch ingepland. Die is nu ingepland.',
+					);
+				} elseif ( $status['stopped'] ) {
+					$notices[] = array(
+						'type' => 'info',
+						'text' => $text . '. De import is gestopt, tot iemand op Draai import drukt.',
+					);
+				} elseif ( $status['next_batch'] ) {
+					$notices[] = array(
+						'type' => 'info',
+						'text' => $text . '. Volgende batch: ' . ( $status['next_batch'] <= time() + MINUTE_IN_SECONDS ? 'binnen een minuut.' : 'om ' . wp_date( 'H:i', $status['next_batch'] ) . '.' ),
+					);
+				} else {
+					$notices[] = array(
+						'type' => 'info',
+						'text' => $text . '.',
+					);
+				}
+			}
+
+			if ( count( $notices ) === 0 ) {
+				$notices[] = array(
+					'type' => 'info',
+					'text' => 'Geen import bezig.' . ( $status['next_round'] ? ' Volgende ronde om ' . wp_date( 'H:i', $status['next_round'] ) . '.' : '' ),
+				);
+			}
+
+			return $notices;
+		}
+
+		/**
+		 * What the Voortgang column says about an etalage.
+		 *
+		 * @param array $etalage  The etalage as BoekDB_Import::status() describes it.
+		 *
+		 * @return string
+		 */
+		public static function progress_text( $etalage ) {
+			switch ( $etalage['state'] ) {
+				case 'busy':
+					return $etalage['size'] > 0
+						? sprintf( 'boek %d van %d (vanaf %d)', $etalage['done'], $etalage['size'], $etalage['offset'] + 1 )
+						: 'rondt af';
+				case 'stuck':
+					return 'vastgelopen';
+				case 'waiting':
+					return $etalage['offset'] > 0 ? sprintf( 'verder vanaf boek %d', $etalage['offset'] + 1 ) : 'wacht';
+				default:
+					return '–';
+			}
+		}
+
+		/**
+		 * What the Status column says about an etalage.
+		 *
+		 * @param array $etalage  The etalage as BoekDB_Import::status() describes it.
+		 *
+		 * @return string
+		 */
+		public static function state_text( $etalage ) {
+			switch ( $etalage['state'] ) {
+				case 'busy':
+					return 'Bezig';
+				case 'stuck':
+					return 'Vastgelopen';
+				case 'waiting':
+					return 'Wacht';
+				default:
+					return is_null( $etalage['finished'] ) ? '–' : 'Klaar';
+			}
 		}
 
 		/**

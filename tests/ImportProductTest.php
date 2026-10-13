@@ -206,7 +206,7 @@ class ImportProductTest extends WP_UnitTestCase {
 				$this->etalage_id
 			)
 		);
-		$this->assertSame( 100, $offset, 'the etalage offset should have advanced by one batch' );
+		$this->assertSame( Boekdb_Api_Service::LIMIT, $offset, 'the etalage offset should have advanced by one batch' );
 
 		return $post_id;
 	}
@@ -290,5 +290,37 @@ class ImportProductTest extends WP_UnitTestCase {
 		BoekDB_Import::import();
 
 		$this->assert_product_was_imported( '9789000000005', 'Sparse Geneste Boek' );
+	}
+
+	/**
+	 * Imports a product that belongs to a series the API gives no title for. Without a
+	 * title there is no series term to attach, so there is nothing to describe either.
+	 *
+	 * @test
+	 */
+	public function imports_a_product_whose_series_has_no_title() {
+		$this->products_body = wp_json_encode(
+			array(
+				array(
+					'isbn'        => '9789000000006',
+					'titel'       => 'Deel Zonder Serietitel',
+					'serietitel'  => null,
+					'serie'       => array(
+						'id'           => 1052,
+						'omschrijving' => 'Een serie zonder titel.',
+						'beeld'        => null,
+					),
+					'betrokkenen' => array(),
+					'onderwerpen' => array(),
+				),
+			)
+		);
+
+		BoekDB_Import::import();
+
+		$post_id = $this->assert_product_was_imported( '9789000000006', 'Deel Zonder Serietitel' );
+
+		$this->assertSame( array(), BoekDB_Import::failed_products( $this->etalage_id ), 'The book should not be written down as failed.' );
+		$this->assertSame( array(), wp_get_object_terms( $post_id, 'boekdb_serie_tax' ), 'There is no series to attach.' );
 	}
 }

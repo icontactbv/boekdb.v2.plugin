@@ -10,9 +10,9 @@ defined( 'ABSPATH' ) || exit;
 
 class Boekdb_Api_Service {
 
-	const BOEKDB_DOMAIN = 'https://boekdbv2.nl/';
+	const BOEKDB_DOMAIN = 'https://www.boekdbv2.nl/';
 	const BASE_URL      = self::BOEKDB_DOMAIN . 'api/json/v1/';
-	const LIMIT         = 100;
+	const LIMIT         = 25;
 
 	/**
 	 * Test API connection

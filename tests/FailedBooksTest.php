@@ -66,6 +66,7 @@ class FailedBooksTest extends WP_UnitTestCase {
 
 		$etalage->boeken = 0;
 		$disabled        = '';
+		$boekdb_status   = BoekDB_Import::status();
 
 		ob_start();
 		include BOEKDB_ABSPATH . 'includes/admin/views/html-admin-etalage-row.php';
