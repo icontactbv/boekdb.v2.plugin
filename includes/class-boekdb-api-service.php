@@ -20,7 +20,7 @@ class Boekdb_Api_Service {
 	 * @return array Connection status and error/success message
 	 */
 	public static function test_api_connection() {
-		$response = wp_remote_get( self::BASE_URL . 'test' );
+		$response = wp_remote_get( self::BASE_URL . 'test', array( 'user-agent' => self::user_agent() ) );
 		if ( is_wp_error( $response ) ) {
 			$error_message = $response->get_error_message();
 
@@ -51,7 +51,7 @@ class Boekdb_Api_Service {
 	 * @return bool The state of the connection
 	 */
 	public static function check_connection_and_version() {
-		$result = wp_remote_get( self::BASE_URL . 'test' );
+		$result = wp_remote_get( self::BASE_URL . 'test', array( 'user-agent' => self::user_agent() ) );
 
 		// Check for connection errors
 		if ( is_wp_error( $result ) || 200 !== wp_remote_retrieve_response_code( $result ) ) {
@@ -86,12 +86,13 @@ class Boekdb_Api_Service {
 		$response = wp_remote_get(
 			self::BASE_URL . 'products?updated_at=' . urlencode( $last_import ),
 			array(
-				'headers' => array(
+				'user-agent' => self::user_agent(),
+				'headers'    => array(
 					'Authorization' => 'Bearer ' . $api_key,
 					'x-limit'       => self::LIMIT,
 					'x-offset'      => $offset,
 				),
-				'timeout' => 30,
+				'timeout'    => 30,
 			)
 		);
 
@@ -120,10 +121,11 @@ class Boekdb_Api_Service {
 		$response = wp_remote_get(
 			self::BASE_URL . 'products/' . rawurlencode( $isbn ),
 			array(
-				'headers' => array(
+				'user-agent' => self::user_agent(),
+				'headers'    => array(
 					'Authorization' => 'Bearer ' . $api_key,
 				),
-				'timeout' => 30,
+				'timeout'    => 30,
 			)
 		);
 
@@ -155,10 +157,11 @@ class Boekdb_Api_Service {
 		$result = wp_remote_get(
 			self::BASE_URL . 'isbns',
 			array(
-				'headers' => array(
+				'user-agent' => self::user_agent(),
+				'headers'    => array(
 					'Authorization' => 'Bearer ' . $api_key,
 				),
-				'timeout' => 30,
+				'timeout'    => 30,
 			)
 		);
 		if ( is_wp_error( $result ) ) {
@@ -207,11 +210,12 @@ class Boekdb_Api_Service {
 		$response = wp_remote_request(
 			$url,
 			array(
-				'method'  => 'PUT',
-				'headers' => array(
+				'method'     => 'PUT',
+				'user-agent' => self::user_agent(),
+				'headers'    => array(
 					'Authorization' => 'Bearer ' . $api_key,
 				),
-				'timeout' => 30,
+				'timeout'    => 30,
 			)
 		);
 
@@ -241,7 +245,8 @@ class Boekdb_Api_Service {
 		$response = wp_remote_get(
 			self::BASE_URL . 'validate',
 			array(
-				'headers' => array(
+				'user-agent' => self::user_agent(),
+				'headers'    => array(
 					'Authorization' => 'Bearer ' . $api_key,
 				),
 			)
@@ -254,5 +259,17 @@ class Boekdb_Api_Service {
 		}
 
 		return true;
+	}
+
+	/**
+	 * The user agent for requests to BoekDB.
+	 *
+	 * The one WordPress sends anyway, which names the site, with the version of the plugin
+	 * after it. The web server of BoekDB logs it, which shows which site runs which version.
+	 *
+	 * @return string
+	 */
+	public static function user_agent() {
+		return 'WordPress/' . get_bloginfo( 'version' ) . '; ' . get_bloginfo( 'url' ) . '; BoekDB/' . BoekDB()->version;
 	}
 }
