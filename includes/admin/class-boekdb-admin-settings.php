@@ -214,7 +214,8 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			if ( $id > 0 ) {
 				$wpdb->query(
 					$wpdb->prepare(
-						"UPDATE {$wpdb->prefix}boekdb_etalages SET last_import=null WHERE id = %d",
+						// Stop keeps the offset, so a reset that left it would skip the books before it.
+						"UPDATE {$wpdb->prefix}boekdb_etalages SET last_import=null, `offset`=0 WHERE id = %d",
 						$id
 					)
 				);

@@ -127,6 +127,31 @@ class AdminSettingsAccessTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Reset starts the etalage over from its first book. Stop keeps the offset, so Reset has
+	 * to clear it too, or the full import skips the books before it.
+	 */
+	public function test_reset_starts_the_etalage_over_from_its_first_book() {
+		global $wpdb;
+		$wpdb->update(
+			$wpdb->prefix . 'boekdb_etalages',
+			array(
+				'offset'      => 75,
+				'last_import' => '2026-10-01 10:00:00',
+			),
+			array( 'id' => $this->etalage_id )
+		);
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$_POST['reset']    = (string) $this->etalage_id;
+		$_POST['_wpnonce'] = wp_create_nonce( 'boekdb-settings' );
+
+		BoekDB_Admin_Settings::save();
+
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT `offset`, last_import FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $this->etalage_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		$this->assertSame( '0', $row->offset, 'The import should start at the first book.' );
+		$this->assertNull( $row->last_import, 'And fetch every book again.' );
+	}
+
+	/**
 	 * WordPress slashes the form data. A name with a quote in it is stored as typed.
 	 */
 	public function test_an_etalage_name_with_a_quote_is_stored_as_typed() {
