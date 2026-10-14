@@ -58,6 +58,11 @@ class BoekDB_Import {
 	const FAILED_ATTEMPTS = 3;
 
 	/**
+	 * Option holding the size of a list of isbns that was held back, per etalage.
+	 */
+	const HELD_LIST_OPTION_PREFIX = 'boekdb_import_held_list_';
+
+	/**
 	 * Identifies the claim this run holds, so it can tell its own lock from the one a later
 	 * run took over.
 	 *
@@ -2216,6 +2221,11 @@ class BoekDB_Import {
 		if ( $isbns === false ) {
 			return false;
 		}
+
+		if ( self::hold_sudden_drop( $etalage, $isbns ) ) {
+			return false;
+		}
+
 		BoekDB_Cleanup::trash_removed( $etalage->id, $isbns['isbns'] );
 		self::drop_retries_outside( $etalage, $isbns['isbns'] );
 
@@ -2250,6 +2260,45 @@ class BoekDB_Import {
 
 		// no reset.
 		return false;
+	}
+
+	/**
+	 * Whether to hold back a list of isbns that shrank suddenly, for one round.
+	 *
+	 * Books missing from the list are removed with their files, and only come back when
+	 * BoekDB reports them changed or someone presses Reset. A list that drops to nothing or
+	 * to less than half while the selection stayed the same looks more like a fault than
+	 * like books leaving, so it is believed the second round in a row. A new selection is
+	 * expected to differ and goes through at once.
+	 *
+	 * @param object $etalage  The etalage.
+	 * @param array  $isbns    What the API answered: the filter hash and the isbns.
+	 *
+	 * @return bool Whether the list is held back this round.
+	 */
+	private static function hold_sudden_drop( $etalage, $isbns ) {
+		$option   = self::HELD_LIST_OPTION_PREFIX . $etalage->id;
+		$previous = (int) $etalage->isbns;
+		$count    = count( $isbns['isbns'] );
+		$sudden   = $isbns['filters'] === $etalage->filter_hash && $previous > 0 && $count * 2 < $previous;
+
+		if ( ! $sudden ) {
+			delete_option( $option );
+
+			return false;
+		}
+
+		if ( false !== get_option( $option ) ) {
+			// The second round in a row: believed.
+			delete_option( $option );
+
+			return false;
+		}
+
+		update_option( $option, $count, false );
+		boekdb_debug( 'Holding back the list of ' . $etalage->name . ': ' . $count . ' isbns, ' . $previous . ' before' );
+
+		return true;
 	}
 
 	/**

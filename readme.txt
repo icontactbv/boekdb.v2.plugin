@@ -40,6 +40,7 @@ This plugin imports books, contributors, series and subjects from BoekDB into Wo
 * Fix: books without an nstc are marked as primary under the name every overview reads, and existing ones are migrated.
 * Fix: cached permalinks are cleared when a book becomes the primary edition or joins another etalage.
 * Fix: an etalage whose selection emptied out loses its books, and unused authors, series and subjects are cleaned up.
+* Fix: a list of isbns that drops to nothing or to less than half while the selection stayed the same is held back for one round, so a fault at BoekDB does not remove the books of an etalage. A second such list an hour later is believed.
 * Fix: the API is called at www.boekdbv2.nl, which the bare domain now redirects to.
 * Performance: an unchanged batch of six editions went from 440 to 182 queries, and recognising a file the site already has from 11 to 5.
 * PHP 7.4 through 8.5. Requires WordPress 6.4 or newer.
