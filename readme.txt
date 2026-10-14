@@ -16,6 +16,7 @@ This plugin imports books, contributors, series and subjects from BoekDB into Wo
 = 1.2.0 =
 * Security: the settings screen now requires the capability the menu requires and a valid form token. Anyone could delete an etalage, and the books that came with it.
 * Fix: large files no longer stall an import. Downloads stream to disk instead of being held in memory.
+* Fix: an image or pdf that is missing, empty or not a valid file is downloaded again when its book is next imported.
 * Fix: an etalage left marked as running is taken back after ten minutes, and a batch that dies hands it back and schedules the next one at once.
 * Fix: a batch is 25 books instead of 100. A shorter batch is less likely to outlast the time a server gives a process, and the offset shows progress sooner.
 * New: the settings screen says which etalage is being worked on and which book of its batch it is on, what waits and when the next batch comes, and when each etalage was last finished. Etalages waiting with no batch scheduled get one when the screen is opened.
@@ -30,5 +31,6 @@ This plugin imports books, contributors, series and subjects from BoekDB into Wo
 * Fix: books without an nstc are marked as primary under the name every overview reads, and existing ones are migrated.
 * Fix: cached permalinks are cleared when a book becomes the primary edition or joins another etalage.
 * Fix: an etalage whose selection emptied out loses its books, and unused authors, series and subjects are cleaned up.
+* Fix: the API is called at www.boekdbv2.nl, which the bare domain now redirects to.
 * Performance: an unchanged batch of six editions went from 440 to 182 queries, and recognising a file the site already has from 11 to 5.
 * PHP 7.4 through 8.5. Requires WordPress 6.4 or newer.
