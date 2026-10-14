@@ -15,6 +15,8 @@ This plugin imports books, contributors, series and subjects from BoekDB into Wo
 
 = 1.2.0 =
 * Security: the settings screen now requires the capability the menu requires and a valid form token. Anyone could delete an etalage, and the books that came with it.
+* Security: the meta boxes of a book are only saved for a book, with a valid form token, by someone who may edit it, and their texts are escaped on the edit screen. The alternate url has to be one on the site.
+* Fix: saving a book whose annotatie or flaptekst holds a quote no longer marks it as overwritten, and backslashes in them survive.
 * Fix: large files no longer stall an import. Downloads stream to disk instead of being held in memory.
 * Fix: an image or pdf that is missing, empty or not a valid file is downloaded again when its book is next imported.
 * Fix: an etalage left marked as running is taken back after ten minutes, and a batch that dies hands it back and schedules the next one at once.
