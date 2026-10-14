@@ -99,4 +99,32 @@ class PermalinkTest extends WP_UnitTestCase {
 
 		$this->assertSame( 'https://example.org/boek/eerste/een-boek/', get_transient( 'boekdb_permalink_' . $boek_post_id ) );
 	}
+
+	/**
+	 * Editions written in the same second have the same post_date. The old post query
+	 * handed those back oldest id first, which made the lowest id the primary edition with
+	 * the bare slug. The first import after an upgrade must not swap that around.
+	 */
+	public function test_editions_written_in_the_same_second_keep_their_primary() {
+		$ids = array();
+		for ( $i = 0; $i < 3; $i++ ) {
+			$ids[] = self::factory()->post->create(
+				array(
+					'post_type'   => 'boekdb_boek',
+					'post_status' => 'publish',
+					'post_date'   => '2026-10-01 10:00:00',
+					'meta_input'  => array(
+						'boekdb_nstc'              => 'nstc-1',
+						'boekdb_status'            => '10',
+						'boekdb_verschijningsvorm' => 'Paperback / softback',
+					),
+				)
+			);
+		}
+
+		$this->invoke_import( 'check_primary_title', array( $ids[2], 'nstc-1', 'het-boek' ) );
+
+		$this->assertSame( '1', get_post_meta( $ids[0], 'boekdb_primair', true ), 'The oldest id stays primary.' );
+		$this->assertSame( '0', get_post_meta( $ids[2], 'boekdb_primair', true ) );
+	}
 }

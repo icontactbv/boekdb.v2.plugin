@@ -1320,7 +1320,7 @@ class BoekDB_Import {
 				"SELECT p.ID FROM {$wpdb->posts} p
 					INNER JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
 					WHERE p.post_type = %s AND p.post_status IN ( 'publish', 'draft', 'inherit' ) AND m.meta_value = %s
-					ORDER BY p.post_date DESC, p.ID DESC",
+					ORDER BY p.post_date DESC, p.ID ASC",
 				$key,
 				$post_type,
 				$value
@@ -1331,7 +1331,8 @@ class BoekDB_Import {
 			return null;
 		}
 
-		// The last of them, which is the one the post query handed back before.
+		// The last of them, which is the one the post query handed back before. That query
+		// ordered by date alone, and MySQL 8.0 returned equal dates lowest id first.
 		return (int) end( $post_ids );
 	}
 
@@ -1997,13 +1998,14 @@ class BoekDB_Import {
 		}
 
 		// Every book of this title, in one query. A WP_Query with a meta_query ran several,
-		// for every product of every batch.
+		// for every product of every batch. Equal dates go lowest id first, as that query
+		// returned them, or the primary edition of books written in the same second swaps.
 		$post_ids = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT p.ID FROM {$wpdb->posts} p
 					INNER JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = 'boekdb_nstc'
 					WHERE p.post_type = 'boekdb_boek' AND p.post_status = 'publish' AND m.meta_value = %s
-					ORDER BY p.post_date DESC, p.ID DESC",
+					ORDER BY p.post_date DESC, p.ID ASC",
 				$nstc
 			)
 		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
