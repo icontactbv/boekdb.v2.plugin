@@ -23,3 +23,13 @@ Een batch haalt 100 boeken op en schrijft de offset pas weg als ze allemaal verw
 Laat een batch stoppen na een vaste tijd (bijvoorbeeld 90 seconden, via een filter aan te passen), schuif de offset op met het aantal werkelijk verwerkte boeken en plan direct de volgende batch in. Verlaag daarnaast de download-timeout per bestand, zodat één boek de tijdslimiet niet alleen al kan overschrijden.
 
 Voorwaarde is dat de API de producten bij elke aanvraag in dezelfde volgorde teruggeeft, anders worden er boeken overgeslagen of dubbel gedaan. Dat geldt bij batches van 100 ook al, maar een offset die per boek opschuift maakt het zichtbaarder.
+
+## Sleutelcontrole met een derde uitkomst
+
+`validate_api_key()` kent alleen geldig en ongeldig. Alleen een 401 telt als ongeldig; een timeout, een 403 of een 500 telt als geldig. Dat is bewust, want `start_import()` verwijdert een etalage met een ongeldige sleutel, en een storing bij BoekDB mag geen etalages kosten. Maar daardoor slaat het instellingenscherm een nieuwe etalage op zonder dat de sleutel echt gecontroleerd is, als alleen de tweede aanroep faalt.
+
+Geef de controle drie uitkomsten: geldig, ongeldig en onbekend. Verwijder alleen bij ongeldig, en weiger bij onbekend een nieuwe etalage met een melding. Neem daarbij mee dat de `catch` in `start_import()` om de hele lus heen staat, zodat één storing de ronde voor alle etalages stopt in plaats van alleen voor die ene.
+
+## Tests voor de voorbeeldtemplates
+
+`template-single-example.php` en `template-archive-example.php` worden door sitebouwers gekopieerd, maar geen test rendert ze. Een test die ze met een volledig gevuld boek rendert, vangt fouten in escaping en lege of afwijkende velden op voordat iemand ze overneemt.
