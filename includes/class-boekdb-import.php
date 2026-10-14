@@ -1446,10 +1446,13 @@ class BoekDB_Import {
 			if ( false === $handle ) {
 				return true;
 			}
-			$head = fread( $handle, 5 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread
+			// Readers accept bytes before the header, and so does the download, which types a
+			// file by its contents. Judged on the first five bytes alone, such a pdf would be
+			// downloaded again on every delivery of its book.
+			$head = fread( $handle, 1024 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread
 			fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 
-			return '%PDF-' !== $head;
+			return false === strpos( (string) $head, '%PDF-' );
 		}
 
 		return false;
