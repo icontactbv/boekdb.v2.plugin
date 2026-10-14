@@ -1043,8 +1043,8 @@ class BoekDB_Import {
 		foreach ( $etalages as $etalage ) {
 			$lock = get_option( self::lock_option( $etalage->id ) );
 
-			// A lock without a date is one from before this version, or one a run never got
-			// round to writing.
+			// A lock without a date tells nothing about a run being alive, so it counts as
+			// stale.
 			if ( is_array( $lock ) && isset( $lock['time'] ) && ( time() - (int) $lock['time'] ) < self::LOCK_TIMEOUT ) {
 				continue;
 			}
@@ -1433,8 +1433,7 @@ class BoekDB_Import {
 	/**
 	 * Whether the file behind an attachment is unusable.
 	 *
-	 * Sites hold attachments whose file is an error page, from the days the plugin wrote
-	 * whatever came back. Only the header of the file is read, because this runs for every
+	 * The file can be an error page: earlier versions stored whatever came back. Only the header of the file is read, because this runs for every
 	 * file of every product of every batch.
 	 *
 	 * @param int $attachment_id  The attachment.
@@ -1590,7 +1589,7 @@ class BoekDB_Import {
 		}
 
 		// Streams to a temporary file. Reading the body into a string instead puts the whole
-		// file in memory, which a 50MB fragment does not survive on a 128M limit.
+		// file in memory: a 71.5 MB pdf fragment ended the import that way at a 256M limit.
 		$tmp_file = download_url( $bestand->url, $timeout );
 		if ( is_wp_error( $tmp_file ) ) {
 			boekdb_debug( 'Error fetching file: ' . $bestand->url );

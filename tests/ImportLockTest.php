@@ -67,8 +67,8 @@ class ImportLockTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A batch that died leaves its etalage marked as running. Nothing picks it up again,
-	 * which is what left the Omniboek site standing still for three weeks.
+	 * A batch that died leaves its etalage marked as running. Nothing picks it up again, so
+	 * the etalage stands still until someone steps in.
 	 */
 	public function test_a_lock_without_a_holder_is_taken_back() {
 		BoekDB_Import::import();

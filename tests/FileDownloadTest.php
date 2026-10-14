@@ -14,8 +14,8 @@ use WP_UnitTestCase;
 /**
  * File download tests.
  *
- * Sites run on a 128M memory limit while BoekDB serves PDF fragments of 50MB and up, so a
- * download that lands in memory is fatal. These tests pin the download to a streaming path.
+ * BoekDB serves fragments of tens of megabytes. Read into memory, a 71.5 MB pdf ended the
+ * import at a 256M limit. These tests pin the download to a streaming path.
  */
 class FileDownloadTest extends WP_UnitTestCase {
 
@@ -289,8 +289,8 @@ class FileDownloadTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The download timeout has to be settable, because a 50MB fragment does not arrive
-	 * within the five seconds WordPress allows by default.
+	 * The download timeout has to be settable: a fragment of tens of megabytes needs more
+	 * than the five seconds WordPress allows by default on a slow connection.
 	 */
 	public function test_download_timeout_is_filterable() {
 		add_filter(
@@ -307,7 +307,7 @@ class FileDownloadTest extends WP_UnitTestCase {
 
 	/**
 	 * Generating attachment metadata for a PDF makes WordPress render a preview, which on a
-	 * 50MB file costs more memory than the download it replaced.
+	 * fragment of tens of megabytes costs a lot of memory.
 	 */
 	public function test_pdf_import_skips_attachment_metadata() {
 		$generated = false;
