@@ -1,0 +1,128 @@
+[
+  {
+    "id": 1004,
+    "isbn": "9789000000004",
+    "nstc": "8717322112255",
+    "titel": "Schaduwen Zonder Namen",
+    "subtitel": "Een verhaal in fragmenten",
+    "deeltitel": "Deel Een",
+    "sectietitel": "Proloog",
+    "origineletitel": "Shadows Without Names",
+    "serie": {
+      "id": 502,
+      "omschrijving": "Een reeks losstaande novelles.",
+      "beeld": null
+    },
+    "serietitel": "Schaduwen Serie",
+    "deel": "1",
+    "druk": "1e druk",
+    "uitgever": "Uitgeverij Prometheus",
+    "imprint": "Prometheus",
+    "flaptekst": "Een verhaal over mensen zonder verleden.",
+    "inhoudsopgave": "Hoofdstuk 1: Het begin",
+    "annotatie": "Boekhandelsinformatie: literaire novelle.",
+    "biografie": "De auteur publiceert onder pseudoniem.",
+    "verschijningsvorm": "Paperback / softback",
+    "verschijningsvorm_code": "BC",
+    "taal": "Nederlands",
+    "illustraties": false,
+    "lengte": "210 mm",
+    "breedte": "135 mm",
+    "dikte": "15 mm",
+    "gewicht": "220 gram",
+    "paginas_hoofdwerk": "180",
+    "paginas_proloog": "4",
+    "paginas_epiloog": "2",
+    "duur": "5 uur",
+    "bestandsgrootte": "1.5 MB",
+    "leeftijdscategorie": "Volwassenen",
+    "avi": "M7",
+    "publicatiedatum": "2024-03-01",
+    "beschikbaarheidsdatum": "2024-02-15",
+    "prijs": "21.99",
+    "actieprijzen": [
+      {
+        "actieprijs": 17.99,
+        "actieperiode_start": "2024-04-01",
+        "actieperiode_einde": "2024-04-30"
+      }
+    ],
+    "betrokkenen": [
+      {
+        "id": 1,
+        "naam": "Nulls Auteur",
+        "voornaam": null,
+        "tussenvoegsel": null,
+        "achternaam": null,
+        "organisatie": null,
+        "biografie": null,
+        "bibliografie": null,
+        "rol": "Auteur",
+        "bestanden": []
+      },
+      {
+        "id": 2,
+        "naam": "Nulls Illustrator",
+        "voornaam": null,
+        "tussenvoegsel": null,
+        "achternaam": null,
+        "organisatie": null,
+        "biografie": null,
+        "bibliografie": null,
+        "rol": "Illustrator",
+        "bestanden": []
+      },
+      {
+        "id": 3,
+        "naam": "Nulls Voorlezer",
+        "voornaam": null,
+        "tussenvoegsel": null,
+        "achternaam": null,
+        "organisatie": null,
+        "biografie": null,
+        "bibliografie": null,
+        "rol": "Voorlezer",
+        "bestanden": []
+      },
+      {
+        "id": 4,
+        "naam": "Nulls Vertaalbureau",
+        "voornaam": null,
+        "tussenvoegsel": null,
+        "achternaam": null,
+        "organisatie": null,
+        "biografie": null,
+        "bibliografie": null,
+        "rol": "Vertaler",
+        "bestanden": []
+      }
+    ],
+    "onderwerpen": [
+      { "type": "NUR", "code": "301", "waarde": "Nederlandse fictie algemeen" },
+      { "type": "BISAC", "code": "FIC000000", "waarde": "FICTION / General" },
+      { "type": "Thema", "code": "FBA", "waarde": "Klassieke fictie" }
+    ],
+    "trefwoorden": "novelle, literair",
+    "bestanden": [
+      { "soort": "Cover", "type": "image/jpeg", "url": "https://boekdbv2.nl/images/cover-9789000000004.jpg", "bestandsnaam": "cover-9789000000004.jpg" },
+      { "soort": "Back cover", "type": "image/jpeg", "url": "https://boekdbv2.nl/images/backcover-9789000000004.jpg", "bestandsnaam": "backcover-9789000000004.jpg" },
+      { "soort": "Fragment", "type": "application/pdf", "url": "https://boekdbv2.nl/files/fragment-9789000000004.pdf", "bestandsnaam": "fragment-9789000000004.pdf" }
+    ],
+    "leverbaarheid": "Leverbaar",
+    "status": "10",
+    "links": [
+      { "soort": "Website", "url": "https://www.uitgeverijprometheus.nl/boek/schaduwen-zonder-namen" }
+    ],
+    "literaireprijzen": [
+      { "naam": "Debutantenprijs", "jaar": null, "land": null, "prestatie": null, "omschrijving": null }
+    ],
+    "recensielinks": [
+      { "type": "Recensie", "url": null, "bron": null, "datum": null }
+    ],
+    "recensiequotes": [
+      { "tekst": "Een verrassend debuut.", "auteur": null, "bron": null, "datum": null }
+    ],
+    "fondsgroep": "Fictie",
+    "laatste_update": "2024-03-01 10:00:00"
+  }
+]

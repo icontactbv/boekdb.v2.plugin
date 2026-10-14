@@ -8,11 +8,14 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Talks to the json api of BoekDB.
+ */
 class Boekdb_Api_Service {
 
-	const BOEKDB_DOMAIN = 'https://boekdbv2.nl/';
+	const BOEKDB_DOMAIN = 'https://www.boekdbv2.nl/';
 	const BASE_URL      = self::BOEKDB_DOMAIN . 'api/json/v1/';
-	const LIMIT         = 100;
+	const LIMIT         = 25;
 
 	/**
 	 * Test API connection
@@ -20,7 +23,7 @@ class Boekdb_Api_Service {
 	 * @return array Connection status and error/success message
 	 */
 	public static function test_api_connection() {
-		$response = wp_remote_get( self::BASE_URL . 'test' );
+		$response = wp_remote_get( self::BASE_URL . 'test', array( 'user-agent' => self::user_agent() ) );
 		if ( is_wp_error( $response ) ) {
 			$error_message = $response->get_error_message();
 
@@ -51,7 +54,7 @@ class Boekdb_Api_Service {
 	 * @return bool The state of the connection
 	 */
 	public static function check_connection_and_version() {
-		$result = wp_remote_get( self::BASE_URL . 'test' );
+		$result = wp_remote_get( self::BASE_URL . 'test', array( 'user-agent' => self::user_agent() ) );
 
 		// Check for connection errors
 		if ( is_wp_error( $result ) || 200 !== wp_remote_retrieve_response_code( $result ) ) {
@@ -59,12 +62,12 @@ class Boekdb_Api_Service {
 		}
 
 		// Fetch the latest version from the API response
-		$body       = wp_remote_retrieve_body( $result );
-		$data       = json_decode( $body, true );
-		$apiVersion = $data['plugin_version'] ?? null;
+		$body        = wp_remote_retrieve_body( $result );
+		$data        = json_decode( $body, true );
+		$api_version = $data['plugin_version'] ?? null;
 
 		// Compare with current plugin version and set/update the option if a new version is available
-		if ( $apiVersion && version_compare( $apiVersion, BoekDB()->version, '>' ) ) {
+		if ( $api_version && version_compare( $api_version, BoekDB()->version, '>' ) ) {
 			update_option( 'boekdb_new_version_available', true );
 		} else {
 			update_option( 'boekdb_new_version_available', false );
@@ -84,14 +87,15 @@ class Boekdb_Api_Service {
 	 */
 	public static function fetch_products( $api_key, $last_import, $offset ) {
 		$response = wp_remote_get(
-			self::BASE_URL . 'products?updated_at=' . urlencode( $last_import ),
+			self::BASE_URL . 'products?updated_at=' . rawurlencode( $last_import ),
 			array(
-				'headers' => array(
+				'user-agent' => self::user_agent(),
+				'headers'    => array(
 					'Authorization' => 'Bearer ' . $api_key,
 					'x-limit'       => self::LIMIT,
 					'x-offset'      => $offset,
 				),
-				'timeout' => 30,
+				'timeout'    => 30,
 			)
 		);
 
@@ -109,6 +113,43 @@ class Boekdb_Api_Service {
 	}
 
 	/**
+	 * Fetch a single product
+	 *
+	 * @param string $api_key  API Key
+	 * @param string $isbn     The isbn to fetch
+	 *
+	 * @return object|bool The product, or false when it could not be fetched
+	 */
+	public static function fetch_product( $api_key, $isbn ) {
+		$response = wp_remote_get(
+			self::BASE_URL . 'products/' . rawurlencode( $isbn ),
+			array(
+				'user-agent' => self::user_agent(),
+				'headers'    => array(
+					'Authorization' => 'Bearer ' . $api_key,
+				),
+				'timeout'    => 30,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			boekdb_debug( 'Error fetching product ' . $isbn . ': ' . $response->get_error_message() );
+
+			return false;
+		}
+
+		if ( wp_remote_retrieve_response_code( $response ) !== 200 ) {
+			boekdb_debug( 'Error fetching product ' . $isbn . ': ' . wp_remote_retrieve_response_code( $response ) );
+
+			return false;
+		}
+
+		$product = json_decode( wp_remote_retrieve_body( $response ) );
+
+		return is_object( $product ) ? $product : false;
+	}
+
+	/**
 	 * Fetch ISBNs
 	 *
 	 * @param string $api_key  API Key
@@ -119,14 +160,19 @@ class Boekdb_Api_Service {
 		$result = wp_remote_get(
 			self::BASE_URL . 'isbns',
 			array(
-				'headers' => array(
+				'user-agent' => self::user_agent(),
+				'headers'    => array(
 					'Authorization' => 'Bearer ' . $api_key,
 				),
-				'timeout' => 30,
+				'timeout'    => 30,
 			)
 		);
 		if ( is_wp_error( $result ) ) {
-			die( $result->get_error_message() );
+			// Ending the request here would take the page or cron run that asked for this
+			// down with it.
+			boekdb_debug( 'Error fetching isbns: ' . $result->get_error_message() );
+
+			return false;
 		}
 		$result = wp_remote_retrieve_body( $result );
 		$result = json_decode( $result, true );
@@ -167,11 +213,12 @@ class Boekdb_Api_Service {
 		$response = wp_remote_request(
 			$url,
 			array(
-				'method'  => 'PUT',
-				'headers' => array(
+				'method'     => 'PUT',
+				'user-agent' => self::user_agent(),
+				'headers'    => array(
 					'Authorization' => 'Bearer ' . $api_key,
 				),
-				'timeout' => 30,
+				'timeout'    => 30,
 			)
 		);
 
@@ -190,6 +237,8 @@ class Boekdb_Api_Service {
 	 * @param string $api_key  API Key
 	 *
 	 * @return bool 'true' if valid 'false' if invalid
+	 *
+	 * @throws Exception When BoekDB cannot be reached.
 	 */
 	public static function validate_api_key( $api_key ) {
 		// Test the connection first
@@ -201,18 +250,31 @@ class Boekdb_Api_Service {
 		$response = wp_remote_get(
 			self::BASE_URL . 'validate',
 			array(
-				'headers' => array(
+				'user-agent' => self::user_agent(),
+				'headers'    => array(
 					'Authorization' => 'Bearer ' . $api_key,
 				),
 			)
 		);
 
 		// Check if the API key is invalid (Unauthorized)
-		if ( wp_remote_retrieve_response_code( $response ) == 401 ) {
-			boekdb_debug( 'Invalid API key: ' . $api_key );
+		if ( 401 === wp_remote_retrieve_response_code( $response ) ) {
+			boekdb_debug( 'Invalid API key ending in ' . substr( $api_key, -4 ) );
 			return false;
 		}
 
 		return true;
+	}
+
+	/**
+	 * The user agent for requests to BoekDB.
+	 *
+	 * The one WordPress sends anyway, which names the site, with the version of the plugin
+	 * after it. The web server of BoekDB logs it, which shows which site runs which version.
+	 *
+	 * @return string
+	 */
+	public static function user_agent() {
+		return 'WordPress/' . get_bloginfo( 'version' ) . '; ' . get_bloginfo( 'url' ) . '; BoekDB/' . BoekDB()->version;
 	}
 }

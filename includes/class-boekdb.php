@@ -25,7 +25,7 @@ final class BoekDB {
 	 *
 	 * @var string
 	 */
-	public $version = '1.1.1';
+	public $version = '1.2.0';
 
 	/**
 	 * BoekDb Constructor.
@@ -105,9 +105,11 @@ final class BoekDB {
 		$fetch = $readytorun ? self::QUERY_READY_ETALAGES : self::QUERY_ALL_ETALAGES;
 		$fetch = str_replace( '{:prefix}', $wpdb->prefix, $fetch );
 
-		$etalages =  $wpdb->get_results( $fetch, OBJECT );
+		$etalages = $wpdb->get_results( $fetch, OBJECT ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Built from constants and the table prefix only.
 
-		if ( ! is_array( $etalages ) ) {
+		// A failed query returns no rows, like an empty table. Callers that act on "no
+		// etalages" must be able to tell the two apart.
+		if ( ! is_array( $etalages ) || '' !== $wpdb->last_error ) {
 			return false;
 		}
 

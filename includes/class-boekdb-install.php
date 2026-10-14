@@ -72,10 +72,82 @@ class BoekDB_Install {
 
 		self::update_boekdb_version();
 		self::register_tables();
+		self::migrate_primary_meta();
+		self::migrate_serie_image_meta();
 
 		flush_rewrite_rules();
 
 		delete_transient( 'boekdb_installing' );
+	}
+
+	/**
+	 * Move series images to the key they are read from.
+	 *
+	 * Versions 1.0.7 to 1.1.1 stored the image of a series under 'seriebeeld_id', while the
+	 * plugin reads 'boekdb_seriebeeld_id', as 1.0.5 and 1.0.6 wrote it. Those images never
+	 * showed, and the cleanup did not know them. Where a series has both, the bare key is
+	 * the later write. Runs on upgrade, and again changes nothing.
+	 *
+	 * @return void
+	 */
+	public static function migrate_serie_image_meta() {
+		global $wpdb;
+
+		$rows = $wpdb->get_results(
+			"SELECT tm.term_id, tm.meta_value FROM {$wpdb->termmeta} tm
+				INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = tm.term_id AND tt.taxonomy = 'boekdb_serie_tax'
+				WHERE tm.meta_key = 'seriebeeld_id'
+				ORDER BY tm.meta_id" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		);
+
+		// The last row written per series.
+		$images = array();
+		foreach ( $rows as $row ) {
+			$images[ (int) $row->term_id ] = $row->meta_value;
+		}
+
+		foreach ( $images as $term_id => $attachment_id ) {
+			// Only an image that is still there replaces the one the series has.
+			if ( 'attachment' === get_post_type( (int) $attachment_id ) ) {
+				update_term_meta( $term_id, 'boekdb_seriebeeld_id', $attachment_id );
+			}
+			delete_term_meta( $term_id, 'seriebeeld_id' );
+		}
+	}
+
+	/**
+	 * Move books marked under the old key to the one every reader uses.
+	 *
+	 * Books without an nstc were marked as the primary edition under an English key, while
+	 * archives and templates filter on the Dutch one. Those books were missing from every
+	 * overview. Runs on upgrade, and again changes nothing.
+	 *
+	 * @return void
+	 */
+	public static function migrate_primary_meta() {
+		global $wpdb;
+
+		// Collected before the rows go, to clear the cache of exactly these books afterwards.
+		$post_ids = $wpdb->get_col(
+			"SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key = 'boekdb_primary'" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		);
+
+		$wpdb->query(
+			"INSERT INTO {$wpdb->postmeta} ( post_id, meta_key, meta_value )
+				SELECT old.post_id, 'boekdb_primair', old.meta_value
+				FROM {$wpdb->postmeta} old
+				WHERE old.meta_key = 'boekdb_primary'
+				AND NOT EXISTS (
+					SELECT 1 FROM {$wpdb->postmeta} current
+					WHERE current.post_id = old.post_id AND current.meta_key = 'boekdb_primair'
+				)" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		);
+
+		$wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key = 'boekdb_primary'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+
+		foreach ( $post_ids as $post_id ) {
+			wp_cache_delete( (int) $post_id, 'post_meta' );
+		}
 	}
 
 	/**
@@ -85,6 +157,9 @@ class BoekDB_Install {
 		update_option( 'boekdb_version', BoekDB()->version );
 	}
 
+	/**
+	 * Creates or updates the tables of the plugin.
+	 */
 	private static function register_tables() {
 		global $wpdb;
 
@@ -127,13 +202,19 @@ class BoekDB_Install {
 		dbDelta( $sql );
 	}
 
+	/**
+	 * Says that BoekDB could not be reached.
+	 */
 	public static function boekdb_connection_error() {
 		$class   = 'notice notice-warning is-dismissible';
 		$message = '<strong>BoekDB Plugin:</strong> Let op: kan geen verbinding maken met BoekDB!';
 
-		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
+		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses_post( $message ) );
 	}
 
+	/**
+	 * Says that a newer version of the plugin is out.
+	 */
 	public static function boekdb_update_notice() {
 		if ( get_option( 'boekdb_new_version_available', false ) ) {
 			echo '<div class="notice notice-warning is-dismissible">';
@@ -142,15 +223,23 @@ class BoekDB_Install {
 		}
 	}
 
+	/**
+	 * Hides the update notice until the next version check.
+	 */
 	public static function dismiss_boekdb_update_notice() {
 		check_ajax_referer( 'boekdb_dismiss_update_notice', 'nonce' );
 		update_option( 'boekdb_new_version_available', false );
 		wp_die();
 	}
 
+	/**
+	 * Shows the notice the plugin left for the next admin page.
+	 */
 	public static function boekdb_admin_notice() {
+		$message = get_transient( 'boekdb_admin_notice' );
+
 		// If our transient isn't available, return early
-		if ( false === ( $message = get_transient( 'boekdb_admin_notice' ) ) ) {
+		if ( false === $message ) {
 			return;
 		}
 
@@ -159,10 +248,13 @@ class BoekDB_Install {
 
 		// display the message
 		echo '<div class="notice notice-info is-dismissible">';
-		echo "<p>$message</p>";
+		echo '<p>' . wp_kses_post( $message ) . '</p>';
 		echo '</div>';
 	}
 
+	/**
+	 * Loads the script that dismisses the update notice.
+	 */
 	public static function enqueue_scripts() {
 		wp_enqueue_script( 'boekdb-admin-scripts', plugins_url( 'assets/js/admin.js', BOEKDB_PLUGIN_FILE ), array( 'jquery' ), BoekDB()->version, true );
 		wp_localize_script(
@@ -175,6 +267,13 @@ class BoekDB_Install {
 		);
 	}
 
+	/**
+	 * Adds a rewrite rule for the books under each etalage prefix.
+	 *
+	 * @param array $rules  The rewrite rules WordPress has.
+	 *
+	 * @return array
+	 */
 	public static function prefixed_rewrite_rule( $rules ) {
 		global $wpdb;
 		$new_rules = array();
@@ -184,7 +283,7 @@ class BoekDB_Install {
 
 		// Generate a rewrite rule for each etalage prefix
 		foreach ( $prefixes as $prefix ) {
-			$new_rules[ 'boek/' . esc_sql( $prefix->prefix ) . '/([^/]+)/?$' ] = 'index.php?post_type=boekdb_boek&name=' . '{$matches[1]}';
+			$new_rules[ 'boek/' . esc_sql( $prefix->prefix ) . '/([^/]+)/?$' ] = 'index.php?post_type=boekdb_boek&name=$matches[1]';
 		}
 
 		// Return the combined rules.

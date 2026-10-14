@@ -1,10 +1,12 @@
 <?php
 /**
  * Voorbeeld voor een archive-pagina met op NSTC ontdubbelde titels
+ *
+ * @package BoekDB
  */
 
 // argumenten
-$args = array(
+$boekdb_args = array(
 	'post_type'      => 'boekdb_boek',
 	'post_status'    => 'publish',
 	'posts_per_page' => -1,
@@ -16,6 +18,6 @@ $args = array(
 	'meta_value'     => '1',
 );
 
-$loop = new WP_Query( $args );
+$boekdb_loop = new WP_Query( $boekdb_args );
 
 // etc
