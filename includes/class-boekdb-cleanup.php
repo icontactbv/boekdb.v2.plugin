@@ -22,6 +22,20 @@ class BoekDB_Cleanup {
 	const NEW_BOOK_GRACE = 3600;
 
 	/**
+	 * The taxonomies the plugin fills, and the only ones its cleanup touches. Other plugins
+	 * and themes can hang their own on books.
+	 */
+	const TAXONOMIES = array(
+		'boekdb_serie_tax',
+		'boekdb_auteur_tax',
+		'boekdb_illustrator_tax',
+		'boekdb_spreker_tax',
+		'boekdb_nur_tax',
+		'boekdb_bisac_tax',
+		'boekdb_thema_tax',
+	);
+
+	/**
 	 * Initialize the class by setting up the necessary hooks and scheduling a cleanup event.
 	 *
 	 * @return void
@@ -101,6 +115,11 @@ class BoekDB_Cleanup {
 	 * @return void
 	 */
 	public static function delete_attached_media( $post_id ) {
+		// Hooked while books are deleted. Any other post keeps its media, as WordPress has it.
+		if ( 'boekdb_boek' !== get_post_type( $post_id ) ) {
+			return;
+		}
+
 		$attachments = get_attached_media( '', $post_id );
 
 		foreach ( $attachments as $attachment ) {
@@ -203,6 +222,24 @@ class BoekDB_Cleanup {
 
 		add_action( 'before_delete_post', array( self::class, 'delete_attached_media' ) );
 
+		try {
+			self::delete_posts_with_media( $post_ids );
+		} finally {
+			// The cleanup runs from cron, where other events delete posts in the same process.
+			remove_action( 'before_delete_post', array( self::class, 'delete_attached_media' ) );
+		}
+	}
+
+	/**
+	 * Delete books, while delete_attached_media() is hooked.
+	 *
+	 * @param array $post_ids  The books.
+	 *
+	 * @return void
+	 */
+	private static function delete_posts_with_media( $post_ids ) {
+		global $wpdb;
+
 		foreach ( $post_ids as $post_id ) {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d", $post_id ) );
 			$wpdb->query(
@@ -212,18 +249,7 @@ class BoekDB_Cleanup {
 				)
 			);
 			wp_delete_post( $post_id, true );
-			wp_delete_object_term_relationships(
-				$post_id,
-				array(
-					'boekdb_serie_tax',
-					'boekdb_auteur_tax',
-					'boekdb_illustrator_tax',
-					'boekdb_spreker_tax',
-					'boekdb_nur_tax',
-					'boekdb_bisac_tax',
-					'boekdb_thema_tax',
-				)
-			);
+			wp_delete_object_term_relationships( $post_id, self::TAXONOMIES );
 
 			boekdb_debug( 'deleted post ' . $post_id );
 		}
@@ -239,6 +265,20 @@ class BoekDB_Cleanup {
 	public static function delete_etalage( $id ) {
 		global $wpdb;
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id ) );
+
+		// What the import kept per etalage goes with it, or a later etalage that gets the
+		// same id inherits it.
+		$prefixes = array(
+			BoekDB_Import::LOCK_OPTION_PREFIX,
+			BoekDB_Import::START_OPTION_PREFIX,
+			BoekDB_Import::FAILED_OPTION_PREFIX,
+			BoekDB_Import::FINISHED_OPTION_PREFIX,
+			BoekDB_Import::HELD_LIST_OPTION_PREFIX,
+		);
+		foreach ( $prefixes as $prefix ) {
+			delete_option( $prefix . $id );
+		}
+
 		$result   = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT eb.boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken eb WHERE eb.etalage_id = %d",
@@ -303,8 +343,19 @@ class BoekDB_Cleanup {
 			return;
 		}
 
+		// No release scheduled it before, so its first runs on a site can have a lot to do.
+		boekdb_lift_time_limit();
+
+		// Every step below deletes what a lookup did not find. A lookup that failed finds
+		// nothing, so the cleanup stops instead of taking that for an empty site.
+		$etalages = BoekDB::fetch_etalages();
+		if ( false === $etalages ) {
+			boekdb_debug( 'Not cleaning up: the etalages could not be read' );
+
+			return;
+		}
+
 		// cleanup etalage_boeken
-		$etalages    = BoekDB::fetch_etalages();
 		$etalage_ids = array();
 		foreach ( $etalages as $etalage ) {
 			$etalage_ids[] = $etalage->id;
@@ -330,6 +381,11 @@ class BoekDB_Cleanup {
 			'array_merge',
 			array()
 		);
+		if ( '' !== $wpdb->last_error ) {
+			boekdb_debug( 'Not cleaning up: the books could not be read' );
+
+			return;
+		}
 		if ( count( $post_ids ) > 0 ) {
 			$placeholders = implode( ', ', array_fill( 0, count( $post_ids ), '%d' ) );
 			$wpdb->query(
@@ -373,8 +429,8 @@ class BoekDB_Cleanup {
 	private static function collect_term_ids_for_cleanup() {
 		global $wpdb;
 
-		// Identify all the taxonomies attached to 'boekdb_boek' post type
-		$relevant_taxonomies = get_object_taxonomies( 'boekdb_boek' );
+		// Only the plugin's own: other taxonomies on books belong to whoever added them.
+		$relevant_taxonomies = self::TAXONOMIES;
 		$term_ids            = array();
 
 		// For each taxonomy, identify terms which aren't associated with any 'boekdb_boek' post.

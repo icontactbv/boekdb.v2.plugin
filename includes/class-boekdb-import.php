@@ -58,6 +58,11 @@ class BoekDB_Import {
 	const FAILED_ATTEMPTS = 3;
 
 	/**
+	 * Option holding the size of a list of isbns that was held back, per etalage.
+	 */
+	const HELD_LIST_OPTION_PREFIX = 'boekdb_import_held_list_';
+
+	/**
 	 * Identifies the claim this run holds, so it can tell its own lock from the one a later
 	 * run took over.
 	 *
@@ -72,6 +77,13 @@ class BoekDB_Import {
 	 * @var string|null
 	 */
 	private static $lock_value = null;
+
+	/**
+	 * The etalage this run holds the lock of, so a download can say the run is alive.
+	 *
+	 * @var object|null
+	 */
+	private static $lock_etalage = null;
 
 	/**
 	 * Initialize the import process
@@ -133,7 +145,7 @@ class BoekDB_Import {
 	 * Import products from API
 	 */
 	public static function import() {
-		set_time_limit( 0 );
+		boekdb_lift_time_limit();
 		boekdb_debug( 'Importing products...' );
 
 		self::reclaim_stale_locks();
@@ -203,8 +215,8 @@ class BoekDB_Import {
 				}
 
 				// Says the batch is alive, so a run that takes minutes is not mistaken for one
-				// that died.
-				self::refresh_lock( $etalage );
+				// that died, and which book it is on.
+				self::refresh_lock( $etalage, isset( $product->isbn ) ? $product->isbn : null );
 
 				// One unusable product used to end the whole batch, leaving every book behind
 				// it unimported and the offset where it was. A product that cannot be
@@ -426,9 +438,13 @@ class BoekDB_Import {
 
 			self::refresh_lock( $etalage );
 
+			// Written down before the book is tried: one that ends the process would
+			// otherwise be retried for ever, and the run would never finish.
+			$failed[ $isbn ] = (int) $attempts + 1;
+			update_option( self::FAILED_OPTION_PREFIX . $etalage->id, $failed, false );
+
 			$product = Boekdb_Api_Service::fetch_product( $etalage->api_key, $isbn );
 			if ( false === $product ) {
-				$failed[ $isbn ] = (int) $attempts + 1;
 				continue;
 			}
 
@@ -440,12 +456,10 @@ class BoekDB_Import {
 				break;
 			}
 
-			if ( self::import_product( $product, $etalage ) ) {
+			if ( self::import_product( $product, $etalage ) && self::holds_lock( $etalage ) ) {
 				unset( $failed[ $isbn ] );
-				continue;
+				update_option( self::FAILED_OPTION_PREFIX . $etalage->id, $failed, false );
 			}
-
-			$failed[ $isbn ] = (int) $attempts + 1;
 		}
 
 		if ( ! self::holds_lock( $etalage ) ) {
@@ -573,6 +587,19 @@ class BoekDB_Import {
 		$error = error_get_last();
 		boekdb_debug( 'Import on ' . $etalage->name . ' ended while holding its lock: ' . ( is_null( $error ) ? 'no error reported' : $error['message'] ) );
 
+		// A batch that died on a book would die on it again at the same offset, for ever,
+		// and the etalages behind it would never get their turn. The book is written down to
+		// be retried on its own, and the next batch starts after it.
+		$lock = self::read_lock( $etalage->id );
+		if ( is_array( $lock ) && ! empty( $lock['size'] ) && isset( $lock['offset'], $lock['done'] ) ) {
+			// One without an isbn cannot be fetched again on its own, but is skipped all the
+			// same.
+			if ( isset( $lock['isbn'] ) ) {
+				self::remember_failed_product( $etalage, (object) array( 'isbn' => $lock['isbn'] ) );
+			}
+			self::update_offset( (int) $lock['offset'] + (int) $lock['done'], $etalage );
+		}
+
 		self::release_lock( $etalage, 2 );
 
 		// Nothing else picks the etalage up before the hourly start.
@@ -646,8 +673,9 @@ class BoekDB_Import {
 			return false;
 		}
 
-		self::$lock_token = $token;
-		self::$lock_value = $value;
+		self::$lock_token   = $token;
+		self::$lock_value   = $value;
+		self::$lock_etalage = $etalage;
 		self::update_running( 1, $etalage );
 
 		// A fatal halts the script on the spot, so no code after it runs and a finally block
@@ -736,6 +764,7 @@ class BoekDB_Import {
 
 		$rows = $wpdb->get_results( "SELECT id, name, running, `offset` FROM {$wpdb->prefix}boekdb_etalages ORDER BY id" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
 
+		$stopped  = self::is_stopped();
 		$etalages = array();
 		foreach ( $rows as $row ) {
 			$lock  = self::read_lock( $row->id );
@@ -747,7 +776,8 @@ class BoekDB_Import {
 			} elseif ( 2 === (int) $row->running ) {
 				$state = 'waiting';
 			} else {
-				$state = 'idle';
+				// Stop keeps the place of an etalage it caught halfway. That one is not done.
+				$state = $stopped && (int) $row->offset > 0 ? 'stopped' : 'idle';
 			}
 
 			$batch    = in_array( $state, array( 'busy', 'stuck' ), true );
@@ -768,7 +798,7 @@ class BoekDB_Import {
 			'etalages'   => $etalages,
 			'next_batch' => wp_next_scheduled( self::IMPORT_HOOK ),
 			'next_round' => wp_next_scheduled( self::START_IMPORT_HOOK ),
-			'stopped'    => self::is_stopped(),
+			'stopped'    => $stopped,
 		);
 	}
 
@@ -849,11 +879,14 @@ class BoekDB_Import {
 	/**
 	 * Record that this run is still working on its etalage.
 	 *
-	 * @param object $etalage  The etalage.
+	 * @param object      $etalage    The etalage.
+	 * @param string|null $isbn       The book the batch is about to import, if any.
+	 * @param bool        $next_book  Whether a next book starts, or the run only says it is
+	 *                                still at work.
 	 *
 	 * @return void
 	 */
-	private static function refresh_lock( $etalage ) {
+	private static function refresh_lock( $etalage, $isbn = null, $next_book = true ) {
 		global $wpdb;
 
 		if ( is_null( self::$lock_value ) ) {
@@ -866,8 +899,17 @@ class BoekDB_Import {
 			$lock = array( 'token' => self::$lock_token );
 		}
 		$lock['time'] = time();
-		$lock['done'] = ( isset( $lock['done'] ) ? (int) $lock['done'] : 0 ) + 1;
-		$value        = maybe_serialize( $lock );
+		if ( $next_book ) {
+			$lock['done'] = ( isset( $lock['done'] ) ? (int) $lock['done'] : 0 ) + 1;
+
+			// The book being worked on, for whoever finds the batch dead on it. A book
+			// without an isbn clears it, or the one before would be blamed.
+			unset( $lock['isbn'] );
+			if ( null !== $isbn ) {
+				$lock['isbn'] = (string) $isbn;
+			}
+		}
+		$value = maybe_serialize( $lock );
 
 		// Only over the lock this run wrote: between the check above and this write, another
 		// run can have taken the etalage over.
@@ -1008,8 +1050,8 @@ class BoekDB_Import {
 		foreach ( $etalages as $etalage ) {
 			$lock = get_option( self::lock_option( $etalage->id ) );
 
-			// A lock without a date is one from before this version, or one a run never got
-			// round to writing.
+			// A lock without a date tells nothing about a run being alive, so it counts as
+			// stale.
 			if ( is_array( $lock ) && isset( $lock['time'] ) && ( time() - (int) $lock['time'] ) < self::LOCK_TIMEOUT ) {
 				continue;
 			}
@@ -1299,7 +1341,7 @@ class BoekDB_Import {
 				"SELECT p.ID FROM {$wpdb->posts} p
 					INNER JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
 					WHERE p.post_type = %s AND p.post_status IN ( 'publish', 'draft', 'inherit' ) AND m.meta_value = %s
-					ORDER BY p.post_date DESC, p.ID DESC",
+					ORDER BY p.post_date DESC, p.ID ASC",
 				$key,
 				$post_type,
 				$value
@@ -1310,7 +1352,9 @@ class BoekDB_Import {
 			return null;
 		}
 
-		// The last of them, which is the one the post query handed back before.
+		// The last of them, which is the one the post query handed back before. That query
+		// ordered by date alone, and in a test on MySQL 8.0.36 it returned equal dates lowest
+		// id first.
 		return (int) end( $post_ids );
 	}
 
@@ -1378,10 +1422,12 @@ class BoekDB_Import {
 			);
 
 			$attachment_id = wp_insert_attachment( $attachment, $image['file'] );
+			// Recognisable before the sizes are made, which can fail or end the process: a
+			// retry finds this one instead of downloading another copy.
+			update_post_meta( $attachment_id, 'hash', $hash );
 			self::take_over_references( $replaced_id, $references, $attachment_id );
 			self::store_attachment_metadata( $attachment_id, $image, $bestand->soort );
 
-			update_post_meta( $attachment_id, 'hash', $hash );
 			// The name boekdb_serie_data() reads it back under.
 			update_term_meta( $term_id, 'boekdb_seriebeeld_id', $attachment_id );
 		} else {
@@ -1395,8 +1441,7 @@ class BoekDB_Import {
 	/**
 	 * Whether the file behind an attachment is unusable.
 	 *
-	 * Sites hold attachments whose file is an error page, from the days the plugin wrote
-	 * whatever came back. Only the header of the file is read, because this runs for every
+	 * The file can be an error page: earlier versions stored whatever came back. Only the header of the file is read, because this runs for every
 	 * file of every product of every batch.
 	 *
 	 * @param int $attachment_id  The attachment.
@@ -1422,10 +1467,13 @@ class BoekDB_Import {
 			if ( false === $handle ) {
 				return true;
 			}
-			$head = fread( $handle, 5 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread
+			// Readers accept bytes before the header, and so does the download, which types a
+			// file by its contents. Judged on the first five bytes alone, such a pdf would be
+			// downloaded again on every delivery of its book.
+			$head = fread( $handle, 1024 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread
 			fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 
-			return '%PDF-' !== $head;
+			return false === strpos( (string) $head, '%PDF-' );
 		}
 
 		return false;
@@ -1450,6 +1498,8 @@ class BoekDB_Import {
 		}
 
 		if ( ! self::attachment_is_broken( $attachment_id ) ) {
+			self::complete_image_metadata( $attachment_id );
+
 			return array( $attachment_id, null, array() );
 		}
 
@@ -1542,8 +1592,15 @@ class BoekDB_Import {
 		 */
 		$timeout = (int) apply_filters( 'boekdb_file_download_timeout', self::DOWNLOAD_TIMEOUT, $bestand->url );
 
+		// One book can bring several files, each allowed minutes. Said per book only, a run
+		// on a slow file host would look dead and be taken over while still downloading.
+		if ( ! is_null( self::$lock_etalage ) ) {
+			self::refresh_lock( self::$lock_etalage, null, false );
+		}
+
 		// Streams to a temporary file. Reading the body into a string instead puts the whole
-		// file in memory, which a 50MB fragment does not survive on a 128M limit.
+		// file in memory: in a test on WordPress 7.1, a 71.5 MB pdf fragment ended the import
+		// that way at a 256M limit.
 		$tmp_file = download_url( $bestand->url, $timeout );
 		if ( is_wp_error( $tmp_file ) ) {
 			boekdb_debug( 'Error fetching file: ' . $bestand->url );
@@ -1591,6 +1648,34 @@ class BoekDB_Import {
 		}
 
 		return $file;
+	}
+
+	/**
+	 * Give an image the sizes it lacks.
+	 *
+	 * The hash is written before the sizes are made, so a retry recognises a file whose
+	 * sizing failed or ended the process. It reuses that file, and makes the sizes here.
+	 *
+	 * @param int $attachment_id  The attachment.
+	 *
+	 * @return void
+	 */
+	private static function complete_image_metadata( $attachment_id ) {
+		if ( ! wp_attachment_is_image( $attachment_id ) ) {
+			return;
+		}
+
+		if ( ! function_exists( 'wp_get_missing_image_subsizes' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+		}
+
+		$metadata = wp_get_attachment_metadata( $attachment_id );
+		if ( ! empty( $metadata ) && count( wp_get_missing_image_subsizes( $attachment_id ) ) === 0 ) {
+			return;
+		}
+
+		// WordPress picks up where sizing stopped, or starts it when nothing was saved.
+		wp_update_image_subsizes( $attachment_id );
 	}
 
 	/**
@@ -1657,6 +1742,9 @@ class BoekDB_Import {
 				);
 
 				$attachment_id = wp_insert_attachment( $attachment, $file['file'], $boek_post_id );
+				// Recognisable before the sizes are made, which can fail or end the process: a
+				// retry finds this one instead of downloading another copy.
+				update_post_meta( $attachment_id, 'hash', $hash );
 				self::take_over_references( $replaced_id, $references, $attachment_id );
 				if ( ! is_wp_error( $attachment_id ) ) {
 					self::store_attachment_metadata( $attachment_id, $file, $bestand->soort );
@@ -1664,7 +1752,6 @@ class BoekDB_Import {
 					boekdb_debug( 'Error inserting attachment: ' . $attachment_id->get_error_message() );
 				}
 
-				update_post_meta( $attachment_id, 'hash', $hash );
 				self::link_file_to_boek( $boek_post_id, $attachment_id, $bestand->soort );
 			} else {
 				$attachment = get_post( $attachment_id );
@@ -1861,6 +1948,9 @@ class BoekDB_Import {
 				);
 
 				$attachment_id = wp_insert_attachment( $attachment, $image['file'] );
+				// Recognisable before the sizes are made, which can fail or end the process: a
+				// retry finds this one instead of downloading another copy.
+				update_post_meta( $attachment_id, 'hash', $hash );
 				self::take_over_references( $replaced_id, $references, $attachment_id );
 				if ( ! is_wp_error( $attachment_id ) ) {
 					self::store_attachment_metadata( $attachment_id, $image, $bestand->soort );
@@ -1869,7 +1959,6 @@ class BoekDB_Import {
 					continue;
 				}
 
-				update_post_meta( $attachment_id, 'hash', $hash );
 				update_term_meta( $term_id, 'auteursfoto_id', $attachment_id );
 				if ( isset( $bestand->copyright ) ) {
 					update_term_meta( $term_id, 'auteursfoto_copyright', $bestand->copyright );
@@ -1976,13 +2065,15 @@ class BoekDB_Import {
 		}
 
 		// Every book of this title, in one query. A WP_Query with a meta_query ran several,
-		// for every product of every batch.
+		// for every product of every batch. Equal dates go lowest id first, as that query
+		// returned them in a test on MySQL 8.0.36, or the primary edition of books written
+		// in the same second swaps.
 		$post_ids = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT p.ID FROM {$wpdb->posts} p
 					INNER JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = 'boekdb_nstc'
 					WHERE p.post_type = 'boekdb_boek' AND p.post_status = 'publish' AND m.meta_value = %s
-					ORDER BY p.post_date DESC, p.ID DESC",
+					ORDER BY p.post_date DESC, p.ID ASC",
 				$nstc
 			)
 		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
@@ -2135,7 +2226,7 @@ class BoekDB_Import {
 	 * @return void
 	 */
 	public static function start_import() {
-		set_time_limit( 0 );
+		boekdb_lift_time_limit();
 
 		if ( self::is_stopped() ) {
 			boekdb_debug( 'Import was stopped, not starting' );
@@ -2156,6 +2247,12 @@ class BoekDB_Import {
 
 		try {
 			$etalages = BoekDB::fetch_etalages();
+			if ( false === $etalages ) {
+				boekdb_debug( 'Error fetching etalages' );
+
+				return;
+			}
+
 			foreach ( $etalages as $etalage ) {
 				// validate api key
 				if ( ! Boekdb_Api_Service::validate_api_key( $etalage->api_key ) ) {
@@ -2166,6 +2263,9 @@ class BoekDB_Import {
 						'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.',
 						3600
 					);
+
+					// Gone, so nothing to start.
+					continue;
 				}
 
 				// What the next run will ask BoekDB for. Taking the moment this run ends
@@ -2210,6 +2310,11 @@ class BoekDB_Import {
 		if ( $isbns === false ) {
 			return false;
 		}
+
+		if ( self::hold_sudden_drop( $etalage, $isbns ) ) {
+			return false;
+		}
+
 		BoekDB_Cleanup::trash_removed( $etalage->id, $isbns['isbns'] );
 		self::drop_retries_outside( $etalage, $isbns['isbns'] );
 
@@ -2244,6 +2349,45 @@ class BoekDB_Import {
 
 		// no reset.
 		return false;
+	}
+
+	/**
+	 * Whether to hold back a list of isbns that shrank suddenly, for one round.
+	 *
+	 * Books missing from the list are removed with their files, and only come back when
+	 * BoekDB reports them changed or someone presses Reset. A list that drops to nothing or
+	 * to less than half while the selection stayed the same looks more like a fault than
+	 * like books leaving, so it is believed the second round in a row. A new selection is
+	 * expected to differ and goes through at once.
+	 *
+	 * @param object $etalage  The etalage.
+	 * @param array  $isbns    What the API answered: the filter hash and the isbns.
+	 *
+	 * @return bool Whether the list is held back this round.
+	 */
+	private static function hold_sudden_drop( $etalage, $isbns ) {
+		$option   = self::HELD_LIST_OPTION_PREFIX . $etalage->id;
+		$previous = (int) $etalage->isbns;
+		$count    = count( $isbns['isbns'] );
+		$sudden   = $isbns['filters'] === $etalage->filter_hash && $previous > 0 && $count * 2 < $previous;
+
+		if ( ! $sudden ) {
+			delete_option( $option );
+
+			return false;
+		}
+
+		if ( false !== get_option( $option ) ) {
+			// The second round in a row: believed.
+			delete_option( $option );
+
+			return false;
+		}
+
+		update_option( $option, $count, false );
+		boekdb_debug( 'Holding back the list of ' . $etalage->name . ': ' . $count . ' isbns, ' . $previous . ' before' );
+
+		return true;
 	}
 
 	/**

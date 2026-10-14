@@ -34,9 +34,9 @@ class ApiServiceTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The API answers on www only and redirects the bare domain. Every request would make a
-	 * detour, and a client that drops the api key on a redirect to another host gets a 401,
-	 * which the start of an import takes for an invalid key.
+	 * The API answers on www and redirects the bare domain, so every request there makes a
+	 * detour. A client that dropped the api key on a redirect to another host would get a
+	 * 401, which the start of an import takes for an invalid key.
 	 */
 	public function test_the_api_is_called_on_the_host_that_answers() {
 		$this->assertStringStartsWith( 'https://www.boekdbv2.nl/', Boekdb_Api_Service::BASE_URL );

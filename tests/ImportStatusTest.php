@@ -307,4 +307,32 @@ class ImportStatusTest extends WP_UnitTestCase {
 		$this->assertSame( 'warning', $notices[0]['type'] );
 		$this->assertSame( '1 etalage wacht, maar er stond geen batch ingepland. Die is nu ingepland.', $notices[0]['text'] );
 	}
+
+	/**
+	 * After Stop every etalage is idle, but the import does not run again until someone
+	 * presses Draai import. The banner says so instead of promising the next round.
+	 */
+	public function test_the_banner_says_the_import_is_stopped() {
+		$this->etalage_is( 0 );
+		update_option( BoekDB_Import::STOPPED_OPTION, 1, false );
+
+		$notices = BoekDB_Admin_Settings::status_notices( BoekDB_Import::status() );
+
+		$this->assertSame( 'warning', $notices[0]['type'] );
+		$this->assertSame( 'De import is gestopt en draait niet tot iemand op Draai import drukt.', $notices[0]['text'] );
+	}
+
+	/**
+	 * An etalage stopped halfway is not done, and says where it stopped.
+	 */
+	public function test_an_etalage_stopped_halfway_says_where() {
+		$this->etalage_is( 0, 50 );
+		update_option( BoekDB_Import::STOPPED_OPTION, 1, false );
+
+		$status = $this->etalage_status();
+
+		$this->assertSame( 'stopped', $status['state'] );
+		$this->assertSame( 'Gestopt', BoekDB_Admin_Settings::state_text( $status ) );
+		$this->assertSame( 'gestopt bij boek 51', BoekDB_Admin_Settings::progress_text( $status ) );
+	}
 }

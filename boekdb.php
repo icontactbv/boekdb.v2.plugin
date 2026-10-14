@@ -66,6 +66,20 @@ function boekdb_debug( $message ) {
 BoekDB();
 
 /**
+ * Lets a long run of the import or the cleanup go on past the usual time limit.
+ *
+ * Hosts can list set_time_limit() in disable_functions, and PHP 8 then does not define it
+ * at all: calling it would be a fatal error.
+ *
+ * @return void
+ */
+function boekdb_lift_time_limit() {
+	if ( function_exists( 'set_time_limit' ) ) {
+		set_time_limit( 0 );
+	}
+}
+
+/**
  * Whether any etalage is being imported or waits for its next batch.
  *
  * @return bool

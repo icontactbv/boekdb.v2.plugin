@@ -73,10 +73,46 @@ class BoekDB_Install {
 		self::update_boekdb_version();
 		self::register_tables();
 		self::migrate_primary_meta();
+		self::migrate_serie_image_meta();
 
 		flush_rewrite_rules();
 
 		delete_transient( 'boekdb_installing' );
+	}
+
+	/**
+	 * Move series images to the key they are read from.
+	 *
+	 * Versions 1.0.7 to 1.1.1 stored the image of a series under 'seriebeeld_id', while the
+	 * plugin reads 'boekdb_seriebeeld_id', as 1.0.5 and 1.0.6 wrote it. Those images never
+	 * showed, and the cleanup did not know them. Where a series has both, the bare key is
+	 * the later write. Runs on upgrade, and again changes nothing.
+	 *
+	 * @return void
+	 */
+	public static function migrate_serie_image_meta() {
+		global $wpdb;
+
+		$rows = $wpdb->get_results(
+			"SELECT tm.term_id, tm.meta_value FROM {$wpdb->termmeta} tm
+				INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = tm.term_id AND tt.taxonomy = 'boekdb_serie_tax'
+				WHERE tm.meta_key = 'seriebeeld_id'
+				ORDER BY tm.meta_id" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		);
+
+		// The last row written per series.
+		$images = array();
+		foreach ( $rows as $row ) {
+			$images[ (int) $row->term_id ] = $row->meta_value;
+		}
+
+		foreach ( $images as $term_id => $attachment_id ) {
+			// Only an image that is still there replaces the one the series has.
+			if ( 'attachment' === get_post_type( (int) $attachment_id ) ) {
+				update_term_meta( $term_id, 'boekdb_seriebeeld_id', $attachment_id );
+			}
+			delete_term_meta( $term_id, 'seriebeeld_id' );
+		}
 	}
 
 	/**

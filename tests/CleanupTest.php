@@ -337,4 +337,69 @@ class CleanupTest extends WP_UnitTestCase {
 
 		$this->assertNull( get_post( $cover ), 'With the last book using it gone, the cover goes too.' );
 	}
+
+	/**
+	 * The cleanup runs from cron, where other events delete posts in the same process. The
+	 * media of a post that is not a book is not the cleanup's to delete.
+	 */
+	public function test_media_of_a_post_that_is_not_a_book_survives_a_later_delete() {
+		BoekDB_Cleanup::delete_posts( array() );
+
+		$post  = self::factory()->post->create();
+		$image = self::factory()->attachment->create_object(
+			'beeld.jpg',
+			$post,
+			array( 'post_mime_type' => 'image/jpeg' )
+		);
+
+		wp_delete_post( $post, true );
+
+		$this->assertNotNull( get_post( $image ), 'WordPress only detaches the media of a deleted post.' );
+	}
+
+	/**
+	 * Another plugin or theme can hang its own taxonomy on books. Its terms are not the
+	 * cleanup's, used by a book or not.
+	 */
+	public function test_terms_of_another_taxonomy_on_books_are_left_alone() {
+		register_taxonomy_for_object_type( 'post_tag', 'boekdb_boek' );
+		$tag = self::factory()->term->create( array( 'taxonomy' => 'post_tag' ) );
+
+		BoekDB_Cleanup::cleanup();
+
+		unregister_taxonomy_for_object_type( 'post_tag', 'boekdb_boek' );
+		$this->assertInstanceOf( 'WP_Term', get_term( $tag, 'post_tag' ), 'A tag no book carries is not ours to remove.' );
+	}
+
+	/**
+	 * A query that fails returns no rows, just like an empty table. The cleanup must not
+	 * read a failed lookup of the etalages as "there are none" and delete every book.
+	 */
+	public function test_a_failed_lookup_of_the_etalages_deletes_nothing() {
+		global $wpdb;
+		$this->etalage( 0 );
+		$boek = $this->book_in_etalage( (int) $wpdb->insert_id, '9789000000062' );
+
+		$break = function ( $query ) {
+			if ( 0 === strpos( $query, 'SELECT id, name, api_key, running' ) ) {
+				return str_replace( 'boekdb_etalages', 'boekdb_etalages_gone', $query );
+			}
+
+			return $query;
+		};
+		add_filter( 'query', $break );
+		$suppressed = $wpdb->suppress_errors( true );
+
+		BoekDB_Cleanup::cleanup();
+
+		$wpdb->suppress_errors( $suppressed );
+		remove_filter( 'query', $break );
+
+		$this->assertNotNull( get_post( $boek ), 'The book should still be there.' );
+		$this->assertSame(
+			'1',
+			$wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d", $boek ) ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+			'And still in its etalage.'
+		);
+	}
 }

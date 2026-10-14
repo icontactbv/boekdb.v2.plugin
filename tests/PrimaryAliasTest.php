@@ -13,7 +13,7 @@ use WP_UnitTestCase;
 /**
  * Alias tests.
  *
- * The plugin writes one name now, but a theme out there reads the other. It keeps working.
+ * The plugin writes one name now. Code that reads the other keeps working.
  */
 class PrimaryAliasTest extends WP_UnitTestCase {
 

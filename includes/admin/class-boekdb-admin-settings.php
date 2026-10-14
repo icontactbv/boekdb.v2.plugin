@@ -195,6 +195,13 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * @return void
 		 */
 		private static function start_cleanup() {
+			if ( BoekDB_Import::is_working() ) {
+				// The cleanup would return without doing anything.
+				self::add_error( 'Er loopt een import. Opruimen kan pas als die klaar is.' );
+
+				return;
+			}
+
 			if ( WP_DEBUG ) {
 				BoekDB_Cleanup::cleanup();
 			} else {
@@ -214,7 +221,8 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			if ( $id > 0 ) {
 				$wpdb->query(
 					$wpdb->prepare(
-						"UPDATE {$wpdb->prefix}boekdb_etalages SET last_import=null WHERE id = %d",
+						// Stop keeps the offset, so a reset that left it would skip the books before it.
+						"UPDATE {$wpdb->prefix}boekdb_etalages SET last_import=null, `offset`=0 WHERE id = %d",
 						$id
 					)
 				);
@@ -364,6 +372,15 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 				}
 			}
 
+			if ( count( $notices ) === 0 && $status['stopped'] ) {
+				// Every etalage is idle after Stop, and the hourly round does nothing until
+				// the import is started again.
+				$notices[] = array(
+					'type' => 'warning',
+					'text' => __( 'De import is gestopt en draait niet tot iemand op Draai import drukt.', 'boekdb' ),
+				);
+			}
+
 			if ( count( $notices ) === 0 ) {
 				$notices[] = array(
 					'type' => 'info',
@@ -393,6 +410,9 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 						: __( 'rondt af', 'boekdb' );
 				case 'stuck':
 					return __( 'vastgelopen', 'boekdb' );
+				case 'stopped':
+					/* translators: %d: book the import stopped at. */
+					return sprintf( __( 'gestopt bij boek %d', 'boekdb' ), $etalage['offset'] + 1 );
 				case 'waiting':
 					return $etalage['offset'] > 0
 						/* translators: %d: book the next batch starts at. */
@@ -418,6 +438,8 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 					return __( 'Vastgelopen', 'boekdb' );
 				case 'waiting':
 					return __( 'Wacht', 'boekdb' );
+				case 'stopped':
+					return __( 'Gestopt', 'boekdb' );
 				default:
 					return is_null( $etalage['finished'] ) ? '–' : __( 'Klaar', 'boekdb' );
 			}

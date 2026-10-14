@@ -14,8 +14,8 @@ use WP_UnitTestCase;
 /**
  * File download tests.
  *
- * Sites run on a 128M memory limit while BoekDB serves PDF fragments of 50MB and up, so a
- * download that lands in memory is fatal. These tests pin the download to a streaming path.
+ * BoekDB serves fragments of tens of megabytes. Read into memory, a 71.5 MB pdf ended the
+ * import at a 256M limit. These tests pin the download to a streaming path.
  */
 class FileDownloadTest extends WP_UnitTestCase {
 
@@ -289,8 +289,8 @@ class FileDownloadTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The download timeout has to be settable, because a 50MB fragment does not arrive
-	 * within the five seconds WordPress allows by default.
+	 * The download timeout has to be settable: a fragment of tens of megabytes needs more
+	 * than the five seconds WordPress allows by default on a slow connection.
 	 */
 	public function test_download_timeout_is_filterable() {
 		add_filter(
@@ -307,7 +307,7 @@ class FileDownloadTest extends WP_UnitTestCase {
 
 	/**
 	 * Generating attachment metadata for a PDF makes WordPress render a preview, which on a
-	 * 50MB file costs more memory than the download it replaced.
+	 * fragment of tens of megabytes costs a lot of memory.
 	 */
 	public function test_pdf_import_skips_attachment_metadata() {
 		$generated = false;
@@ -404,6 +404,132 @@ class FileDownloadTest extends WP_UnitTestCase {
 		$metadata = wp_get_attachment_metadata( $attachment_id );
 		$this->assertSame( 1, $metadata['width'], 'Image metadata should describe the image.' );
 		$this->assertSame( 1, $metadata['height'], 'Image metadata should describe the image.' );
+	}
+
+	/**
+	 * One book can bring several files, each allowed minutes. A run that only said it was
+	 * alive once per book looked dead on a slow file host, and was taken over while still
+	 * downloading. Each download says so too.
+	 */
+	public function test_a_download_says_the_run_is_still_at_work() {
+		global $wpdb;
+		$wpdb->insert(
+			$wpdb->prefix . 'boekdb_etalages',
+			array(
+				'name'    => 'Test Etalage',
+				'api_key' => 'test-key',
+				'running' => 2,
+			)
+		);
+		$etalage = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $wpdb->insert_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		$option  = 'boekdb_import_lock_' . $etalage->id;
+
+		$claim = new ReflectionMethod( BoekDB_Import::class, 'claim_lock' );
+		if ( PHP_VERSION_ID < 80100 ) {
+			$claim->setAccessible( true );
+		}
+		$claim->invoke( null, $etalage, 1 );
+
+		// The last sign of life, long ago.
+		$read         = function () use ( $wpdb, $option ) {
+			return maybe_unserialize( $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $option ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		};
+		$lock         = $read();
+		$lock['time'] = time() - 500;
+		$stale        = maybe_serialize( $lock );
+		$wpdb->update( $wpdb->options, array( 'option_value' => $stale ), array( 'option_name' => $option ) );
+		$value = new \ReflectionProperty( BoekDB_Import::class, 'lock_value' );
+		if ( PHP_VERSION_ID < 80100 ) {
+			$value->setAccessible( true );
+		}
+		$value->setValue( null, $stale );
+
+		$seen    = null;
+		$capture = function ( $preempt, $args, $url ) use ( &$seen, $read ) {
+			if ( self::SMALL_FILE_URL === $url ) {
+				$seen = $read();
+			}
+
+			return $preempt;
+		};
+		add_filter( 'pre_http_request', $capture, 8, 3 );
+
+		$this->import_file( 'Fragment', 'application/pdf', self::SMALL_FILE_URL );
+
+		remove_filter( 'pre_http_request', $capture, 8 );
+		foreach ( array( 'lock_token', 'lock_value', 'lock_etalage' ) as $name ) {
+			if ( ! property_exists( BoekDB_Import::class, $name ) ) {
+				continue;
+			}
+			$property = new \ReflectionProperty( BoekDB_Import::class, $name );
+			if ( PHP_VERSION_ID < 80100 ) {
+				$property->setAccessible( true );
+			}
+			$property->setValue( null, null );
+		}
+
+		$this->assertGreaterThan( time() - 60, $seen['time'], 'The download should have said the run is alive.' );
+		$this->assertSame( $lock['done'], $seen['done'], 'Without counting another book.' );
+	}
+
+	/**
+	 * Making the sizes of an image can fail, or end the process. The file and its
+	 * attachment are there by then, and the hash the next attempt recognises them by has
+	 * to be too, or every retry adds another copy.
+	 */
+	public function test_a_cover_whose_sizes_failed_is_not_downloaded_again() {
+		$fail = function () {
+			throw new \RuntimeException( 'Out of memory while sizing the cover.' );
+		};
+		add_filter( 'wp_generate_attachment_metadata', $fail );
+
+		$boek_post_id = self::factory()->post->create( array( 'post_type' => 'boekdb_boek' ) );
+		try {
+			$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek_post_id );
+		} catch ( \RuntimeException $e ) {
+			unset( $e );
+		}
+		remove_filter( 'wp_generate_attachment_metadata', $fail );
+
+		$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek_post_id );
+
+		$this->assertCount(
+			1,
+			get_children(
+				array(
+					'post_parent' => $boek_post_id,
+					'post_type'   => 'attachment',
+				)
+			),
+			'The cover should be on the site once.'
+		);
+	}
+
+	/**
+	 * The process can end between writing the hash and making the sizes. The retry reuses
+	 * the file, and makes what the first attempt did not get to.
+	 */
+	public function test_a_reused_cover_gets_the_metadata_it_lacks() {
+		$die = function ( $meta_id, $object_id, $meta_key ) {
+			if ( 'hash' === $meta_key ) {
+				throw new \RuntimeException( 'The process ended here.' );
+			}
+		};
+		add_action( 'added_post_meta', $die, 10, 3 );
+
+		$boek_post_id = self::factory()->post->create( array( 'post_type' => 'boekdb_boek' ) );
+		try {
+			$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek_post_id );
+		} catch ( \RuntimeException $e ) {
+			unset( $e );
+		}
+		remove_action( 'added_post_meta', $die, 10 );
+
+		$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek_post_id );
+
+		$cover = (int) get_post_meta( $boek_post_id, '_thumbnail_id', true );
+		$this->assertNotSame( 0, $cover, 'The cover should be linked.' );
+		$this->assertNotEmpty( wp_get_attachment_metadata( $cover ), 'And have its metadata.' );
 	}
 
 	/**
