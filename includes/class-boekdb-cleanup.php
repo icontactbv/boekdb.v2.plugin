@@ -22,6 +22,20 @@ class BoekDB_Cleanup {
 	const NEW_BOOK_GRACE = 3600;
 
 	/**
+	 * The taxonomies the plugin fills, and the only ones its cleanup touches. Other plugins
+	 * and themes can hang their own on books.
+	 */
+	const TAXONOMIES = array(
+		'boekdb_serie_tax',
+		'boekdb_auteur_tax',
+		'boekdb_illustrator_tax',
+		'boekdb_spreker_tax',
+		'boekdb_nur_tax',
+		'boekdb_bisac_tax',
+		'boekdb_thema_tax',
+	);
+
+	/**
 	 * Initialize the class by setting up the necessary hooks and scheduling a cleanup event.
 	 *
 	 * @return void
@@ -101,6 +115,11 @@ class BoekDB_Cleanup {
 	 * @return void
 	 */
 	public static function delete_attached_media( $post_id ) {
+		// Hooked while books are deleted. Any other post keeps its media, as WordPress has it.
+		if ( 'boekdb_boek' !== get_post_type( $post_id ) ) {
+			return;
+		}
+
 		$attachments = get_attached_media( '', $post_id );
 
 		foreach ( $attachments as $attachment ) {
@@ -212,21 +231,13 @@ class BoekDB_Cleanup {
 				)
 			);
 			wp_delete_post( $post_id, true );
-			wp_delete_object_term_relationships(
-				$post_id,
-				array(
-					'boekdb_serie_tax',
-					'boekdb_auteur_tax',
-					'boekdb_illustrator_tax',
-					'boekdb_spreker_tax',
-					'boekdb_nur_tax',
-					'boekdb_bisac_tax',
-					'boekdb_thema_tax',
-				)
-			);
+			wp_delete_object_term_relationships( $post_id, self::TAXONOMIES );
 
 			boekdb_debug( 'deleted post ' . $post_id );
 		}
+
+		// The cleanup runs from cron, where other events delete posts in the same process.
+		remove_action( 'before_delete_post', array( self::class, 'delete_attached_media' ) );
 	}
 
 	/**
@@ -373,8 +384,8 @@ class BoekDB_Cleanup {
 	private static function collect_term_ids_for_cleanup() {
 		global $wpdb;
 
-		// Identify all the taxonomies attached to 'boekdb_boek' post type
-		$relevant_taxonomies = get_object_taxonomies( 'boekdb_boek' );
+		// Only the plugin's own: other taxonomies on books belong to whoever added them.
+		$relevant_taxonomies = self::TAXONOMIES;
 		$term_ids            = array();
 
 		// For each taxonomy, identify terms which aren't associated with any 'boekdb_boek' post.

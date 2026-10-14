@@ -34,6 +34,7 @@ This plugin imports books, contributors, series and subjects from BoekDB into Wo
 * Fix: series images are stored where they are read back, so they show up at all.
 * Fix: a book in a series without a title no longer raises warnings.
 * Fix: a file shared by several books or authors survives the removal of one of them.
+* Fix: the cleanup only removes media of books and terms of the plugin's own taxonomies. Media of other posts deleted in the same cron run, and terms of taxonomies other plugins add to books, are left alone.
 * Fix: review quotes switched off on the site stay off after an import.
 * Fix: books without an nstc are marked as primary under the name every overview reads, and existing ones are migrated.
 * Fix: cached permalinks are cleared when a book becomes the primary edition or joins another etalage.
