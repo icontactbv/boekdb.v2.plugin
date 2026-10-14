@@ -127,6 +127,34 @@ class AdminSettingsAccessTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The cleanup keeps away from an import in progress. Pressing Opruimen then says so,
+	 * instead of saying it started.
+	 */
+	public function test_cleanup_says_it_waits_while_an_import_runs() {
+		global $wpdb;
+		$wpdb->update( $wpdb->prefix . 'boekdb_etalages', array( 'running' => 2 ), array( 'id' => $this->etalage_id ) );
+		foreach ( array( 'messages', 'errors' ) as $name ) {
+			$property = new \ReflectionProperty( BoekDB_Admin_Settings::class, $name );
+			if ( PHP_VERSION_ID < 80100 ) {
+				$property->setAccessible( true );
+			}
+			$property->setValue( null, array() );
+		}
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$_POST['cleanup']  = '1';
+		$_POST['_wpnonce'] = wp_create_nonce( 'boekdb-settings' );
+
+		BoekDB_Admin_Settings::save();
+
+		ob_start();
+		BoekDB_Admin_Settings::show_messages();
+		$html = ob_get_clean();
+
+		$this->assertStringContainsString( 'Er loopt een import', $html );
+		$this->assertStringNotContainsString( 'Opruimen gestart', $html );
+	}
+
+	/**
 	 * Reset starts the etalage over from its first book. Stop keeps the offset, so Reset has
 	 * to clear it too, or the full import skips the books before it.
 	 */

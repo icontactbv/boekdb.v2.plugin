@@ -195,6 +195,13 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * @return void
 		 */
 		private static function start_cleanup() {
+			if ( BoekDB_Import::is_working() ) {
+				// The cleanup would return without doing anything.
+				self::add_error( 'Er loopt een import. Opruimen kan pas als die klaar is.' );
+
+				return;
+			}
+
 			if ( WP_DEBUG ) {
 				BoekDB_Cleanup::cleanup();
 			} else {
