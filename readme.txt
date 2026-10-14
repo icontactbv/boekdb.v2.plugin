@@ -26,6 +26,7 @@ This plugin imports books, contributors, series and subjects from BoekDB into Wo
 * Fix: an etalage left marked as running is taken back after ten minutes, and a batch that dies hands it back and schedules the next one at once.
 * Fix: a batch is 25 books instead of 100. A shorter batch is less likely to outlast the time a server gives a process, and the offset shows progress sooner.
 * New: the settings screen says which etalage is being worked on and which book of its batch it is on, what waits and when the next batch comes, and when each etalage was last finished. Etalages waiting with no batch scheduled get one when the screen is opened.
+* New: after Stop the settings screen says the import is stopped until someone starts it, and shows where an etalage caught halfway stopped.
 * Fix: one book that cannot be processed no longer ends the batch. Skipped books are fetched again afterwards, and listed on the settings screen with their isbns.
 * Fix: a book that ends the process itself, through memory or a hook that exits, is written down as failed and the next batch starts after it, instead of the batch dying on it again and again. Retries count an attempt before they start, so one that keeps ending the process stops after three.
 * Fix: Stop keeps an import stopped, and keeps its place instead of starting over.

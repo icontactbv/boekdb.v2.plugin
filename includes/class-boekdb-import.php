@@ -752,6 +752,7 @@ class BoekDB_Import {
 
 		$rows = $wpdb->get_results( "SELECT id, name, running, `offset` FROM {$wpdb->prefix}boekdb_etalages ORDER BY id" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
 
+		$stopped  = self::is_stopped();
 		$etalages = array();
 		foreach ( $rows as $row ) {
 			$lock  = self::read_lock( $row->id );
@@ -763,7 +764,8 @@ class BoekDB_Import {
 			} elseif ( 2 === (int) $row->running ) {
 				$state = 'waiting';
 			} else {
-				$state = 'idle';
+				// Stop keeps the place of an etalage it caught halfway. That one is not done.
+				$state = $stopped && (int) $row->offset > 0 ? 'stopped' : 'idle';
 			}
 
 			$batch    = in_array( $state, array( 'busy', 'stuck' ), true );
@@ -784,7 +786,7 @@ class BoekDB_Import {
 			'etalages'   => $etalages,
 			'next_batch' => wp_next_scheduled( self::IMPORT_HOOK ),
 			'next_round' => wp_next_scheduled( self::START_IMPORT_HOOK ),
-			'stopped'    => self::is_stopped(),
+			'stopped'    => $stopped,
 		);
 	}
 
