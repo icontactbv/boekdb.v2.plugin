@@ -250,6 +250,20 @@ class BoekDB_Cleanup {
 	public static function delete_etalage( $id ) {
 		global $wpdb;
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $id ) );
+
+		// What the import kept per etalage goes with it, or a later etalage that gets the
+		// same id inherits it.
+		$prefixes = array(
+			BoekDB_Import::LOCK_OPTION_PREFIX,
+			BoekDB_Import::START_OPTION_PREFIX,
+			BoekDB_Import::FAILED_OPTION_PREFIX,
+			BoekDB_Import::FINISHED_OPTION_PREFIX,
+			BoekDB_Import::HELD_LIST_OPTION_PREFIX,
+		);
+		foreach ( $prefixes as $prefix ) {
+			delete_option( $prefix . $id );
+		}
+
 		$result   = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT eb.boek_id FROM {$wpdb->prefix}boekdb_etalage_boeken eb WHERE eb.etalage_id = %d",

@@ -2224,6 +2224,9 @@ class BoekDB_Import {
 						'Etalage ' . $etalage->name . ' is verwijderd omdat de API-sleutel ongeldig was.',
 						3600
 					);
+
+					// Gone, so nothing to start.
+					continue;
 				}
 
 				// What the next run will ask BoekDB for. Taking the moment this run ends
