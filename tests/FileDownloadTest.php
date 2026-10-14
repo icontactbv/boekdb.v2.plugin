@@ -407,6 +407,39 @@ class FileDownloadTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Making the sizes of an image can fail, or end the process. The file and its
+	 * attachment are there by then, and the hash the next attempt recognises them by has
+	 * to be too, or every retry adds another copy.
+	 */
+	public function test_a_cover_whose_sizes_failed_is_not_downloaded_again() {
+		$fail = function () {
+			throw new \RuntimeException( 'Out of memory while sizing the cover.' );
+		};
+		add_filter( 'wp_generate_attachment_metadata', $fail );
+
+		$boek_post_id = self::factory()->post->create( array( 'post_type' => 'boekdb_boek' ) );
+		try {
+			$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek_post_id );
+		} catch ( \RuntimeException $e ) {
+			unset( $e );
+		}
+		remove_filter( 'wp_generate_attachment_metadata', $fail );
+
+		$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek_post_id );
+
+		$this->assertCount(
+			1,
+			get_children(
+				array(
+					'post_parent' => $boek_post_id,
+					'post_type'   => 'attachment',
+				)
+			),
+			'The cover should be on the site once.'
+		);
+	}
+
+	/**
 	 * A file that disappeared from disk is fetched again. The book has to end up pointing at
 	 * what was just downloaded, not at nothing: an empty _thumbnail_id is a book without a
 	 * cover on every template that shows one.

@@ -1402,10 +1402,12 @@ class BoekDB_Import {
 			);
 
 			$attachment_id = wp_insert_attachment( $attachment, $image['file'] );
+			// Recognisable before the sizes are made, which can fail or end the process: a
+			// retry finds this one instead of downloading another copy.
+			update_post_meta( $attachment_id, 'hash', $hash );
 			self::take_over_references( $replaced_id, $references, $attachment_id );
 			self::store_attachment_metadata( $attachment_id, $image, $bestand->soort );
 
-			update_post_meta( $attachment_id, 'hash', $hash );
 			// The name boekdb_serie_data() reads it back under.
 			update_term_meta( $term_id, 'boekdb_seriebeeld_id', $attachment_id );
 		} else {
@@ -1684,6 +1686,9 @@ class BoekDB_Import {
 				);
 
 				$attachment_id = wp_insert_attachment( $attachment, $file['file'], $boek_post_id );
+				// Recognisable before the sizes are made, which can fail or end the process: a
+				// retry finds this one instead of downloading another copy.
+				update_post_meta( $attachment_id, 'hash', $hash );
 				self::take_over_references( $replaced_id, $references, $attachment_id );
 				if ( ! is_wp_error( $attachment_id ) ) {
 					self::store_attachment_metadata( $attachment_id, $file, $bestand->soort );
@@ -1691,7 +1696,6 @@ class BoekDB_Import {
 					boekdb_debug( 'Error inserting attachment: ' . $attachment_id->get_error_message() );
 				}
 
-				update_post_meta( $attachment_id, 'hash', $hash );
 				self::link_file_to_boek( $boek_post_id, $attachment_id, $bestand->soort );
 			} else {
 				$attachment = get_post( $attachment_id );
@@ -1888,6 +1892,9 @@ class BoekDB_Import {
 				);
 
 				$attachment_id = wp_insert_attachment( $attachment, $image['file'] );
+				// Recognisable before the sizes are made, which can fail or end the process: a
+				// retry finds this one instead of downloading another copy.
+				update_post_meta( $attachment_id, 'hash', $hash );
 				self::take_over_references( $replaced_id, $references, $attachment_id );
 				if ( ! is_wp_error( $attachment_id ) ) {
 					self::store_attachment_metadata( $attachment_id, $image, $bestand->soort );
@@ -1896,7 +1903,6 @@ class BoekDB_Import {
 					continue;
 				}
 
-				update_post_meta( $attachment_id, 'hash', $hash );
 				update_term_meta( $term_id, 'auteursfoto_id', $attachment_id );
 				if ( isset( $bestand->copyright ) ) {
 					update_term_meta( $term_id, 'auteursfoto_copyright', $bestand->copyright );
