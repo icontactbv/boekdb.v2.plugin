@@ -45,26 +45,31 @@ function BoekDB() { // phpcs:ignore WordPress.NamingConventions.ValidFunctionNam
 }
 
 /**
- * Debug function
+ * Writes a message to the debug log, when the site keeps one.
  *
- * @param $message
+ * @param mixed $message  The message, or a value to dump.
  */
 function boekdb_debug( $message ) {
 	if ( WP_DEBUG && WP_DEBUG_LOG ) {
 		if ( ! is_string( $message ) ) {
-			$message = var_export( $message, true );
+			$message = var_export( $message, true ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Writing to the debug log is what this function is for.
 		}
 		/**
 		 * Don't inspect this line, it's a debug function
 		 *
 		 * @noinspection ForgottenDebugOutputInspection
 		 */
-		error_log( $message );
+		error_log( $message ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Writing to the debug log is what this function is for.
 	}
 }
 
 BoekDB();
 
+/**
+ * Whether any etalage is being imported or waits for its next batch.
+ *
+ * @return bool
+ */
 function boekdb_is_import_running() {
 	global $wpdb;
 
@@ -82,7 +87,7 @@ function boekdb_is_import_running() {
 /**
  * Fetches the data for a single book
  *
- * @param $id
+ * @param int $id  The ID of the book.
  *
  * @return array
  */
@@ -94,15 +99,15 @@ function boekdb_boek_data( $id ) {
 			$data[ substr( $name, 7 ) ] = $value[0];
 		}
 		if ( $name === 'boekdb_recensiequotes' ) {
-			$quotes = unserialize( $value[0] );
+			$quotes = maybe_unserialize( $value[0] );
 			$parsed = array();
-			foreach ( $quotes as $quote ) {
+			foreach ( (array) $quotes as $quote ) {
 				if ( $quote['tonen'] ) {
 					unset( $quote['tonen'] );
 					$parsed[] = $quote;
 				}
 			}
-			$data[ substr( $name, 7 ) ] = serialize( $parsed );
+			$data[ substr( $name, 7 ) ] = serialize( $parsed ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Templates read this field as a serialized string, as they always have.
 		}
 	}
 
@@ -117,7 +122,7 @@ function boekdb_boek_data( $id ) {
 /**
  * Fetches the data for all betrokkenen
  *
- * @param $id
+ * @param int $id  The ID of the book.
  *
  * @return array
  */
@@ -142,8 +147,8 @@ function boekdb_betrokkenen_data( $id ) {
 /**
  * Fetches the data for a single betrokkene
  *
- * @param $id
- * @param $term
+ * @param int          $id    The ID of the term.
+ * @param WP_Term|null $term  The term, when the caller has it already.
  *
  * @return array
  */
@@ -268,7 +273,7 @@ function boekdb_startswith( $haystack, $needle ) {
 /**
  * Returns the slug for a given verschijningsvorm code
  *
- * @param $code The verschijningsvorm code
+ * @param string $code  The verschijningsvorm code
  *
  * @return string The verschijningsvorm slug
  */
@@ -332,7 +337,7 @@ add_filter( 'posts_join', 'boekdb_etalage_join', 10, 2 );
 function boekdb_add_minutely( $schedules ) {
 	$schedules['minutely'] = array(
 		'interval' => 60,
-		'display'  => __( 'Every minute' ),
+		'display'  => __( 'Every minute', 'boekdb' ),
 	);
 
 	return $schedules;
@@ -341,11 +346,11 @@ function boekdb_add_minutely( $schedules ) {
 /**
  * Fetches the alternate URLs for a given post ID
  *
- * @param int $postId  The ID of the post
+ * @param int $post_id  The ID of the post
  *
  * @return array An array of alternate URLs with their corresponding etalage names
  */
-function boekdb_get_alternate_urls( $postId ) {
+function boekdb_get_alternate_urls( $post_id ) {
 	global $wpdb;
 
 	$prefix_records = $wpdb->get_results(
@@ -355,7 +360,7 @@ function boekdb_get_alternate_urls( $postId ) {
             FROM `{$wpdb->prefix}boekdb_etalages` AS e
             JOIN `{$wpdb->prefix}boekdb_etalage_boeken` AS eb ON e.id = eb.etalage_id
             WHERE eb.boek_id = %d",
-			$postId
+			$post_id
 		)
 	);
 
@@ -371,24 +376,33 @@ function boekdb_get_alternate_urls( $postId ) {
 		$prefix           = $record->prefix;
 		$alternate_urls[] = array(
 			'name' => $etalage_name,
-			'url'  => home_url( '/boek/' . esc_sql( $prefix ) . '/' . get_post_field( 'post_name', $postId ) . '/' ),
+			'url'  => home_url( '/boek/' . esc_sql( $prefix ) . '/' . get_post_field( 'post_name', $post_id ) . '/' ),
 		);
 	}
 
 	// Add the default URL
 	$alternate_urls[] = array(
 		'name' => 'default',
-		'url'  => home_url( '/boek/' . get_post_field( 'post_name', $postId ) . '/' ),
+		'url'  => home_url( '/boek/' . get_post_field( 'post_name', $post_id ) . '/' ),
 	);
 
 	return $alternate_urls;
 }
 
-add_filter( 'cron_schedules', 'boekdb_add_minutely' );
+add_filter( 'cron_schedules', 'boekdb_add_minutely' ); // phpcs:ignore WordPress.WP.CronInterval.CronSchedulesInterval -- Batches follow one another as fast as they can.
 
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	add_filter( 'post_type_link', 'boekdb_modify_boek_permalink', 10, 2 );
 
+	/**
+	 * The permalink of a book: the alternate url chosen for it, or the one under the prefix
+	 * of its etalage.
+	 *
+	 * @param string  $post_link  The permalink WordPress made.
+	 * @param WP_Post $post       The post.
+	 *
+	 * @return string
+	 */
 	function boekdb_modify_boek_permalink( $post_link, $post ) {
 		// Only apply changes for 'boekdb_boek' post type
 		if ( 'boekdb_boek' === $post->post_type ) {

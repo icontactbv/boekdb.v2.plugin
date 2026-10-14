@@ -1,6 +1,8 @@
 <?php
 /**
  * Voorbeeld-template voor ophalen van boek-informatie
+ *
+ * @package BoekDB
  */
 
 get_header();
@@ -32,38 +34,38 @@ while ( have_posts() ) :
 			<?php
 			the_content();
 
-			$boek_data = boekdb_boek_data( get_the_ID() );
+			$boekdb_boek_data = boekdb_boek_data( get_the_ID() );
 			echo '<table>';
 			echo '<tr><th>Key</th><th>Waarde</th></tr>';
-			foreach ( $boek_data as $key => $value ) {
-				echo '<tr><td>' . $key . '</td><td>' . $value . '</td></tr>';
+			foreach ( $boekdb_boek_data as $boekdb_key => $boekdb_value ) {
+				echo '<tr><td>' . esc_html( $boekdb_key ) . '</td><td>' . esc_html( $boekdb_value ) . '</td></tr>';
 			}
-			if ( isset( $boek_data['file_voorbeeld_id'] ) ) {
+			if ( isset( $boekdb_boek_data['file_voorbeeld_id'] ) ) {
 				echo '<tr><td>Fragment</td><td>';
-				echo wp_get_attachment_link( $boek_data['file_voorbeeld_id'] );
+				echo wp_get_attachment_link( $boekdb_boek_data['file_voorbeeld_id'] );
 				echo '</td></tr>';
 			}
-			if ( isset( $boek_data['file_backcover_id'] ) ) {
+			if ( isset( $boekdb_boek_data['file_backcover_id'] ) ) {
 				echo '<tr><td>Back cover</td><td>';
-				$image_attributes = wp_get_attachment_image_src( $boek_data['file_backcover_id'] );
-				if ( $image_attributes ) :
+				$boekdb_image_attributes = wp_get_attachment_image_src( $boekdb_boek_data['file_backcover_id'] );
+				if ( $boekdb_image_attributes ) :
 					?>
 					<a href="
 					<?php
-					echo wp_get_original_image_url( $boek_data['file_backcover_id'] )
+					echo esc_url( wp_get_original_image_url( $boekdb_boek_data['file_backcover_id'] ) );
 					?>
 					">
 						<img src="
 						<?php
-						echo $image_attributes[0];
+						echo esc_attr( $boekdb_image_attributes[0] );
 						?>
 						" width="
 						<?php
-						echo $image_attributes[1];
+						echo esc_attr( $boekdb_image_attributes[1] );
 						?>
 						" height="
 						<?php
-						echo $image_attributes[2];
+						echo esc_attr( $boekdb_image_attributes[2] );
 						?>
 						"/>
 					</a>
@@ -71,27 +73,27 @@ while ( have_posts() ) :
 				endif;
 				echo '</td></tr>';
 			}
-			if ( isset( $boek_data['serie_beeld_id'] ) ) {
+			if ( isset( $boekdb_boek_data['serie_beeld_id'] ) ) {
 				echo '<tr><td>Seriebeeld</td><td>';
-				$image_attributes = wp_get_attachment_image_src( $boek_data['serie_beeld_id'] );
-				if ( $image_attributes ) :
+				$boekdb_image_attributes = wp_get_attachment_image_src( $boekdb_boek_data['serie_beeld_id'] );
+				if ( $boekdb_image_attributes ) :
 					?>
 					<a href="
 					<?php
-					echo wp_get_original_image_url( $boek_data['serie_beeld_id'] )
+					echo esc_url( wp_get_original_image_url( $boekdb_boek_data['serie_beeld_id'] ) );
 					?>
 					">
 						<img src="
 						<?php
-						echo $image_attributes[0];
+						echo esc_attr( $boekdb_image_attributes[0] );
 						?>
 						" width="
 						<?php
-						echo $image_attributes[1];
+						echo esc_attr( $boekdb_image_attributes[1] );
 						?>
 						" height="
 						<?php
-						echo $image_attributes[2];
+						echo esc_attr( $boekdb_image_attributes[2] );
 						?>
 						"/>
 					</a>
@@ -101,32 +103,32 @@ while ( have_posts() ) :
 			}
 			echo '</table>';
 
-			$alle_betrokkenen = boekdb_betrokkenen_data( get_the_ID() );
+			$boekdb_alle_betrokkenen = boekdb_betrokkenen_data( get_the_ID() );
 			echo '<table>';
-			foreach ( $alle_betrokkenen as $rol => $betrokkenen ) {
-				foreach ( $betrokkenen as $betrokkene ) {
+			foreach ( $boekdb_alle_betrokkenen as $boekdb_rol => $boekdb_betrokkenen ) {
+				foreach ( $boekdb_betrokkenen as $boekdb_betrokkene ) {
 					echo '<tr><td>';
-					if ( isset( $betrokkene['auteursfoto_id'] ) ) {
+					if ( isset( $boekdb_betrokkene['auteursfoto_id'] ) ) {
 						echo '<strong>Auteursfoto</strong>:<br />';
-						$image_attributes = wp_get_attachment_image_src( $betrokkene['auteursfoto_id'] );
-						if ( $image_attributes ) :
+						$boekdb_image_attributes = wp_get_attachment_image_src( $boekdb_betrokkene['auteursfoto_id'] );
+						if ( $boekdb_image_attributes ) :
 							?>
 							<a href="
 							<?php
-							echo wp_get_original_image_url( $betrokkene['auteursfoto_id'] )
+							echo esc_url( wp_get_original_image_url( $boekdb_betrokkene['auteursfoto_id'] ) );
 							?>
 							">
 								<img src="
 								<?php
-								echo $image_attributes[0];
+								echo esc_attr( $boekdb_image_attributes[0] );
 								?>
 								" width="
 								<?php
-								echo $image_attributes[1];
+								echo esc_attr( $boekdb_image_attributes[1] );
 								?>
 								" height="
 								<?php
-								echo $image_attributes[2];
+								echo esc_attr( $boekdb_image_attributes[2] );
 								?>
 								"/>
 							</a>
@@ -137,56 +139,60 @@ while ( have_posts() ) :
 				}
 			}
 
-			if ( isset( $boek_data['actieprijzen'] ) ) {
+			if ( isset( $boekdb_boek_data['actieprijzen'] ) ) {
 				echo '<strong>Actieprijzen</strong><br />';
-				$actieprijzen = unserialize( $boek_data['actieprijzen'] );
-				foreach ( $actieprijzen as $actieprijs ) {
-					echo 'Actieprijs: ' . $actieprijs['actieprijs'] . '<br />';
-					echo 'Van: ' . DateTime::createFromFormat(
-						'Y-m-d',
-						$actieprijs['actieperiode_start']
-					)->format( 'd-m-Y' ) . '<br/>';
-					echo 'Tot: ' . DateTime::createFromFormat(
-						'Y-m-d',
-						$actieprijs['actieperiode_einde']
-					)->format( 'd-m-Y' ) . '<br/>';
+				$boekdb_actieprijzen = maybe_unserialize( $boekdb_boek_data['actieprijzen'] );
+				foreach ( $boekdb_actieprijzen as $boekdb_actieprijs ) {
+					echo 'Actieprijs: ' . esc_html( $boekdb_actieprijs['actieprijs'] ) . '<br />';
+					echo 'Van: ' . esc_html(
+						DateTime::createFromFormat(
+							'Y-m-d',
+							$boekdb_actieprijs['actieperiode_start']
+						)->format( 'd-m-Y' )
+					) . '<br/>';
+					echo 'Tot: ' . esc_html(
+						DateTime::createFromFormat(
+							'Y-m-d',
+							$boekdb_actieprijs['actieperiode_einde']
+						)->format( 'd-m-Y' )
+					) . '<br/>';
 					echo '<br />';
 				}
 			}
 
-			if ( isset( $boek_data['links'] ) ) {
+			if ( isset( $boekdb_boek_data['links'] ) ) {
 				echo '<strong>Links</strong><br />';
-				$links = unserialize( $boek_data['links'] );
-				foreach ( $links as $link ) {
-					echo 'Link naar ' . $link['soort'] . ' : ' . $link['url'] . '<br />';
+				$boekdb_links = maybe_unserialize( $boekdb_boek_data['links'] );
+				foreach ( $boekdb_links as $boekdb_link ) {
+					echo 'Link naar ' . esc_html( $boekdb_link['soort'] ) . ' : ' . esc_url( $boekdb_link['url'] ) . '<br />';
 				}
 			}
 
-			if ( isset( $boek_data['literaireprijzen'] ) ) {
+			if ( isset( $boekdb_boek_data['literaireprijzen'] ) ) {
 				echo '<strong>Literaire prijzen</strong><br />';
-				$literaireprijzen = unserialize( $boek_data['literaireprijzen'] );
-				foreach ( $literaireprijzen as $literaireprijs ) {
-					echo $literaireprijs['prestatie'] . ' ' . $literaireprijs['naam'] . ' ' . $literaireprijs['jaar'] . '<br />';
-					echo $literaireprijs['omschrijving'] . '<br />';
-					echo $literaireprijs['land'] . '<br />';
+				$boekdb_literaireprijzen = maybe_unserialize( $boekdb_boek_data['literaireprijzen'] );
+				foreach ( $boekdb_literaireprijzen as $boekdb_literaireprijs ) {
+					echo esc_html( $boekdb_literaireprijs['prestatie'] ) . ' ' . esc_html( $boekdb_literaireprijs['naam'] ) . ' ' . esc_html( $boekdb_literaireprijs['jaar'] ) . '<br />';
+					echo esc_html( $boekdb_literaireprijs['omschrijving'] ) . '<br />';
+					echo esc_html( $boekdb_literaireprijs['land'] ) . '<br />';
 				}
 			}
 
-			if ( isset( $boek_data['recensielinks'] ) ) {
+			if ( isset( $boekdb_boek_data['recensielinks'] ) ) {
 				echo '<strong>Recensies</strong><br />';
-				$recensielinks = unserialize( $boek_data['recensielinks'] );
-				foreach ( $recensielinks as $link ) {
-					echo $link['bron'] . ' ' . $link['datum'] . ' ' . $link['soort'] . ':<br />';
-					echo $link['url'] . '<br />';
+				$boekdb_recensielinks = maybe_unserialize( $boekdb_boek_data['recensielinks'] );
+				foreach ( $boekdb_recensielinks as $boekdb_link ) {
+					echo esc_html( $boekdb_link['bron'] ) . ' ' . esc_html( $boekdb_link['datum'] ) . ' ' . esc_html( $boekdb_link['soort'] ) . ':<br />';
+					echo esc_url( $boekdb_link['url'] ) . '<br />';
 				}
 			}
 
-			if ( isset( $boek_data['recensiequotes'] ) ) {
+			if ( isset( $boekdb_boek_data['recensiequotes'] ) ) {
 				echo '<strong>Quotes</strong><br />';
-				$recensiequotes = unserialize( $boek_data['recensiequotes'] );
-				foreach ( $recensiequotes as $quote ) {
-					echo $quote['tekst'] . '<br />';
-					echo $quote['auteur'] . ' - ' . $quote['bron'] . ' - ' . $quote['datum'] . '<br />';
+				$boekdb_recensiequotes = maybe_unserialize( $boekdb_boek_data['recensiequotes'] );
+				foreach ( $boekdb_recensiequotes as $boekdb_quote ) {
+					echo wp_kses_post( $boekdb_quote['tekst'] ) . '<br />';
+					echo esc_html( $boekdb_quote['auteur'] ) . ' - ' . esc_html( $boekdb_quote['bron'] ) . ' - ' . esc_html( $boekdb_quote['datum'] ) . '<br />';
 				}
 			}
 
@@ -195,11 +201,11 @@ while ( have_posts() ) :
 				array(
 					'before'   => '<nav class="page-links" aria-label="' . esc_attr__(
 						'Page',
-						'twentytwentyone'
+						'boekdb'
 					) . '">',
 					'after'    => '</nav>',
 					/* translators: %: Page number. */
-					'pagelink' => esc_html__( 'Page %', 'twentytwentyone' ),
+					'pagelink' => esc_html__( 'Page %', 'boekdb' ),
 				)
 			);
 	?>

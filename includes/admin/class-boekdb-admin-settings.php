@@ -97,11 +97,11 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * @return void
 		 */
 		private static function test_connection() {
-			$testResponse = Boekdb_Api_Service::test_api_connection();
-			if ( ! $testResponse['success'] ) {
-				self::add_error( $testResponse['message'] );
+			$test_response = Boekdb_Api_Service::test_api_connection();
+			if ( ! $test_response['success'] ) {
+				self::add_error( $test_response['message'] );
 			} else {
-				self::add_message( $testResponse['message'] );
+				self::add_message( $test_response['message'] );
 			}
 		}
 
@@ -210,7 +210,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 */
 		private static function reset_etalage() {
 			global $wpdb;
-			$id = (int) $_POST['reset'];
+			$id = isset( $_POST['reset'] ) ? (int) $_POST['reset'] : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- save() checked the nonce.
 			if ( $id > 0 ) {
 				$wpdb->query(
 					$wpdb->prepare(
@@ -229,7 +229,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * @return void
 		 */
 		private static function delete_etalage() {
-			$id = (int) $_POST['delete'];
+			$id = isset( $_POST['delete'] ) ? (int) $_POST['delete'] : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- save() checked the nonce.
 			if ( $id > 0 ) {
 				BoekDB_Cleanup::delete_etalage( $id );
 				set_transient( 'boekdb_admin_notice', 'Etalage is verwijderd.', 60 );

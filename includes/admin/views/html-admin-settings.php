@@ -41,13 +41,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<tbody>
 			<?php
 
-			foreach ( $boekdb_etalages as $etalage ) :
-				if ( $etalage->running > 0 ) {
-					$disabled = 'disabled="disabled" aria-disabled="true"';
-				} else {
-					$disabled = '';
-				}
-
+			foreach ( $boekdb_etalages as $boekdb_etalage ) :
 				include 'html-admin-etalage-row.php'; // includes the etalage row template
 
 			endforeach;

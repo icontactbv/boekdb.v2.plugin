@@ -60,13 +60,12 @@ class FailedBooksTest extends WP_UnitTestCase {
 	private function render_row() {
 		global $wpdb;
 
-		$etalage = $wpdb->get_row(
+		$boekdb_etalage = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $this->etalage_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		);
 
-		$etalage->boeken = 0;
-		$disabled        = '';
-		$boekdb_status   = BoekDB_Import::status();
+		$boekdb_etalage->boeken = 0;
+		$boekdb_status          = BoekDB_Import::status();
 
 		ob_start();
 		include BOEKDB_ABSPATH . 'includes/admin/views/html-admin-etalage-row.php';
