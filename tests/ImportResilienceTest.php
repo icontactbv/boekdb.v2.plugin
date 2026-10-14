@@ -472,21 +472,6 @@ class ImportResilienceTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Reads a column of the etalage row.
-	 *
-	 * @param string $column  Column name.
-	 *
-	 * @return int
-	 */
-	private function etalage_value( $column ) {
-		global $wpdb;
-
-		return (int) $wpdb->get_var(
-			$wpdb->prepare( "SELECT `{$column}` FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $this->etalage_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		);
-	}
-
-	/**
 	 * Stop is pressed in the admin while a batch is running here. That is another request,
 	 * so this one has to look in the database rather than at what it cached.
 	 */
@@ -508,7 +493,7 @@ class ImportResilienceTest extends WP_UnitTestCase {
 
 		BoekDB_Import::import();
 
-		$this->assertSame( 0, $this->etalage_value( 'running' ), 'A stopped import should not be queued again.' );
+		$this->assertSame( 0, $this->etalage_column( 'running' ), 'A stopped import should not be queued again.' );
 	}
 
 	/**
@@ -524,7 +509,7 @@ class ImportResilienceTest extends WP_UnitTestCase {
 
 		BoekDB_Import::import();
 
-		$this->assertSame( 0, $this->etalage_value( 'offset' ), 'The offset belongs to whoever holds the lock.' );
+		$this->assertSame( 0, $this->etalage_column( 'offset' ), 'The offset belongs to whoever holds the lock.' );
 	}
 
 	/**
@@ -1068,7 +1053,7 @@ class ImportResilienceTest extends WP_UnitTestCase {
 
 		BoekDB_Import::import();
 
-		$this->assertSame( 1, $this->etalage_value( 'running' ), 'The new owner decides the state of the etalage.' );
+		$this->assertSame( 1, $this->etalage_column( 'running' ), 'The new owner decides the state of the etalage.' );
 	}
 
 	/**

@@ -279,22 +279,27 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			foreach ( $status['etalages'] as $etalage ) {
 				if ( 'busy' === $etalage['state'] ) {
 					if ( $etalage['size'] > 0 ) {
-						$text = sprintf( 'Bezig met %s: boek %d van %d in de batch vanaf boek %d.', $etalage['name'], $etalage['done'], $etalage['size'], $etalage['offset'] + 1 );
+						/* translators: 1: etalage name, 2: book being worked on, 3: books in the batch, 4: first book of the batch. */
+						$text = sprintf( __( 'Bezig met %1$s: boek %2$d van %3$d in de batch vanaf boek %4$d.', 'boekdb' ), $etalage['name'], $etalage['done'], $etalage['size'], $etalage['offset'] + 1 );
 					} else {
-						$text = sprintf( 'Bezig met %s: de rest van de etalage is binnen, de overgeslagen boeken worden opnieuw geprobeerd.', $etalage['name'] );
+						/* translators: %s: etalage name. */
+						$text = sprintf( __( 'Bezig met %s: de rest van de etalage is binnen, de overgeslagen boeken worden opnieuw geprobeerd.', 'boekdb' ), $etalage['name'] );
 					}
 
 					$seconds   = max( 0, time() - $etalage['heartbeat'] );
 					$notices[] = array(
 						'type' => 'info',
-						'text' => $text . ( 1 === $seconds ? ' Laatste teken van leven: 1 seconde geleden.' : sprintf( ' Laatste teken van leven: %d seconden geleden.', $seconds ) ),
+						/* translators: %d: seconds since the batch last reported in. */
+						'text' => $text . ' ' . sprintf( _n( 'Laatste teken van leven: %d seconde geleden.', 'Laatste teken van leven: %d seconden geleden.', $seconds, 'boekdb' ), $seconds ),
 					);
 				} elseif ( 'stuck' === $etalage['state'] ) {
 					$notices[] = array(
 						'type' => 'warning',
 						'text' => is_null( $etalage['heartbeat'] )
-							? sprintf( '%s lijkt vastgelopen en wordt bij de volgende batch hervat.', $etalage['name'] )
-							: sprintf( '%s lijkt vastgelopen sinds %s en wordt bij de volgende batch hervat.', $etalage['name'], wp_date( 'H:i', $etalage['heartbeat'] ) ),
+							/* translators: %s: etalage name. */
+							? sprintf( __( '%s lijkt vastgelopen en wordt bij de volgende batch hervat.', 'boekdb' ), $etalage['name'] )
+							/* translators: 1: etalage name, 2: time it last reported in. */
+							: sprintf( __( '%1$s lijkt vastgelopen sinds %2$s en wordt bij de volgende batch hervat.', 'boekdb' ), $etalage['name'], wp_date( 'H:i', $etalage['heartbeat'] ) ),
 					);
 				} elseif ( 'waiting' === $etalage['state'] ) {
 					++$waiting;
@@ -302,22 +307,32 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			}
 
 			if ( $waiting > 0 ) {
-				$text = 1 === $waiting ? '1 etalage wacht' : sprintf( '%d etalages wachten', $waiting );
+				/* translators: %d: number of waiting etalages. */
+				$text = sprintf( _n( '%d etalage wacht', '%d etalages wachten', $waiting, 'boekdb' ), $waiting );
 
 				if ( $scheduled ) {
 					$notices[] = array(
 						'type' => 'warning',
-						'text' => $text . ', maar er stond geen batch ingepland. Die is nu ingepland.',
+						/* translators: %s: how many etalages wait. */
+						'text' => sprintf( __( '%s, maar er stond geen batch ingepland. Die is nu ingepland.', 'boekdb' ), $text ),
 					);
 				} elseif ( $status['stopped'] ) {
 					$notices[] = array(
 						'type' => 'info',
-						'text' => $text . '. De import is gestopt, tot iemand op Draai import drukt.',
+						/* translators: %s: how many etalages wait. */
+						'text' => sprintf( __( '%s. De import is gestopt, tot iemand op Draai import drukt.', 'boekdb' ), $text ),
+					);
+				} elseif ( $status['next_batch'] && $status['next_batch'] <= time() + MINUTE_IN_SECONDS ) {
+					$notices[] = array(
+						'type' => 'info',
+						/* translators: %s: how many etalages wait. */
+						'text' => sprintf( __( '%s. Volgende batch: binnen een minuut.', 'boekdb' ), $text ),
 					);
 				} elseif ( $status['next_batch'] ) {
 					$notices[] = array(
 						'type' => 'info',
-						'text' => $text . '. Volgende batch: ' . ( $status['next_batch'] <= time() + MINUTE_IN_SECONDS ? 'binnen een minuut.' : 'om ' . wp_date( 'H:i', $status['next_batch'] ) . '.' ),
+						/* translators: 1: how many etalages wait, 2: time of the next batch. */
+						'text' => sprintf( __( '%1$s. Volgende batch: om %2$s.', 'boekdb' ), $text, wp_date( 'H:i', $status['next_batch'] ) ),
 					);
 				} else {
 					$notices[] = array(
@@ -330,7 +345,10 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			if ( count( $notices ) === 0 ) {
 				$notices[] = array(
 					'type' => 'info',
-					'text' => 'Geen import bezig.' . ( $status['next_round'] ? ' Volgende ronde om ' . wp_date( 'H:i', $status['next_round'] ) . '.' : '' ),
+					'text' => $status['next_round']
+						/* translators: %s: time of the next round. */
+						? sprintf( __( 'Geen import bezig. Volgende ronde om %s.', 'boekdb' ), wp_date( 'H:i', $status['next_round'] ) )
+						: __( 'Geen import bezig.', 'boekdb' ),
 				);
 			}
 
@@ -348,12 +366,16 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			switch ( $etalage['state'] ) {
 				case 'busy':
 					return $etalage['size'] > 0
-						? sprintf( 'boek %d van %d (vanaf %d)', $etalage['done'], $etalage['size'], $etalage['offset'] + 1 )
-						: 'rondt af';
+						/* translators: 1: book being worked on, 2: books in the batch, 3: first book of the batch. */
+						? sprintf( __( 'boek %1$d van %2$d (vanaf %3$d)', 'boekdb' ), $etalage['done'], $etalage['size'], $etalage['offset'] + 1 )
+						: __( 'rondt af', 'boekdb' );
 				case 'stuck':
-					return 'vastgelopen';
+					return __( 'vastgelopen', 'boekdb' );
 				case 'waiting':
-					return $etalage['offset'] > 0 ? sprintf( 'verder vanaf boek %d', $etalage['offset'] + 1 ) : 'wacht';
+					return $etalage['offset'] > 0
+						/* translators: %d: book the next batch starts at. */
+						? sprintf( __( 'verder vanaf boek %d', 'boekdb' ), $etalage['offset'] + 1 )
+						: __( 'wacht', 'boekdb' );
 				default:
 					return '–';
 			}
@@ -369,13 +391,13 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		public static function state_text( $etalage ) {
 			switch ( $etalage['state'] ) {
 				case 'busy':
-					return 'Bezig';
+					return __( 'Bezig', 'boekdb' );
 				case 'stuck':
-					return 'Vastgelopen';
+					return __( 'Vastgelopen', 'boekdb' );
 				case 'waiting':
-					return 'Wacht';
+					return __( 'Wacht', 'boekdb' );
 				default:
-					return is_null( $etalage['finished'] ) ? '–' : 'Klaar';
+					return is_null( $etalage['finished'] ) ? '–' : __( 'Klaar', 'boekdb' );
 			}
 		}
 
