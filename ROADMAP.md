@@ -40,10 +40,10 @@ Een boek dat niet te importeren is, krijgt drie pogingen: de batch, en de herkan
 
 ## Kleinere randen in de import
 
+- Een ISBN-lijst die bij dezelfde filters onder de helft zakt, wordt een ronde vastgehouden. Een lijst die daarna maar deels herstelt (van 1000 naar 600), valt boven die drempel en wordt geloofd, waarna de ontbrekende boeken verdwijnen. Een betere maat vergelijkt met de laatste lijst die wel klopte, of houdt elke krimp boven een vast aantal boeken vast.
 - `handle_boek()` controleert het resultaat van `wp_insert_post()` niet. Een mislukte insert telt als geïmporteerd en laat koppelrijen met boek 0 achter. Dit zat ook al in 1.1.1.
 - `wp_insert_attachment()` wordt aangeroepen zonder `$wp_error`, dus de `is_wp_error()`-controles erna doen niets. Een mislukte insert geeft 0, en verwijzingen gaan naar 0.
 - Een kapot bestand wordt verwijderd voordat de vervanger binnen is. Mislukt de sideload, dan wijzen cover, achterkant, auteursfoto of seriebeeld nergens meer naar.
-- Een bijlage waarvan het maken van de afmetingen mislukte, wordt nu herkend en hergebruikt, maar krijgt haar afmetingen niet alsnog. Maak ze bij hergebruik aan als ze ontbreken.
 - `store_attachment_metadata()` slaat metadata over voor alles wat geen afbeelding is, dus ook mp3-fragmenten missen ID3- en lengtegegevens. Of iets die gebruikt, is niet bekend.
 - De permalink-cache van een boek dat een etalage verlaat, wordt niet geleegd. Een oude prefix-url blijft tot 12 uur staan.
 - `migrate_primary_meta()` verwijdert de oude sleutel ook als het kopiëren mislukte.

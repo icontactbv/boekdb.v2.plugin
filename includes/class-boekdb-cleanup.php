@@ -222,6 +222,24 @@ class BoekDB_Cleanup {
 
 		add_action( 'before_delete_post', array( self::class, 'delete_attached_media' ) );
 
+		try {
+			self::delete_posts_with_media( $post_ids );
+		} finally {
+			// The cleanup runs from cron, where other events delete posts in the same process.
+			remove_action( 'before_delete_post', array( self::class, 'delete_attached_media' ) );
+		}
+	}
+
+	/**
+	 * Delete books, while delete_attached_media() is hooked.
+	 *
+	 * @param array $post_ids  The books.
+	 *
+	 * @return void
+	 */
+	private static function delete_posts_with_media( $post_ids ) {
+		global $wpdb;
+
 		foreach ( $post_ids as $post_id ) {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}boekdb_isbns WHERE boek_id = %d", $post_id ) );
 			$wpdb->query(
@@ -235,9 +253,6 @@ class BoekDB_Cleanup {
 
 			boekdb_debug( 'deleted post ' . $post_id );
 		}
-
-		// The cleanup runs from cron, where other events delete posts in the same process.
-		remove_action( 'before_delete_post', array( self::class, 'delete_attached_media' ) );
 	}
 
 	/**

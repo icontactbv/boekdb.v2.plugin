@@ -96,12 +96,22 @@ class BoekDB_Install {
 		$rows = $wpdb->get_results(
 			"SELECT tm.term_id, tm.meta_value FROM {$wpdb->termmeta} tm
 				INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = tm.term_id AND tt.taxonomy = 'boekdb_serie_tax'
-				WHERE tm.meta_key = 'seriebeeld_id'" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+				WHERE tm.meta_key = 'seriebeeld_id'
+				ORDER BY tm.meta_id" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
 		);
 
+		// The last row written per series.
+		$images = array();
 		foreach ( $rows as $row ) {
-			update_term_meta( (int) $row->term_id, 'boekdb_seriebeeld_id', $row->meta_value );
-			delete_term_meta( (int) $row->term_id, 'seriebeeld_id' );
+			$images[ (int) $row->term_id ] = $row->meta_value;
+		}
+
+		foreach ( $images as $term_id => $attachment_id ) {
+			// Only an image that is still there replaces the one the series has.
+			if ( 'attachment' === get_post_type( (int) $attachment_id ) ) {
+				update_term_meta( $term_id, 'boekdb_seriebeeld_id', $attachment_id );
+			}
+			delete_term_meta( $term_id, 'seriebeeld_id' );
 		}
 	}
 

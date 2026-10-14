@@ -506,6 +506,33 @@ class FileDownloadTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The process can end between writing the hash and making the sizes. The retry reuses
+	 * the file, and makes what the first attempt did not get to.
+	 */
+	public function test_a_reused_cover_gets_the_metadata_it_lacks() {
+		$die = function ( $meta_id, $object_id, $meta_key ) {
+			if ( 'hash' === $meta_key ) {
+				throw new \RuntimeException( 'The process ended here.' );
+			}
+		};
+		add_action( 'added_post_meta', $die, 10, 3 );
+
+		$boek_post_id = self::factory()->post->create( array( 'post_type' => 'boekdb_boek' ) );
+		try {
+			$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek_post_id );
+		} catch ( \RuntimeException $e ) {
+			unset( $e );
+		}
+		remove_action( 'added_post_meta', $die, 10 );
+
+		$this->import_file( 'Cover', 'image/png', self::IMAGE_FILE_URL, 'cover.png', $boek_post_id );
+
+		$cover = (int) get_post_meta( $boek_post_id, '_thumbnail_id', true );
+		$this->assertNotSame( 0, $cover, 'The cover should be linked.' );
+		$this->assertNotEmpty( wp_get_attachment_metadata( $cover ), 'And have its metadata.' );
+	}
+
+	/**
 	 * A file that disappeared from disk is fetched again. The book has to end up pointing at
 	 * what was just downloaded, not at nothing: an empty _thumbnail_id is a book without a
 	 * cover on every template that shows one.

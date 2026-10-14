@@ -591,8 +591,12 @@ class BoekDB_Import {
 		// and the etalages behind it would never get their turn. The book is written down to
 		// be retried on its own, and the next batch starts after it.
 		$lock = self::read_lock( $etalage->id );
-		if ( is_array( $lock ) && ! empty( $lock['size'] ) && isset( $lock['isbn'], $lock['offset'], $lock['done'] ) ) {
-			self::remember_failed_product( $etalage, (object) array( 'isbn' => $lock['isbn'] ) );
+		if ( is_array( $lock ) && ! empty( $lock['size'] ) && isset( $lock['offset'], $lock['done'] ) ) {
+			// One without an isbn cannot be fetched again on its own, but is skipped all the
+			// same.
+			if ( isset( $lock['isbn'] ) ) {
+				self::remember_failed_product( $etalage, (object) array( 'isbn' => $lock['isbn'] ) );
+			}
 			self::update_offset( (int) $lock['offset'] + (int) $lock['done'], $etalage );
 		}
 
@@ -897,10 +901,13 @@ class BoekDB_Import {
 		$lock['time'] = time();
 		if ( $next_book ) {
 			$lock['done'] = ( isset( $lock['done'] ) ? (int) $lock['done'] : 0 ) + 1;
-		}
-		if ( null !== $isbn ) {
-			// The book being worked on, for whoever finds the batch dead on it.
-			$lock['isbn'] = (string) $isbn;
+
+			// The book being worked on, for whoever finds the batch dead on it. A book
+			// without an isbn clears it, or the one before would be blamed.
+			unset( $lock['isbn'] );
+			if ( null !== $isbn ) {
+				$lock['isbn'] = (string) $isbn;
+			}
 		}
 		$value = maybe_serialize( $lock );
 
@@ -1346,7 +1353,8 @@ class BoekDB_Import {
 		}
 
 		// The last of them, which is the one the post query handed back before. That query
-		// ordered by date alone, and MySQL 8.0 returned equal dates lowest id first.
+		// ordered by date alone, and in a test on MySQL 8.0.36 it returned equal dates lowest
+		// id first.
 		return (int) end( $post_ids );
 	}
 
@@ -1490,6 +1498,8 @@ class BoekDB_Import {
 		}
 
 		if ( ! self::attachment_is_broken( $attachment_id ) ) {
+			self::complete_image_metadata( $attachment_id );
+
 			return array( $attachment_id, null, array() );
 		}
 
@@ -1589,7 +1599,8 @@ class BoekDB_Import {
 		}
 
 		// Streams to a temporary file. Reading the body into a string instead puts the whole
-		// file in memory: a 71.5 MB pdf fragment ended the import that way at a 256M limit.
+		// file in memory: in a test on WordPress 7.1, a 71.5 MB pdf fragment ended the import
+		// that way at a 256M limit.
 		$tmp_file = download_url( $bestand->url, $timeout );
 		if ( is_wp_error( $tmp_file ) ) {
 			boekdb_debug( 'Error fetching file: ' . $bestand->url );
@@ -1637,6 +1648,34 @@ class BoekDB_Import {
 		}
 
 		return $file;
+	}
+
+	/**
+	 * Give an image the sizes it lacks.
+	 *
+	 * The hash is written before the sizes are made, so a retry recognises a file whose
+	 * sizing failed or ended the process. It reuses that file, and makes the sizes here.
+	 *
+	 * @param int $attachment_id  The attachment.
+	 *
+	 * @return void
+	 */
+	private static function complete_image_metadata( $attachment_id ) {
+		if ( ! wp_attachment_is_image( $attachment_id ) ) {
+			return;
+		}
+
+		if ( ! function_exists( 'wp_get_missing_image_subsizes' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+		}
+
+		$metadata = wp_get_attachment_metadata( $attachment_id );
+		if ( ! empty( $metadata ) && count( wp_get_missing_image_subsizes( $attachment_id ) ) === 0 ) {
+			return;
+		}
+
+		// WordPress picks up where sizing stopped, or starts it when nothing was saved.
+		wp_update_image_subsizes( $attachment_id );
 	}
 
 	/**
@@ -2027,7 +2066,8 @@ class BoekDB_Import {
 
 		// Every book of this title, in one query. A WP_Query with a meta_query ran several,
 		// for every product of every batch. Equal dates go lowest id first, as that query
-		// returned them, or the primary edition of books written in the same second swaps.
+		// returned them in a test on MySQL 8.0.36, or the primary edition of books written
+		// in the same second swaps.
 		$post_ids = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT p.ID FROM {$wpdb->posts} p

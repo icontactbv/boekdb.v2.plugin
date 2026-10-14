@@ -24,13 +24,27 @@ class SerieImageMetaTest extends WP_UnitTestCase {
 	 */
 	public function test_an_image_under_the_old_key_is_moved() {
 		$serie = self::factory()->term->create( array( 'taxonomy' => 'boekdb_serie_tax' ) );
-		add_term_meta( $serie, 'seriebeeld_id', '42' );
+		$image = (string) $this->image();
+		add_term_meta( $serie, 'seriebeeld_id', $image );
 
 		BoekDB_Install::migrate_serie_image_meta();
 
-		$this->assertSame( '42', get_term_meta( $serie, 'boekdb_seriebeeld_id', true ) );
+		$this->assertSame( $image, get_term_meta( $serie, 'boekdb_seriebeeld_id', true ) );
 		$this->assertSame( '', get_term_meta( $serie, 'seriebeeld_id', true ) );
-		$this->assertSame( '42', boekdb_serie_data( $serie )['serie_beeld_id'] );
+		$this->assertSame( $image, boekdb_serie_data( $serie )['serie_beeld_id'] );
+	}
+
+	/**
+	 * An image attachment.
+	 *
+	 * @return int
+	 */
+	private function image() {
+		return self::factory()->attachment->create_object(
+			'serie.jpg',
+			0,
+			array( 'post_mime_type' => 'image/jpeg' )
+		);
 	}
 
 	/**
@@ -38,12 +52,29 @@ class SerieImageMetaTest extends WP_UnitTestCase {
 	 */
 	public function test_the_old_key_wins_where_both_are_there() {
 		$serie = self::factory()->term->create( array( 'taxonomy' => 'boekdb_serie_tax' ) );
-		add_term_meta( $serie, 'boekdb_seriebeeld_id', '7' );
-		add_term_meta( $serie, 'seriebeeld_id', '42' );
+		$older = (string) $this->image();
+		$later = (string) $this->image();
+		add_term_meta( $serie, 'boekdb_seriebeeld_id', $older );
+		add_term_meta( $serie, 'seriebeeld_id', $later );
 
 		BoekDB_Install::migrate_serie_image_meta();
 
-		$this->assertSame( array( '42' ), get_term_meta( $serie, 'boekdb_seriebeeld_id', false ) );
+		$this->assertSame( array( $later ), get_term_meta( $serie, 'boekdb_seriebeeld_id', false ) );
+	}
+
+	/**
+	 * Unless the old key points at an image that is gone: the series keeps the one it has.
+	 */
+	public function test_an_old_key_pointing_at_nothing_does_not_replace_a_good_image() {
+		$serie = self::factory()->term->create( array( 'taxonomy' => 'boekdb_serie_tax' ) );
+		$good  = (string) $this->image();
+		add_term_meta( $serie, 'boekdb_seriebeeld_id', $good );
+		add_term_meta( $serie, 'seriebeeld_id', '999999' );
+
+		BoekDB_Install::migrate_serie_image_meta();
+
+		$this->assertSame( $good, get_term_meta( $serie, 'boekdb_seriebeeld_id', true ) );
+		$this->assertSame( '', get_term_meta( $serie, 'seriebeeld_id', true ), 'The old key is cleared all the same.' );
 	}
 
 	/**
