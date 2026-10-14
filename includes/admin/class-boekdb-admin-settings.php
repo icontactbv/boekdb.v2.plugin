@@ -125,9 +125,13 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		private static function save_etalage() {
 			global $wpdb;
 
-			$api_key = sanitize_text_field( $_POST['etalage_api_key'] );
-			$name    = sanitize_text_field( $_POST['etalage_name'] );
-			$prefix  = strtolower( sanitize_text_field( $_POST['etalage_prefix'] ) );
+			// WordPress slashes the form data. Unslashed, or a name with a quote in it is stored
+			// with a backslash.
+			// phpcs:disable WordPress.Security.NonceVerification.Missing -- save() checked the nonce.
+			$api_key = sanitize_text_field( wp_unslash( isset( $_POST['etalage_api_key'] ) ? $_POST['etalage_api_key'] : '' ) );
+			$name    = sanitize_text_field( wp_unslash( isset( $_POST['etalage_name'] ) ? $_POST['etalage_name'] : '' ) );
+			$prefix  = strtolower( sanitize_text_field( wp_unslash( isset( $_POST['etalage_prefix'] ) ? $_POST['etalage_prefix'] : '' ) ) );
+			// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 			if ( strlen( $api_key ) === 0 || strlen( $name ) === 0 ) {
 				self::add_error( 'Er is iets fout gegaan' );

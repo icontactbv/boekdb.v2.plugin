@@ -125,4 +125,57 @@ class AdminSettingsAccessTest extends WP_UnitTestCase {
 
 		$this->assertFalse( $this->etalage_exists(), 'An administrator should be able to delete an etalage.' );
 	}
+
+	/**
+	 * WordPress slashes the form data. A name with a quote in it is stored as typed.
+	 */
+	public function test_an_etalage_name_with_a_quote_is_stored_as_typed() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		add_filter( 'pre_http_request', array( $this, 'answer_as_boekdb' ), 9, 3 );
+		$_POST = wp_slash(
+			array(
+				'save'            => '1',
+				'etalage_api_key' => 'nieuwe-sleutel',
+				'etalage_name'    => 'Uitgeverij \'t Hoofd',
+				'etalage_prefix'  => '',
+				'_wpnonce'        => wp_create_nonce( 'boekdb-settings' ),
+			)
+		);
+
+		BoekDB_Admin_Settings::save();
+		remove_filter( 'pre_http_request', array( $this, 'answer_as_boekdb' ), 9 );
+
+		global $wpdb;
+		$this->assertSame(
+			'Uitgeverij \'t Hoofd',
+			$wpdb->get_var( "SELECT name FROM {$wpdb->prefix}boekdb_etalages WHERE api_key = 'nieuwe-sleutel'" ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		);
+	}
+
+	/**
+	 * Answers the connection test and the key check as BoekDB does for a valid key.
+	 *
+	 * @param mixed  $preempt  The pre-empted response, or false.
+	 * @param array  $args     The request arguments.
+	 * @param string $url      The request URL.
+	 *
+	 * @return array
+	 */
+	public function answer_as_boekdb( $preempt, $args, $url ) {
+		return array(
+			'response' => array(
+				'code'    => 200,
+				'message' => 'OK',
+			),
+			'body'     => wp_json_encode(
+				array(
+					'hello',
+					'plugin_version' => '1.2.0',
+				)
+			),
+			'headers'  => array(),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+	}
 }
