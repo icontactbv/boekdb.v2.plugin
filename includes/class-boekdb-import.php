@@ -145,7 +145,7 @@ class BoekDB_Import {
 	 * Import products from API
 	 */
 	public static function import() {
-		set_time_limit( 0 );
+		boekdb_lift_time_limit();
 		boekdb_debug( 'Importing products...' );
 
 		self::reclaim_stale_locks();
@@ -2187,7 +2187,7 @@ class BoekDB_Import {
 	 * @return void
 	 */
 	public static function start_import() {
-		set_time_limit( 0 );
+		boekdb_lift_time_limit();
 
 		if ( self::is_stopped() ) {
 			boekdb_debug( 'Import was stopped, not starting' );

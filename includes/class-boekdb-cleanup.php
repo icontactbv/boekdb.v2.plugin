@@ -328,6 +328,9 @@ class BoekDB_Cleanup {
 			return;
 		}
 
+		// No release scheduled it before, so its first runs on a site can have a lot to do.
+		boekdb_lift_time_limit();
+
 		// Every step below deletes what a lookup did not find. A lookup that failed finds
 		// nothing, so the cleanup stops instead of taking that for an empty site.
 		$etalages = BoekDB::fetch_etalages();
