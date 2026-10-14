@@ -83,19 +83,32 @@ class BoekDB_Admin_Meta_Boxes {
 	}
 
 	/**
-	 * A text field of the form, unslashed.
-	 *
-	 * Left as it was typed for whoever may post unfiltered html, as WordPress does for post
-	 * content. Anyone else gets what is allowed in a post.
+	 * A text field of the form, unslashed and as it is compared and stored.
 	 *
 	 * @param string $field  The name of the field.
 	 *
 	 * @return string
 	 */
 	private static function posted_text( $field ) {
-		$value = wp_unslash( $_POST[ $field ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- The caller checked the nonce and that the field is set; it is sanitized below.
+		return self::as_stored( wp_unslash( $_POST[ $field ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- The caller checked the nonce and that the field is a string; as_stored() sanitizes it.
+	}
 
-		return current_user_can( 'unfiltered_html' ) ? (string) $value : wp_kses_post( $value );
+	/**
+	 * A text the way this user would store it.
+	 *
+	 * Left as it was typed for whoever may post unfiltered html, as WordPress does for post
+	 * content. Anyone else gets what is allowed in a post. Line endings as a textarea sends
+	 * them back are made plain. What BoekDB stored goes through the same, so a text nobody
+	 * touched compares equal and is not taken for one that was overwritten.
+	 *
+	 * @param string $text  The text.
+	 *
+	 * @return string
+	 */
+	private static function as_stored( $text ) {
+		$text = str_replace( "\r\n", "\n", (string) $text );
+
+		return current_user_can( 'unfiltered_html' ) ? $text : wp_kses_post( $text );
 	}
 
 	/**
@@ -119,24 +132,24 @@ class BoekDB_Admin_Meta_Boxes {
 		}
 
 		$meta = get_post_meta( $post_id );
-		if ( isset( $_POST['boekdb_annotatie'] ) ) {
+		if ( isset( $_POST['boekdb_annotatie'] ) && is_string( $_POST['boekdb_annotatie'] ) ) {
 			$boekdb_annotatie      = self::posted_text( 'boekdb_annotatie' );
 			$annotatie_overwritten = isset( $meta['boekdb_annotatie_overwritten'][0] ) ? $meta['boekdb_annotatie_overwritten'][0] : '0';
 			if ( strlen( trim( $boekdb_annotatie ) ) === 0 && '1' === $annotatie_overwritten ) {
 				update_post_meta( $post_id, 'boekdb_annotatie', wp_slash( $meta['boekdb_annotatie_org'][0] ) );
 				update_post_meta( $post_id, 'boekdb_annotatie_overwritten', '0' );
-			} elseif ( '1' === $annotatie_overwritten || $meta['boekdb_annotatie'][0] !== $boekdb_annotatie ) {
+			} elseif ( '1' === $annotatie_overwritten || self::as_stored( $meta['boekdb_annotatie'][0] ) !== $boekdb_annotatie ) {
 					update_post_meta( $post_id, 'boekdb_annotatie', wp_slash( $boekdb_annotatie ) );
 					update_post_meta( $post_id, 'boekdb_annotatie_overwritten', '1' );
 			}
 		}
-		if ( isset( $_POST['boekdb_flaptekst'] ) ) {
-			$boekdb_flaptekst      = str_replace( "\r\n", "\n", self::posted_text( 'boekdb_flaptekst' ) );
+		if ( isset( $_POST['boekdb_flaptekst'] ) && is_string( $_POST['boekdb_flaptekst'] ) ) {
+			$boekdb_flaptekst      = self::posted_text( 'boekdb_flaptekst' );
 			$flaptekst_overwritten = isset( $meta['boekdb_flaptekst_overwritten'][0] ) ? $meta['boekdb_flaptekst_overwritten'][0] : '0';
 			if ( strlen( trim( $boekdb_flaptekst ) ) === 0 && '1' === $flaptekst_overwritten ) {
 				update_post_meta( $post_id, 'boekdb_flaptekst', wp_slash( trim( $meta['boekdb_flaptekst_org'][0] ) ) );
 				update_post_meta( $post_id, 'boekdb_flaptekst_overwritten', '0' );
-			} elseif ( '1' === $flaptekst_overwritten || trim( $meta['boekdb_flaptekst'][0] ) !== $boekdb_flaptekst ) {
+			} elseif ( '1' === $flaptekst_overwritten || trim( self::as_stored( $meta['boekdb_flaptekst'][0] ) ) !== $boekdb_flaptekst ) {
 					update_post_meta( $post_id, 'boekdb_flaptekst', wp_slash( $boekdb_flaptekst ) );
 					update_post_meta( $post_id, 'boekdb_flaptekst_overwritten', '1' );
 			}
@@ -290,7 +303,7 @@ class BoekDB_Admin_Meta_Boxes {
 
 		$selected_url = esc_url_raw( wp_unslash( $_POST['selected_alternate_url'] ) );
 
-		if ( 0 !== strpos( $selected_url, home_url( '/boek/' ) ) ) {
+		if ( ! boekdb_is_book_url( $selected_url ) ) {
 			return;
 		}
 

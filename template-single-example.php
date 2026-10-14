@@ -57,7 +57,7 @@ while ( have_posts() ) :
 					">
 						<img src="
 						<?php
-						echo esc_attr( $boekdb_image_attributes[0] );
+						echo esc_url( $boekdb_image_attributes[0] );
 						?>
 						" width="
 						<?php
@@ -85,7 +85,7 @@ while ( have_posts() ) :
 					">
 						<img src="
 						<?php
-						echo esc_attr( $boekdb_image_attributes[0] );
+						echo esc_url( $boekdb_image_attributes[0] );
 						?>
 						" width="
 						<?php
@@ -120,7 +120,7 @@ while ( have_posts() ) :
 							">
 								<img src="
 								<?php
-								echo esc_attr( $boekdb_image_attributes[0] );
+								echo esc_url( $boekdb_image_attributes[0] );
 								?>
 								" width="
 								<?php
@@ -144,18 +144,15 @@ while ( have_posts() ) :
 				$boekdb_actieprijzen = maybe_unserialize( $boekdb_boek_data['actieprijzen'] );
 				foreach ( $boekdb_actieprijzen as $boekdb_actieprijs ) {
 					echo 'Actieprijs: ' . esc_html( $boekdb_actieprijs['actieprijs'] ) . '<br />';
-					echo 'Van: ' . esc_html(
-						DateTime::createFromFormat(
-							'Y-m-d',
-							$boekdb_actieprijs['actieperiode_start']
-						)->format( 'd-m-Y' )
-					) . '<br/>';
-					echo 'Tot: ' . esc_html(
-						DateTime::createFromFormat(
-							'Y-m-d',
-							$boekdb_actieprijs['actieperiode_einde']
-						)->format( 'd-m-Y' )
-					) . '<br/>';
+					// A date that cannot be read is left out rather than ending the page.
+					$boekdb_van = DateTime::createFromFormat( 'Y-m-d', $boekdb_actieprijs['actieperiode_start'] );
+					$boekdb_tot = DateTime::createFromFormat( 'Y-m-d', $boekdb_actieprijs['actieperiode_einde'] );
+					if ( $boekdb_van ) {
+						echo 'Van: ' . esc_html( $boekdb_van->format( 'd-m-Y' ) ) . '<br/>';
+					}
+					if ( $boekdb_tot ) {
+						echo 'Tot: ' . esc_html( $boekdb_tot->format( 'd-m-Y' ) ) . '<br/>';
+					}
 					echo '<br />';
 				}
 			}
@@ -164,7 +161,7 @@ while ( have_posts() ) :
 				echo '<strong>Links</strong><br />';
 				$boekdb_links = maybe_unserialize( $boekdb_boek_data['links'] );
 				foreach ( $boekdb_links as $boekdb_link ) {
-					echo 'Link naar ' . esc_html( $boekdb_link['soort'] ) . ' : ' . esc_url( $boekdb_link['url'] ) . '<br />';
+					echo 'Link naar ' . esc_html( $boekdb_link['soort'] ) . ' : ' . esc_html( $boekdb_link['url'] ) . '<br />';
 				}
 			}
 
@@ -183,7 +180,7 @@ while ( have_posts() ) :
 				$boekdb_recensielinks = maybe_unserialize( $boekdb_boek_data['recensielinks'] );
 				foreach ( $boekdb_recensielinks as $boekdb_link ) {
 					echo esc_html( $boekdb_link['bron'] ) . ' ' . esc_html( $boekdb_link['datum'] ) . ' ' . esc_html( $boekdb_link['soort'] ) . ':<br />';
-					echo esc_url( $boekdb_link['url'] ) . '<br />';
+					echo esc_html( $boekdb_link['url'] ) . '<br />';
 				}
 			}
 

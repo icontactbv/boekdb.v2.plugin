@@ -201,6 +201,51 @@ class MetaBoxSaveTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Without unfiltered html the posted text goes through kses. What BoekDB stored goes
+	 * through it too before the two are compared, so an untouched annotatie stays BoekDB's.
+	 */
+	public function test_an_untouched_annotatie_stays_the_one_from_boekdb_without_unfiltered_html() {
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		wp_update_post(
+			array(
+				'ID'          => $this->boek_id,
+				'post_author' => $author,
+			)
+		);
+		wp_set_current_user( $author );
+		update_post_meta( $this->boek_id, 'boekdb_annotatie', 'Regel een<br>regel twee & meer' );
+		$this->post_form( array( 'boekdb_annotatie' => 'Regel een<br>regel twee & meer' ) );
+
+		BoekDB_Admin_Meta_Boxes::save_meta_boxes( $this->boek_id );
+
+		$this->assertSame( '', get_post_meta( $this->boek_id, 'boekdb_annotatie_overwritten', true ) );
+	}
+
+	/**
+	 * A textarea sends its lines back ending in \r\n. An untouched annotatie of several lines
+	 * is not a changed one.
+	 */
+	public function test_an_untouched_annotatie_of_several_lines_stays_the_one_from_boekdb() {
+		update_post_meta( $this->boek_id, 'boekdb_annotatie', "Regel een\nRegel twee" );
+		$this->post_form( array( 'boekdb_annotatie' => "Regel een\r\nRegel twee" ) );
+
+		BoekDB_Admin_Meta_Boxes::save_meta_boxes( $this->boek_id );
+
+		$this->assertSame( '', get_post_meta( $this->boek_id, 'boekdb_annotatie_overwritten', true ) );
+	}
+
+	/**
+	 * A field posted as a list is not a text, and is left alone.
+	 */
+	public function test_an_annotatie_posted_as_a_list_is_ignored() {
+		$this->post_form( array( 'boekdb_annotatie' => array( 'x' ) ) );
+
+		BoekDB_Admin_Meta_Boxes::save_meta_boxes( $this->boek_id );
+
+		$this->assertSame( 'Uitgeverij \'t Hoofd', get_post_meta( $this->boek_id, 'boekdb_annotatie', true ) );
+	}
+
+	/**
 	 * Whatever the annotatie holds, it stays inside the textarea on the edit screen.
 	 */
 	public function test_the_annotatie_cannot_break_out_of_its_textarea() {

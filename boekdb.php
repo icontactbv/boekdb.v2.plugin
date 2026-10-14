@@ -101,8 +101,10 @@ function boekdb_boek_data( $id ) {
 		if ( $name === 'boekdb_recensiequotes' ) {
 			$quotes = maybe_unserialize( $value[0] );
 			$parsed = array();
-			foreach ( (array) $quotes as $quote ) {
-				if ( $quote['tonen'] ) {
+			// A value that is not a list of quotes gives no quotes, rather than an error on
+			// every page that shows the book.
+			foreach ( is_array( $quotes ) ? $quotes : array() as $quote ) {
+				if ( is_array( $quote ) && ! empty( $quote['tonen'] ) ) {
 					unset( $quote['tonen'] );
 					$parsed[] = $quote;
 				}
@@ -129,15 +131,15 @@ function boekdb_boek_data( $id ) {
 function boekdb_betrokkenen_data( $id ) {
 	$data = array();
 	foreach ( wp_get_post_terms( $id, 'boekdb_auteur_tax' ) as $term ) {
-		$data['auteurs'][] = array_merge( array( 'rol' => 'auteur' ), boekdb_betrokkene_data( $term->id, $term ) );
+		$data['auteurs'][] = array_merge( array( 'rol' => 'auteur' ), boekdb_betrokkene_data( $term->term_id, $term ) );
 	}
 	foreach ( wp_get_post_terms( $id, 'boekdb_spreker_tax' ) as $term ) {
-		$data['sprekers'][] = array_merge( array( 'rol' => 'spreker' ), boekdb_betrokkene_data( $term->id, $term ) );
+		$data['sprekers'][] = array_merge( array( 'rol' => 'spreker' ), boekdb_betrokkene_data( $term->term_id, $term ) );
 	}
 	foreach ( wp_get_post_terms( $id, 'boekdb_illustrator_tax' ) as $term ) {
 		$data['illustrators'][] = array_merge(
 			array( 'rol' => 'illustrator' ),
-			boekdb_betrokkene_data( $term->id, $term )
+			boekdb_betrokkene_data( $term->term_id, $term )
 		);
 	}
 
@@ -389,6 +391,19 @@ function boekdb_get_alternate_urls( $post_id ) {
 	return $alternate_urls;
 }
 
+/**
+ * Whether a url is one of a book on this site, as an alternate url has to be.
+ *
+ * It becomes the permalink of the book, so one anywhere else is not used.
+ *
+ * @param mixed $url  The url.
+ *
+ * @return bool
+ */
+function boekdb_is_book_url( $url ) {
+	return is_string( $url ) && 0 === strpos( $url, home_url( '/boek/' ) );
+}
+
 add_filter( 'cron_schedules', 'boekdb_add_minutely' ); // phpcs:ignore WordPress.WP.CronInterval.CronSchedulesInterval -- Batches follow one another as fast as they can.
 
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
@@ -414,7 +429,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 				$selected_url = get_post_meta( $post->ID, 'selected_alternate_url', true );
 				$prefix       = boekdb_get_etalage_prefix( $post->ID );
 
-				if ( trim( $selected_url ) !== '' ) {
+				if ( boekdb_is_book_url( $selected_url ) ) {
 					// Use selected alternate URL if it exists
 					$post_link = $selected_url;
 				} elseif ( $prefix !== '' ) {
