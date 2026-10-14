@@ -32,7 +32,7 @@ This plugin imports books, contributors, series and subjects from BoekDB into Wo
 * Fix: Reset starts the etalage over from its first book, also after Stop kept its place.
 * Fix: a finished run records when it started, so changes made while it ran are not skipped.
 * Fix: the daily cleanup runs again, and keeps away from an import in progress.
-* Fix: series images are stored where they are read back, so they show up at all.
+* Fix: series images are stored where they are read back, so they show up at all. Those stored by 1.0.7 to 1.1.1 are moved there on upgrade.
 * Fix: a book in a series without a title no longer raises warnings.
 * Fix: a file shared by several books or authors survives the removal of one of them.
 * Fix: the cleanup only removes media of books and terms of the plugin's own taxonomies. Media of other posts deleted in the same cron run, and terms of taxonomies other plugins add to books, are left alone.
