@@ -79,6 +79,13 @@ class BoekDB_Import {
 	private static $lock_value = null;
 
 	/**
+	 * The etalage this run holds the lock of, so a download can say the run is alive.
+	 *
+	 * @var object|null
+	 */
+	private static $lock_etalage = null;
+
+	/**
 	 * Initialize the import process
 	 *
 	 * This method adds action hooks for starting the import and performing the import.
@@ -662,8 +669,9 @@ class BoekDB_Import {
 			return false;
 		}
 
-		self::$lock_token = $token;
-		self::$lock_value = $value;
+		self::$lock_token   = $token;
+		self::$lock_value   = $value;
+		self::$lock_etalage = $etalage;
 		self::update_running( 1, $etalage );
 
 		// A fatal halts the script on the spot, so no code after it runs and a finally block
@@ -867,12 +875,14 @@ class BoekDB_Import {
 	/**
 	 * Record that this run is still working on its etalage.
 	 *
-	 * @param object      $etalage  The etalage.
-	 * @param string|null $isbn     The book the batch is about to import, if any.
+	 * @param object      $etalage    The etalage.
+	 * @param string|null $isbn       The book the batch is about to import, if any.
+	 * @param bool        $next_book  Whether a next book starts, or the run only says it is
+	 *                                still at work.
 	 *
 	 * @return void
 	 */
-	private static function refresh_lock( $etalage, $isbn = null ) {
+	private static function refresh_lock( $etalage, $isbn = null, $next_book = true ) {
 		global $wpdb;
 
 		if ( is_null( self::$lock_value ) ) {
@@ -885,7 +895,9 @@ class BoekDB_Import {
 			$lock = array( 'token' => self::$lock_token );
 		}
 		$lock['time'] = time();
-		$lock['done'] = ( isset( $lock['done'] ) ? (int) $lock['done'] : 0 ) + 1;
+		if ( $next_book ) {
+			$lock['done'] = ( isset( $lock['done'] ) ? (int) $lock['done'] : 0 ) + 1;
+		}
 		if ( null !== $isbn ) {
 			// The book being worked on, for whoever finds the batch dead on it.
 			$lock['isbn'] = (string) $isbn;
@@ -1570,6 +1582,12 @@ class BoekDB_Import {
 		 * @param string $url      The file being downloaded.
 		 */
 		$timeout = (int) apply_filters( 'boekdb_file_download_timeout', self::DOWNLOAD_TIMEOUT, $bestand->url );
+
+		// One book can bring several files, each allowed minutes. Said per book only, a run
+		// on a slow file host would look dead and be taken over while still downloading.
+		if ( ! is_null( self::$lock_etalage ) ) {
+			self::refresh_lock( self::$lock_etalage, null, false );
+		}
 
 		// Streams to a temporary file. Reading the body into a string instead puts the whole
 		// file in memory, which a 50MB fragment does not survive on a 128M limit.

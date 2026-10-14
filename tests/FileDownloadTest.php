@@ -407,6 +407,72 @@ class FileDownloadTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * One book can bring several files, each allowed minutes. A run that only said it was
+	 * alive once per book looked dead on a slow file host, and was taken over while still
+	 * downloading. Each download says so too.
+	 */
+	public function test_a_download_says_the_run_is_still_at_work() {
+		global $wpdb;
+		$wpdb->insert(
+			$wpdb->prefix . 'boekdb_etalages',
+			array(
+				'name'    => 'Test Etalage',
+				'api_key' => 'test-key',
+				'running' => 2,
+			)
+		);
+		$etalage = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $wpdb->insert_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		$option  = 'boekdb_import_lock_' . $etalage->id;
+
+		$claim = new ReflectionMethod( BoekDB_Import::class, 'claim_lock' );
+		if ( PHP_VERSION_ID < 80100 ) {
+			$claim->setAccessible( true );
+		}
+		$claim->invoke( null, $etalage, 1 );
+
+		// The last sign of life, long ago.
+		$read         = function () use ( $wpdb, $option ) {
+			return maybe_unserialize( $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $option ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		};
+		$lock         = $read();
+		$lock['time'] = time() - 500;
+		$stale        = maybe_serialize( $lock );
+		$wpdb->update( $wpdb->options, array( 'option_value' => $stale ), array( 'option_name' => $option ) );
+		$value = new \ReflectionProperty( BoekDB_Import::class, 'lock_value' );
+		if ( PHP_VERSION_ID < 80100 ) {
+			$value->setAccessible( true );
+		}
+		$value->setValue( null, $stale );
+
+		$seen    = null;
+		$capture = function ( $preempt, $args, $url ) use ( &$seen, $read ) {
+			if ( self::SMALL_FILE_URL === $url ) {
+				$seen = $read();
+			}
+
+			return $preempt;
+		};
+		add_filter( 'pre_http_request', $capture, 8, 3 );
+
+		$this->import_file( 'Fragment', 'application/pdf', self::SMALL_FILE_URL );
+
+		remove_filter( 'pre_http_request', $capture, 8 );
+		foreach ( array( 'lock_token', 'lock_value', 'lock_etalage' ) as $name ) {
+			if ( ! property_exists( BoekDB_Import::class, $name ) ) {
+				continue;
+			}
+			$property = new \ReflectionProperty( BoekDB_Import::class, $name );
+			if ( PHP_VERSION_ID < 80100 ) {
+				$property->setAccessible( true );
+			}
+			$property->setValue( null, null );
+		}
+
+		$this->assertGreaterThan( time() - 60, $seen['time'], 'The download should have said the run is alive.' );
+		$this->assertSame( $lock['done'], $seen['done'], 'Without counting another book.' );
+	}
+
+	/**
 	 * Making the sizes of an image can fail, or end the process. The file and its
 	 * attachment are there by then, and the hash the next attempt recognises them by has
 	 * to be too, or every retry adds another copy.
