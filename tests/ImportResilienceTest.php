@@ -302,6 +302,81 @@ class ImportResilienceTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A book that ends the process (memory, exit() in a hook) throws nothing the batch can
+	 * catch. Handed back at the same offset, the next batch would die on it again, and the
+	 * etalages behind it would never get their turn. It is written down as failed, and the
+	 * next batch starts after it.
+	 */
+	public function test_a_book_that_ends_the_process_is_skipped_by_the_next_batch() {
+		$this->during_the_first_book(
+			function () {
+				global $wpdb;
+
+				$etalage = $wpdb->get_row(
+					$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}boekdb_etalages WHERE id = %d", $this->etalage_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				);
+
+				BoekDB_Import::release_lock_on_shutdown( $etalage );
+			}
+		);
+
+		BoekDB_Import::import();
+
+		$failed = get_option( 'boekdb_import_failed_' . $this->etalage_id );
+		$this->assertSame( 1, isset( $failed['9789000000011'] ) ? $failed['9789000000011'] : null, 'The book should be written down as failed once.' );
+		$this->assertSame( 1, $this->etalage_column( 'offset' ), 'The next batch should start after it.' );
+	}
+
+	/**
+	 * The retries at the end of a run can end the process too. Their attempt is written
+	 * down before the book is fetched, or a book that keeps ending the process is retried
+	 * for ever and the run never finishes.
+	 */
+	public function test_a_retry_is_counted_before_it_is_tried() {
+		update_option( 'boekdb_import_failed_' . $this->etalage_id, array( '9789000000011' => 1 ), false );
+
+		$seen = null;
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $args, $url ) use ( &$seen ) {
+				if ( Boekdb_Api_Service::BASE_URL . 'products/9789000000011' === $url ) {
+					$seen = get_option( 'boekdb_import_failed_' . $this->etalage_id );
+				}
+
+				return $preempt;
+			},
+			8,
+			3
+		);
+		add_filter(
+			'pre_http_request',
+			function ( $preempt, $args, $url ) {
+				if ( 0 !== strpos( $url, Boekdb_Api_Service::BASE_URL . 'products?updated_at=' ) ) {
+					return $preempt;
+				}
+
+				return array(
+					'response' => array(
+						'code'    => 200,
+						'message' => 'OK',
+					),
+					'body'     => wp_json_encode( array() ),
+					'headers'  => array(),
+					'cookies'  => array(),
+					'filename' => null,
+				);
+			},
+			11,
+			3
+		);
+
+		$this->queue_another_run();
+		BoekDB_Import::import();
+
+		$this->assertSame( array( '9789000000011' => 2 ), $seen, 'The attempt should be written down before the book is fetched.' );
+	}
+
+	/**
 	 * The Stop button clears the running state. Shutdown must not put the etalage back to
 	 * work behind the user's back.
 	 */

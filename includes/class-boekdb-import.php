@@ -208,8 +208,8 @@ class BoekDB_Import {
 				}
 
 				// Says the batch is alive, so a run that takes minutes is not mistaken for one
-				// that died.
-				self::refresh_lock( $etalage );
+				// that died, and which book it is on.
+				self::refresh_lock( $etalage, isset( $product->isbn ) ? $product->isbn : null );
 
 				// One unusable product used to end the whole batch, leaving every book behind
 				// it unimported and the offset where it was. A product that cannot be
@@ -431,9 +431,13 @@ class BoekDB_Import {
 
 			self::refresh_lock( $etalage );
 
+			// Written down before the book is tried: one that ends the process would
+			// otherwise be retried for ever, and the run would never finish.
+			$failed[ $isbn ] = (int) $attempts + 1;
+			update_option( self::FAILED_OPTION_PREFIX . $etalage->id, $failed, false );
+
 			$product = Boekdb_Api_Service::fetch_product( $etalage->api_key, $isbn );
 			if ( false === $product ) {
-				$failed[ $isbn ] = (int) $attempts + 1;
 				continue;
 			}
 
@@ -445,12 +449,10 @@ class BoekDB_Import {
 				break;
 			}
 
-			if ( self::import_product( $product, $etalage ) ) {
+			if ( self::import_product( $product, $etalage ) && self::holds_lock( $etalage ) ) {
 				unset( $failed[ $isbn ] );
-				continue;
+				update_option( self::FAILED_OPTION_PREFIX . $etalage->id, $failed, false );
 			}
-
-			$failed[ $isbn ] = (int) $attempts + 1;
 		}
 
 		if ( ! self::holds_lock( $etalage ) ) {
@@ -577,6 +579,15 @@ class BoekDB_Import {
 
 		$error = error_get_last();
 		boekdb_debug( 'Import on ' . $etalage->name . ' ended while holding its lock: ' . ( is_null( $error ) ? 'no error reported' : $error['message'] ) );
+
+		// A batch that died on a book would die on it again at the same offset, for ever,
+		// and the etalages behind it would never get their turn. The book is written down to
+		// be retried on its own, and the next batch starts after it.
+		$lock = self::read_lock( $etalage->id );
+		if ( is_array( $lock ) && ! empty( $lock['size'] ) && isset( $lock['isbn'], $lock['offset'], $lock['done'] ) ) {
+			self::remember_failed_product( $etalage, (object) array( 'isbn' => $lock['isbn'] ) );
+			self::update_offset( (int) $lock['offset'] + (int) $lock['done'], $etalage );
+		}
 
 		self::release_lock( $etalage, 2 );
 
@@ -854,11 +865,12 @@ class BoekDB_Import {
 	/**
 	 * Record that this run is still working on its etalage.
 	 *
-	 * @param object $etalage  The etalage.
+	 * @param object      $etalage  The etalage.
+	 * @param string|null $isbn     The book the batch is about to import, if any.
 	 *
 	 * @return void
 	 */
-	private static function refresh_lock( $etalage ) {
+	private static function refresh_lock( $etalage, $isbn = null ) {
 		global $wpdb;
 
 		if ( is_null( self::$lock_value ) ) {
@@ -872,7 +884,11 @@ class BoekDB_Import {
 		}
 		$lock['time'] = time();
 		$lock['done'] = ( isset( $lock['done'] ) ? (int) $lock['done'] : 0 ) + 1;
-		$value        = maybe_serialize( $lock );
+		if ( null !== $isbn ) {
+			// The book being worked on, for whoever finds the batch dead on it.
+			$lock['isbn'] = (string) $isbn;
+		}
+		$value = maybe_serialize( $lock );
 
 		// Only over the lock this run wrote: between the check above and this write, another
 		// run can have taken the etalage over.
