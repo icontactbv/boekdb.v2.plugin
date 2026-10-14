@@ -133,11 +133,29 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 			$prefix  = strtolower( sanitize_text_field( wp_unslash( isset( $_POST['etalage_prefix'] ) ? $_POST['etalage_prefix'] : '' ) ) );
 			// phpcs:enable WordPress.Security.NonceVerification.Missing
 
+			// Each error ends here. The etalage used to be stored anyway, under the error.
 			if ( strlen( $api_key ) === 0 || strlen( $name ) === 0 ) {
 				self::add_error( 'Er is iets fout gegaan' );
-			} elseif ( ! Boekdb_Api_Service::validate_api_key( $api_key ) ) {
+
+				return;
+			}
+
+			try {
+				$valid = Boekdb_Api_Service::validate_api_key( $api_key );
+			} catch ( Exception $e ) {
+				// BoekDB could not be reached. Uncaught, this ended the request in a fatal error.
+				self::add_error( 'Geen verbinding met BoekDB, de etalage is niet opgeslagen.' );
+
+				return;
+			}
+
+			if ( ! $valid ) {
 				self::add_error( 'API key is niet geldig' );
-			} elseif ( ! empty( $prefix ) || $prefix === 'default' ) {
+
+				return;
+			}
+
+			if ( ! empty( $prefix ) ) {
 				// Check if the prefix already exists
 				$existing_prefix = $wpdb->get_var(
 					$wpdb->prepare(
