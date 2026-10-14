@@ -82,7 +82,7 @@ class PrimaryMetaTest extends WP_UnitTestCase {
 		BoekDB_Install::migrate_primary_meta();
 		BoekDB_Install::migrate_primary_meta();
 
-		$this->assertSame( array( '1' ), get_post_meta( $post_id, 'boekdb_primair' ), 'There should be exactly one value.' );
+		$this->assertSame( array( '1' ), get_post_meta( $post_id, 'boekdb_primair', false ), 'There should be exactly one value.' );
 	}
 
 	/**

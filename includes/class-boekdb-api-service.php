@@ -8,6 +8,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Talks to the json api of BoekDB.
+ */
 class Boekdb_Api_Service {
 
 	const BOEKDB_DOMAIN = 'https://www.boekdbv2.nl/';
@@ -59,12 +62,12 @@ class Boekdb_Api_Service {
 		}
 
 		// Fetch the latest version from the API response
-		$body       = wp_remote_retrieve_body( $result );
-		$data       = json_decode( $body, true );
-		$apiVersion = $data['plugin_version'] ?? null;
+		$body        = wp_remote_retrieve_body( $result );
+		$data        = json_decode( $body, true );
+		$api_version = $data['plugin_version'] ?? null;
 
 		// Compare with current plugin version and set/update the option if a new version is available
-		if ( $apiVersion && version_compare( $apiVersion, BoekDB()->version, '>' ) ) {
+		if ( $api_version && version_compare( $api_version, BoekDB()->version, '>' ) ) {
 			update_option( 'boekdb_new_version_available', true );
 		} else {
 			update_option( 'boekdb_new_version_available', false );
@@ -84,7 +87,7 @@ class Boekdb_Api_Service {
 	 */
 	public static function fetch_products( $api_key, $last_import, $offset ) {
 		$response = wp_remote_get(
-			self::BASE_URL . 'products?updated_at=' . urlencode( $last_import ),
+			self::BASE_URL . 'products?updated_at=' . rawurlencode( $last_import ),
 			array(
 				'user-agent' => self::user_agent(),
 				'headers'    => array(
@@ -234,6 +237,8 @@ class Boekdb_Api_Service {
 	 * @param string $api_key  API Key
 	 *
 	 * @return bool 'true' if valid 'false' if invalid
+	 *
+	 * @throws Exception When BoekDB cannot be reached.
 	 */
 	public static function validate_api_key( $api_key ) {
 		// Test the connection first
@@ -253,8 +258,8 @@ class Boekdb_Api_Service {
 		);
 
 		// Check if the API key is invalid (Unauthorized)
-		if ( wp_remote_retrieve_response_code( $response ) == 401 ) {
-			boekdb_debug( 'Invalid API key: ' . $api_key );
+		if ( 401 === wp_remote_retrieve_response_code( $response ) ) {
+			boekdb_debug( 'Invalid API key ending in ' . substr( $api_key, -4 ) );
 			return false;
 		}
 

@@ -125,4 +125,152 @@ class AdminSettingsAccessTest extends WP_UnitTestCase {
 
 		$this->assertFalse( $this->etalage_exists(), 'An administrator should be able to delete an etalage.' );
 	}
+
+	/**
+	 * WordPress slashes the form data. A name with a quote in it is stored as typed.
+	 */
+	public function test_an_etalage_name_with_a_quote_is_stored_as_typed() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		add_filter( 'pre_http_request', array( $this, 'answer_as_boekdb' ), 9, 3 );
+		$_POST = wp_slash(
+			array(
+				'save'            => '1',
+				'etalage_api_key' => 'nieuwe-sleutel',
+				'etalage_name'    => 'Uitgeverij \'t Hoofd',
+				'etalage_prefix'  => '',
+				'_wpnonce'        => wp_create_nonce( 'boekdb-settings' ),
+			)
+		);
+
+		BoekDB_Admin_Settings::save();
+		remove_filter( 'pre_http_request', array( $this, 'answer_as_boekdb' ), 9 );
+
+		global $wpdb;
+		$this->assertSame(
+			'Uitgeverij \'t Hoofd',
+			$wpdb->get_var( "SELECT name FROM {$wpdb->prefix}boekdb_etalages WHERE api_key = 'nieuwe-sleutel'" ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		);
+	}
+
+	/**
+	 * Posts the form that adds an etalage, as an administrator.
+	 *
+	 * @param string $name     Name of the etalage.
+	 * @param string $api_key  Its api key.
+	 *
+	 * @return void
+	 */
+	private function add_etalage( $name, $api_key ) {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$_POST = wp_slash(
+			array(
+				'save'            => '1',
+				'etalage_api_key' => $api_key,
+				'etalage_name'    => $name,
+				'etalage_prefix'  => '',
+				'_wpnonce'        => wp_create_nonce( 'boekdb-settings' ),
+			)
+		);
+
+		BoekDB_Admin_Settings::save();
+	}
+
+	/**
+	 * How many etalages have this api key.
+	 *
+	 * @param string $api_key  The api key.
+	 *
+	 * @return int
+	 */
+	private function etalages_with_key( $api_key ) {
+		global $wpdb;
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}boekdb_etalages WHERE api_key = %s", $api_key ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		);
+	}
+
+	/**
+	 * An etalage without a name is refused, and not stored under the error.
+	 */
+	public function test_an_etalage_without_a_name_is_not_stored() {
+		add_filter( 'pre_http_request', array( $this, 'answer_as_boekdb' ), 9, 3 );
+
+		$this->add_etalage( '', 'naamloze-sleutel' );
+
+		remove_filter( 'pre_http_request', array( $this, 'answer_as_boekdb' ), 9 );
+		$this->assertSame( 0, $this->etalages_with_key( 'naamloze-sleutel' ) );
+	}
+
+	/**
+	 * Nor is one whose key BoekDB does not know.
+	 */
+	public function test_an_etalage_with_an_unknown_key_is_not_stored() {
+		add_filter( 'pre_http_request', array( $this, 'refuse_the_key' ), 9, 3 );
+
+		$this->add_etalage( 'Onbekend', 'onbekende-sleutel' );
+
+		remove_filter( 'pre_http_request', array( $this, 'refuse_the_key' ), 9 );
+		$this->assertSame( 0, $this->etalages_with_key( 'onbekende-sleutel' ) );
+	}
+
+	/**
+	 * With BoekDB out of reach the key cannot be checked. The screen says so instead of
+	 * ending in a fatal error, and stores nothing.
+	 */
+	public function test_an_etalage_is_not_stored_while_boekdb_is_out_of_reach() {
+		// Outbound HTTP is blocked in the bootstrap, as if BoekDB were down.
+		$this->add_etalage( 'Onbereikbaar', 'sleutel-zonder-verbinding' );
+
+		$this->assertSame( 0, $this->etalages_with_key( 'sleutel-zonder-verbinding' ) );
+	}
+
+	/**
+	 * Answers the connection test, and refuses the key as BoekDB does for one it does not know.
+	 *
+	 * @param mixed  $preempt  The pre-empted response, or false.
+	 * @param array  $args     The request arguments.
+	 * @param string $url      The request URL.
+	 *
+	 * @return array
+	 */
+	public function refuse_the_key( $preempt, $args, $url ) {
+		$response = $this->answer_as_boekdb( $preempt, $args, $url );
+
+		if ( false !== strpos( $url, 'validate' ) ) {
+			$response['response'] = array(
+				'code'    => 401,
+				'message' => 'Unauthorized',
+			);
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Answers the connection test and the key check as BoekDB does for a valid key.
+	 *
+	 * @param mixed  $preempt  The pre-empted response, or false.
+	 * @param array  $args     The request arguments.
+	 * @param string $url      The request URL.
+	 *
+	 * @return array
+	 */
+	public function answer_as_boekdb( $preempt, $args, $url ) {
+		return array(
+			'response' => array(
+				'code'    => 200,
+				'message' => 'OK',
+			),
+			'body'     => wp_json_encode(
+				array(
+					'hello',
+					'plugin_version' => '1.2.0',
+				)
+			),
+			'headers'  => array(),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+	}
 }

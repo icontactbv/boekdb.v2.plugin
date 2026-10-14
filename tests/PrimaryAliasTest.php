@@ -52,7 +52,7 @@ class PrimaryAliasTest extends WP_UnitTestCase {
 	public function test_reading_the_old_name_without_single_gives_the_stored_values() {
 		$post_id = $this->book( 0 );
 
-		$this->assertSame( array( '0' ), get_post_meta( $post_id, 'boekdb_primary' ) );
+		$this->assertSame( array( '0' ), get_post_meta( $post_id, 'boekdb_primary', false ) );
 	}
 
 	/**

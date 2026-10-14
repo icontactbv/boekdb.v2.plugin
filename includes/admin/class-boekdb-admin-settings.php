@@ -97,11 +97,11 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * @return void
 		 */
 		private static function test_connection() {
-			$testResponse = Boekdb_Api_Service::test_api_connection();
-			if ( ! $testResponse['success'] ) {
-				self::add_error( $testResponse['message'] );
+			$test_response = Boekdb_Api_Service::test_api_connection();
+			if ( ! $test_response['success'] ) {
+				self::add_error( $test_response['message'] );
 			} else {
-				self::add_message( $testResponse['message'] );
+				self::add_message( $test_response['message'] );
 			}
 		}
 
@@ -125,15 +125,37 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		private static function save_etalage() {
 			global $wpdb;
 
-			$api_key = sanitize_text_field( $_POST['etalage_api_key'] );
-			$name    = sanitize_text_field( $_POST['etalage_name'] );
-			$prefix  = strtolower( sanitize_text_field( $_POST['etalage_prefix'] ) );
+			// WordPress slashes the form data. Unslashed, or a name with a quote in it is stored
+			// with a backslash.
+			// phpcs:disable WordPress.Security.NonceVerification.Missing -- save() checked the nonce.
+			$api_key = sanitize_text_field( wp_unslash( isset( $_POST['etalage_api_key'] ) ? $_POST['etalage_api_key'] : '' ) );
+			$name    = sanitize_text_field( wp_unslash( isset( $_POST['etalage_name'] ) ? $_POST['etalage_name'] : '' ) );
+			$prefix  = strtolower( sanitize_text_field( wp_unslash( isset( $_POST['etalage_prefix'] ) ? $_POST['etalage_prefix'] : '' ) ) );
+			// phpcs:enable WordPress.Security.NonceVerification.Missing
 
+			// Each error ends here. The etalage used to be stored anyway, under the error.
 			if ( strlen( $api_key ) === 0 || strlen( $name ) === 0 ) {
 				self::add_error( 'Er is iets fout gegaan' );
-			} elseif ( ! Boekdb_Api_Service::validate_api_key( $api_key ) ) {
+
+				return;
+			}
+
+			try {
+				$valid = Boekdb_Api_Service::validate_api_key( $api_key );
+			} catch ( Exception $e ) {
+				// BoekDB could not be reached. Uncaught, this ended the request in a fatal error.
+				self::add_error( 'Geen verbinding met BoekDB, de etalage is niet opgeslagen.' );
+
+				return;
+			}
+
+			if ( ! $valid ) {
 				self::add_error( 'API key is niet geldig' );
-			} elseif ( ! empty( $prefix ) || $prefix === 'default' ) {
+
+				return;
+			}
+
+			if ( ! empty( $prefix ) ) {
 				// Check if the prefix already exists
 				$existing_prefix = $wpdb->get_var(
 					$wpdb->prepare(
@@ -188,7 +210,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 */
 		private static function reset_etalage() {
 			global $wpdb;
-			$id = (int) $_POST['reset'];
+			$id = isset( $_POST['reset'] ) ? (int) $_POST['reset'] : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- save() checked the nonce.
 			if ( $id > 0 ) {
 				$wpdb->query(
 					$wpdb->prepare(
@@ -207,7 +229,7 @@ if ( ! class_exists( 'BoekDB_Admin_Settings', false ) ) :
 		 * @return void
 		 */
 		private static function delete_etalage() {
-			$id = (int) $_POST['delete'];
+			$id = isset( $_POST['delete'] ) ? (int) $_POST['delete'] : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- save() checked the nonce.
 			if ( $id > 0 ) {
 				BoekDB_Cleanup::delete_etalage( $id );
 				set_transient( 'boekdb_admin_notice', 'Etalage is verwijderd.', 60 );

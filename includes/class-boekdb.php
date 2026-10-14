@@ -105,7 +105,7 @@ final class BoekDB {
 		$fetch = $readytorun ? self::QUERY_READY_ETALAGES : self::QUERY_ALL_ETALAGES;
 		$fetch = str_replace( '{:prefix}', $wpdb->prefix, $fetch );
 
-		$etalages =  $wpdb->get_results( $fetch, OBJECT );
+		$etalages = $wpdb->get_results( $fetch, OBJECT ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Built from constants and the table prefix only.
 
 		if ( ! is_array( $etalages ) ) {
 			return false;

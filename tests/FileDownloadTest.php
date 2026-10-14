@@ -147,8 +147,8 @@ class FileDownloadTest extends WP_UnitTestCase {
 	 */
 	public function intercept_http_request( $preempt, $args, $url ) {
 		$fixtures = array(
-			self::FILE_URL       => $this->fixture,
-			self::SMALL_FILE_URL => $this->small_fixture,
+			self::FILE_URL             => $this->fixture,
+			self::SMALL_FILE_URL       => $this->small_fixture,
 			self::IMAGE_FILE_URL       => $this->image_fixture,
 			self::OTHER_IMAGE_FILE_URL => $this->image_fixture,
 		);

@@ -121,6 +121,9 @@ class BoekDB_Install {
 		update_option( 'boekdb_version', BoekDB()->version );
 	}
 
+	/**
+	 * Creates or updates the tables of the plugin.
+	 */
 	private static function register_tables() {
 		global $wpdb;
 
@@ -163,13 +166,19 @@ class BoekDB_Install {
 		dbDelta( $sql );
 	}
 
+	/**
+	 * Says that BoekDB could not be reached.
+	 */
 	public static function boekdb_connection_error() {
 		$class   = 'notice notice-warning is-dismissible';
 		$message = '<strong>BoekDB Plugin:</strong> Let op: kan geen verbinding maken met BoekDB!';
 
-		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
+		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses_post( $message ) );
 	}
 
+	/**
+	 * Says that a newer version of the plugin is out.
+	 */
 	public static function boekdb_update_notice() {
 		if ( get_option( 'boekdb_new_version_available', false ) ) {
 			echo '<div class="notice notice-warning is-dismissible">';
@@ -178,15 +187,23 @@ class BoekDB_Install {
 		}
 	}
 
+	/**
+	 * Hides the update notice until the next version check.
+	 */
 	public static function dismiss_boekdb_update_notice() {
 		check_ajax_referer( 'boekdb_dismiss_update_notice', 'nonce' );
 		update_option( 'boekdb_new_version_available', false );
 		wp_die();
 	}
 
+	/**
+	 * Shows the notice the plugin left for the next admin page.
+	 */
 	public static function boekdb_admin_notice() {
+		$message = get_transient( 'boekdb_admin_notice' );
+
 		// If our transient isn't available, return early
-		if ( false === ( $message = get_transient( 'boekdb_admin_notice' ) ) ) {
+		if ( false === $message ) {
 			return;
 		}
 
@@ -195,10 +212,13 @@ class BoekDB_Install {
 
 		// display the message
 		echo '<div class="notice notice-info is-dismissible">';
-		echo "<p>$message</p>";
+		echo '<p>' . wp_kses_post( $message ) . '</p>';
 		echo '</div>';
 	}
 
+	/**
+	 * Loads the script that dismisses the update notice.
+	 */
 	public static function enqueue_scripts() {
 		wp_enqueue_script( 'boekdb-admin-scripts', plugins_url( 'assets/js/admin.js', BOEKDB_PLUGIN_FILE ), array( 'jquery' ), BoekDB()->version, true );
 		wp_localize_script(
@@ -211,6 +231,13 @@ class BoekDB_Install {
 		);
 	}
 
+	/**
+	 * Adds a rewrite rule for the books under each etalage prefix.
+	 *
+	 * @param array $rules  The rewrite rules WordPress has.
+	 *
+	 * @return array
+	 */
 	public static function prefixed_rewrite_rule( $rules ) {
 		global $wpdb;
 		$new_rules = array();
@@ -220,7 +247,7 @@ class BoekDB_Install {
 
 		// Generate a rewrite rule for each etalage prefix
 		foreach ( $prefixes as $prefix ) {
-			$new_rules[ 'boek/' . esc_sql( $prefix->prefix ) . '/([^/]+)/?$' ] = 'index.php?post_type=boekdb_boek&name=' . '{$matches[1]}';
+			$new_rules[ 'boek/' . esc_sql( $prefix->prefix ) . '/([^/]+)/?$' ] = 'index.php?post_type=boekdb_boek&name=$matches[1]';
 		}
 
 		// Return the combined rules.
