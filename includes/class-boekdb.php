@@ -107,7 +107,9 @@ final class BoekDB {
 
 		$etalages = $wpdb->get_results( $fetch, OBJECT ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Built from constants and the table prefix only.
 
-		if ( ! is_array( $etalages ) ) {
+		// A failed query returns no rows, like an empty table. Callers that act on "no
+		// etalages" must be able to tell the two apart.
+		if ( ! is_array( $etalages ) || '' !== $wpdb->last_error ) {
 			return false;
 		}
 

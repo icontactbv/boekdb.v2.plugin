@@ -370,4 +370,36 @@ class CleanupTest extends WP_UnitTestCase {
 		unregister_taxonomy_for_object_type( 'post_tag', 'boekdb_boek' );
 		$this->assertInstanceOf( 'WP_Term', get_term( $tag, 'post_tag' ), 'A tag no book carries is not ours to remove.' );
 	}
+
+	/**
+	 * A query that fails returns no rows, just like an empty table. The cleanup must not
+	 * read a failed lookup of the etalages as "there are none" and delete every book.
+	 */
+	public function test_a_failed_lookup_of_the_etalages_deletes_nothing() {
+		global $wpdb;
+		$this->etalage( 0 );
+		$boek = $this->book_in_etalage( (int) $wpdb->insert_id, '9789000000062' );
+
+		$break = function ( $query ) {
+			if ( 0 === strpos( $query, 'SELECT id, name, api_key, running' ) ) {
+				return str_replace( 'boekdb_etalages', 'boekdb_etalages_gone', $query );
+			}
+
+			return $query;
+		};
+		add_filter( 'query', $break );
+		$suppressed = $wpdb->suppress_errors( true );
+
+		BoekDB_Cleanup::cleanup();
+
+		$wpdb->suppress_errors( $suppressed );
+		remove_filter( 'query', $break );
+
+		$this->assertNotNull( get_post( $boek ), 'The book should still be there.' );
+		$this->assertSame(
+			'1',
+			$wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}boekdb_etalage_boeken WHERE boek_id = %d", $boek ) ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+			'And still in its etalage.'
+		);
+	}
 }

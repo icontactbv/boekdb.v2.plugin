@@ -314,8 +314,16 @@ class BoekDB_Cleanup {
 			return;
 		}
 
+		// Every step below deletes what a lookup did not find. A lookup that failed finds
+		// nothing, so the cleanup stops instead of taking that for an empty site.
+		$etalages = BoekDB::fetch_etalages();
+		if ( false === $etalages ) {
+			boekdb_debug( 'Not cleaning up: the etalages could not be read' );
+
+			return;
+		}
+
 		// cleanup etalage_boeken
-		$etalages    = BoekDB::fetch_etalages();
 		$etalage_ids = array();
 		foreach ( $etalages as $etalage ) {
 			$etalage_ids[] = $etalage->id;
@@ -341,6 +349,11 @@ class BoekDB_Cleanup {
 			'array_merge',
 			array()
 		);
+		if ( '' !== $wpdb->last_error ) {
+			boekdb_debug( 'Not cleaning up: the books could not be read' );
+
+			return;
+		}
 		if ( count( $post_ids ) > 0 ) {
 			$placeholders = implode( ', ', array_fill( 0, count( $post_ids ), '%d' ) );
 			$wpdb->query(

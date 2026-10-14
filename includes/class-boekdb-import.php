@@ -2156,6 +2156,12 @@ class BoekDB_Import {
 
 		try {
 			$etalages = BoekDB::fetch_etalages();
+			if ( false === $etalages ) {
+				boekdb_debug( 'Error fetching etalages' );
+
+				return;
+			}
+
 			foreach ( $etalages as $etalage ) {
 				// validate api key
 				if ( ! Boekdb_Api_Service::validate_api_key( $etalage->api_key ) ) {
