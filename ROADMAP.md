@@ -38,6 +38,14 @@ Geef de controle drie uitkomsten: geldig, ongeldig en onbekend. Verwijder alleen
 
 Een boek dat niet te importeren is, krijgt drie pogingen: de batch, en de herkansing aan het eind van die ronde en van de volgende. Binnen ongeveer een uur is het budget op, en daarna wordt het boek nooit meer opgehaald tot BoekDB het wijzigt of iemand op Reset drukt. Een storing die na een uur is opgelost, laat dus boeken achter. Verhoog het aantal pogingen of spreid ze over de tijd, zet de tellers terug bij Draai import of Reset, en laat op het instellingenscherm zien welke boeken zijn opgegeven.
 
+## Volgorde van de hoofdeditie: nieuwe standaard en een filter
+
+Van edities met dezelfde `nstc` wordt er één de hoofdeditie (`boekdb_primair`, de kale slug). `sort_books_by_productform()` kiest die op vaste volgorde: paperback, hardback, luisterboek, ebook, en daarna de rest en wat niet leverbaar is. Een serie met alleen ebooks en luisterboeken toont daardoor op een overzicht met primaire edities alleen de luisterboeken, en een thema kan dat niet veranderen.
+
+Maak hardback, paperback, ebook, luisterboek de standaardvolgorde, en geef de volgorde door een filter (`boekdb_productform_order`), zodat een thema met een andere voorkeur die met `add_filter` in `functions.php` kan zetten.
+
+De keuze valt bij de import, dus een nieuwe volgorde geldt pas bij de volgende import van een titel, of na een Reset van de etalage. De nieuwe standaard raakt elke site: bij titels met een hardback en een paperback, of met een ebook en een luisterboek, gaat de kale url naar een andere editie. Dat hoort in de CHANGELOG van die versie.
+
 ## Kleinere randen in de import
 
 - Een ISBN-lijst die bij dezelfde filters onder de helft zakt, wordt een ronde vastgehouden. Een lijst die daarna maar deels herstelt (van 1000 naar 600), valt boven die drempel en wordt geloofd, waarna de ontbrekende boeken verdwijnen. Een betere maat vergelijkt met de laatste lijst die wel klopte, of houdt elke krimp boven een vast aantal boeken vast.
